@@ -16,7 +16,7 @@ async function exists(path) {
 }
 
 test("exports a complete static GitHub Pages artifact", async () => {
-  for (const file of ["index.html", "404.html", ".nojekyll", "favicon.svg", "og.png"]) {
+  for (const file of ["index.html", "404.html", "favicon.svg", "og.png"]) {
     assert.equal(await exists(resolve(output, file)), true, `${file} should exist`);
   }
 

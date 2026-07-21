@@ -59,6 +59,5 @@ await cp(resolve(root, "public/og.png"), resolve(outputDirectory, "og.png"));
 const html = await render("/");
 await writeFile(resolve(outputDirectory, "index.html"), html);
 await writeFile(resolve(outputDirectory, "404.html"), html);
-await writeFile(resolve(outputDirectory, ".nojekyll"), "");
 
 console.log(`Exported GitHub Pages artifact to ${outputDirectory}`);
