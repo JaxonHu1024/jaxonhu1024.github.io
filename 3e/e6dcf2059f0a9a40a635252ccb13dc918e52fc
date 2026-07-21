@@ -1,0 +1,21 @@
+.github/workflows/deploy-pages.yml
+  s_d390ba0b1aa7b3::t_50efe72caedf8b 29,38,54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3ee6dcf2059f0a9a40a635252ccb13dc918e52fc",
+  "prompts": {},
+  "sessions": {
+    "s_d390ba0b1aa7b3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f834f-b57d-72d2-adf8-3b19f54b961c",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
