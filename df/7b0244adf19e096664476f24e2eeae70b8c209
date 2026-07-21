@@ -1,0 +1,34 @@
+tests/cancellable-scroll.test.mjs
+  s_d390ba0b1aa7b3::t_4cd3906e3740de 1-112
+tests/rendered-html.test.mjs
+  s_d390ba0b1aa7b3::t_8efec8c41875ec 37-45,49-51
+app/page.tsx
+  s_d390ba0b1aa7b3::t_3c8d162ca15f0a 120,145,147-151
+  s_d390ba0b1aa7b3::t_52196c6ce341b0 56,83,110-115,203-208
+app/components/Navigation.tsx
+  s_d390ba0b1aa7b3::t_a617e3d056930e 3-6,17-37,58-59,62,67-73
+app/globals.css
+  s_d390ba0b1aa7b3::t_f3c0afb4123c84 29,475-476,480-483,572,701
+package.json
+  s_d390ba0b1aa7b3::t_07944ec8a56756 13
+app/lib/cancellable-scroll.ts
+  s_d390ba0b1aa7b3::t_ffa4303251f6cd 1-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "df7b0244adf19e096664476f24e2eeae70b8c209",
+  "prompts": {},
+  "sessions": {
+    "s_d390ba0b1aa7b3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f834f-b57d-72d2-adf8-3b19f54b961c",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
