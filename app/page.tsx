@@ -53,7 +53,7 @@ export default function Home() {
       </a>
       <Navigation />
       <main id="content">
-        <section className="section hero grid-surface" id="hero" aria-labelledby="hero-title">
+        <section className="section hero grid-surface" id="hero" aria-labelledby="hero-title" tabIndex={-1}>
           <div className="hero-frame" aria-hidden="true" />
           <h1 className="hero-name" id="hero-title">
             JAXON
@@ -80,6 +80,7 @@ export default function Home() {
           className="section experience grid-surface"
           id="experience"
           aria-labelledby="experience-title"
+          tabIndex={-1}
         >
           <div className="section-kicker reveal" id="experience-title">
             <span>EXPERIENCE.LOG</span>
@@ -106,12 +107,17 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section research grid-surface" id="research" aria-label="Research publications">
+        <section
+          className="section research grid-surface"
+          id="research"
+          aria-label="Research publications"
+          tabIndex={-1}
+        >
           <div className="research-frame reveal">
             {papers.map((paper) => (
               <article className={`research-packet is-${paper.visual}`} key={paper.id}>
                 <div className="paper-copy">
-                  <p className="paper-index">JAXON / PUBLICATION {paper.id}</p>
+                  <p className="paper-index">PUBLICATION {paper.id}</p>
                   <h2>
                     {paper.title.map((line) => (
                       <span key={line}>{line}</span>
@@ -136,8 +142,13 @@ export default function Home() {
           className="section foundations grid-surface"
           id="foundations"
           aria-labelledby="foundations-title"
+          tabIndex={-1}
         >
-          <h2 className="foundations-title reveal" id="foundations-title">FOUNDATIONS</h2>
+          <h2 className="section-kicker foundations-kicker reveal" id="foundations-title">
+            <span>FOUNDATIONS.INDEX</span>
+            <span className="kicker-rule" aria-hidden="true" />
+            <span className="square-end" aria-hidden="true" />
+          </h2>
           <div className="foundations-grid reveal">
             <div className="education-column">
               <div className="column-label">
@@ -159,9 +170,6 @@ export default function Home() {
                   <time dateTime="2016-09/2020-06">2016.09–2020.06</time>
                 </article>
               </div>
-            </div>
-            <div className="foundation-spine" aria-hidden="true">
-              <span />
             </div>
             <div className="toolchain-column">
               <div className="column-label">
@@ -192,7 +200,12 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="section contact grid-surface" id="contact" aria-labelledby="contact-title">
+        <section
+          className="section contact grid-surface"
+          id="contact"
+          aria-labelledby="contact-title"
+          tabIndex={-1}
+        >
           <div className="channel-label reveal" id="contact-title">
             <span aria-hidden="true">⌜</span>
             OPEN_CHANNEL

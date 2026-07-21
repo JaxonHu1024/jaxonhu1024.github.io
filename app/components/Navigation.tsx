@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
+
+import { startCancellableScroll } from "../lib/cancellable-scroll";
 
 const links = [
   ["experience", "EXPERIENCE"],
@@ -11,6 +14,27 @@ const links = [
 
 export function Navigation() {
   const [active, setActive] = useState("hero");
+  const cancelScrollRef = useRef<() => void>(() => undefined);
+
+  const navigateToSection = useCallback((event: ReactMouseEvent<HTMLAnchorElement>, id: string) => {
+    if (
+      event.defaultPrevented
+      || event.button !== 0
+      || event.metaKey
+      || event.ctrlKey
+      || event.shiftKey
+      || event.altKey
+    ) {
+      return;
+    }
+
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    event.preventDefault();
+    cancelScrollRef.current();
+    cancelScrollRef.current = startCancellableScroll(window, target, `#${id}`);
+  }, []);
 
   useEffect(() => {
     const sections = ["hero", ...links.map(([id]) => id)]
@@ -31,14 +55,22 @@ export function Navigation() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => () => cancelScrollRef.current(), []);
+
   return (
     <header className="site-header">
-      <a className="wordmark" href="#hero" aria-label="Jaxon, back to top">
+      <a className="wordmark" href="#hero" aria-label="Jaxon, back to top" onClick={(event) => navigateToSection(event, "hero")}>
         <span aria-hidden="true">›_</span> JAXON
       </a>
       <nav className="nav-scroll" aria-label="Primary navigation">
         {links.map(([id, label]) => (
-          <a href={`#${id}`} className={active === id ? "is-active" : ""} aria-current={active === id ? "location" : undefined} key={id}>
+          <a
+            href={`#${id}`}
+            className={active === id ? "is-active" : ""}
+            aria-current={active === id ? "location" : undefined}
+            onClick={(event) => navigateToSection(event, id)}
+            key={id}
+          >
             {label}
           </a>
         ))}

@@ -34,9 +34,21 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /FOR THE REAL WORLD_/);
   assert.match(html, /字节跳动/);
   assert.match(html, /FOUNDATIONS/);
+  assert.match(html, /FOUNDATIONS\.INDEX/);
+  for (const id of ["hero", "experience", "research", "foundations", "contact"]) {
+    assert.match(
+      html,
+      new RegExp(`<section(?=[^>]*\\bid="${id}")(?=[^>]*\\btabindex="-1")[^>]*>`),
+    );
+  }
+  assert.doesNotMatch(html, /class="foundations-title/);
+  assert.doesNotMatch(html, /foundation-spine/);
   assert.match(html, /mailto:hujiaxingseu@163\.com/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9170807/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9831898/);
+  assert.match(html, /PUBLICATION\s*(?:<!-- -->)?\s*01/);
+  assert.match(html, /PUBLICATION\s*(?:<!-- -->)?\s*02/);
+  assert.doesNotMatch(html, /JAXON\s*\/\s*PUBLICATION/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));
   assert.doesNotMatch(html, /road-network-geolocalization\.png/);
   assert.doesNotMatch(html, /胡嘉星/);
