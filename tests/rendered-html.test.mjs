@@ -60,6 +60,32 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /JAXON\.EXE/);
 });
 
+test("research titles expose complete readable names", async () => {
+  const response = await render();
+  const html = await response.text();
+
+  assert.match(
+    html,
+    /<h3 aria-label="ResFi: WiFi-Enabled Device-Free Respiration Detection Based on Deep Learning">/,
+  );
+  assert.match(
+    html,
+    /<h3 aria-label="Road-Network-Based Fast Geolocalization">/,
+  );
+});
+
+test("renders clear portfolio copy with explicit language boundaries", async () => {
+  const response = await render();
+  const html = await response.text();
+
+  assert.match(html, /<html lang="en">/);
+  assert.match(html, /VIEW EXPERIENCE/);
+  assert.match(html, /2025\.02–PRESENT/);
+  assert.doesNotMatch(html, /2025\.02–NOW/);
+  assert.match(html, /<h3 lang="zh-CN">字节跳动<\/h3>/);
+  assert.match(html, /<h3 lang="zh-CN">南洋理工大学<\/h3>/);
+});
+
 test("orders foundations before research and omits toolchain number labels", async () => {
   const response = await render();
   const html = await response.text();
@@ -115,8 +141,14 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   assert.match(css, /\.education-item \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 48px;/);
   assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
   assert.match(css, /clip-path: inset\(0 0 100% 0\)/);
+  assert.match(css, /height: calc\(100dvh - 82px\)/);
   assert.match(css, /\.site-header\.is-menu-open \.nav-scroll a \{/);
   assert.doesNotMatch(css, /transition:\s*max-height|max-height:\s*320px/);
+  assert.match(css, /\.experience-copy h3 \{/);
+  assert.match(css, /\.paper-copy h3 \{/);
+  assert.match(css, /\.paper-copy h3 span \{ display: block; \}/);
+  assert.doesNotMatch(css, /\.experience-copy h2|\.paper-copy h2/);
+  assert.match(css, /@media \(min-width: 761px\) and \(max-width: 1100px\)/);
 });
 
 test("keeps focusable sections out of hidden scroll containers", async () => {

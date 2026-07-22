@@ -16,6 +16,8 @@ export function Navigation() {
   const [active, setActive] = useState("hero");
   const [menuOpen, setMenuOpen] = useState(false);
   const cancelScrollRef = useRef<() => void>(() => undefined);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const firstNavLinkRef = useRef<HTMLAnchorElement>(null);
 
   const navigateToSection = useCallback((event: ReactMouseEvent<HTMLAnchorElement>, id: string) => {
     if (
@@ -62,11 +64,21 @@ export function Navigation() {
   useEffect(() => {
     if (!menuOpen) return;
     const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMenuOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [menuOpen, setMenuOpen]);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const frame = window.requestAnimationFrame(() => firstNavLinkRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [menuOpen]);
 
   return (
     <header className={`site-header${menuOpen ? " is-menu-open" : ""}`}>
@@ -74,8 +86,9 @@ export function Navigation() {
         <span aria-hidden="true">›_</span> JAXON
       </a>
       <nav className="nav-scroll" id="primary-navigation" aria-label="Primary navigation">
-        {links.map(([id, label]) => (
+        {links.map(([id, label], index) => (
           <a
+            ref={index === 0 ? firstNavLinkRef : undefined}
             href={`#${id}`}
             className={active === id ? "is-active" : ""}
             aria-current={active === id ? "location" : undefined}
@@ -86,9 +99,13 @@ export function Navigation() {
           </a>
         ))}
       </nav>
+      <span className="system-mark system-mark-static" aria-hidden="true">
+        <span className="system-mark-dots"><i /><i /><i /><i /></span>
+      </span>
       <button
+        ref={menuButtonRef}
         type="button"
-        className="system-mark"
+        className="system-mark system-mark-trigger"
         aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
         aria-expanded={menuOpen}
         aria-controls="primary-navigation"

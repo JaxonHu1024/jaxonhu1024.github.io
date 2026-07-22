@@ -5,7 +5,7 @@ import { ResearchVisual } from "./components/ResearchVisual";
 const experiences = [
   {
     company: "字节跳动",
-    period: "2025.02–NOW",
+    period: "2025.02–PRESENT",
     dateTime: "2025-02",
     current: true,
   },
@@ -64,7 +64,7 @@ export default function Home() {
               <span>FOR THE REAL WORLD_</span>
             </p>
             <a className="terminal-button hero-cta" href="#experience">
-              <span>ENTER ARCHIVE</span>
+              <span>VIEW EXPERIENCE</span>
               <span className="button-arrow" aria-hidden="true">›</span>
             </a>
           </div>
@@ -95,8 +95,8 @@ export default function Home() {
                   <span className="node-lead" />
                 </div>
                 <div className="experience-copy">
-                  <h3>{item.company}</h3>
-                  <p>AI 算法工程师 / AI Algorithm Engineer</p>
+                  <h3 lang="zh-CN">{item.company}</h3>
+                  <p><span lang="zh-CN">AI 算法工程师</span> / AI Algorithm Engineer</p>
                 </div>
                 <time className="experience-date" dateTime={item.dateTime}>
                   {item.period}
@@ -135,16 +135,16 @@ export default function Home() {
                   {/* Static export serves the local SVG directly; Next image optimizer is not used. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="education-crest" src="/assets/logo-ntu.svg" alt="" aria-hidden="true" />
-                  <h3>南洋理工大学</h3>
-                  <p>计算机控制及其自动化，硕士</p>
+                  <h3 lang="zh-CN">南洋理工大学</h3>
+                  <p lang="zh-CN">计算机控制及其自动化，硕士</p>
                   <time dateTime="2020-12/2022-03">2020.12–2022.03</time>
                 </article>
                 <article className="education-item has-crest">
                   <span className="education-node" aria-hidden="true" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="education-crest" src="/assets/logo-seu-color.svg" alt="" aria-hidden="true" />
-                  <h3>东南大学</h3>
-                  <p>电气工程及其自动化，学士</p>
+                  <h3 lang="zh-CN">东南大学</h3>
+                  <p lang="zh-CN">电气工程及其自动化，学士</p>
                   <time dateTime="2016-09/2020-06">2016.09–2020.06</time>
                 </article>
               </div>
@@ -193,7 +193,7 @@ export default function Home() {
               <article className={`research-packet is-${paper.visual}`} key={paper.id}>
                 <div className="paper-copy">
                   <p className="paper-index">PUBLICATION {paper.id}</p>
-                  <h3>
+                  <h3 aria-label={paper.title.join(" ")}>
                     {paper.title.map((line) => (
                       <span key={line}>{line}</span>
                     ))}
