@@ -14,6 +14,7 @@ const links = [
 
 export function Navigation() {
   const [active, setActive] = useState("hero");
+  const [menuOpen, setMenuOpen] = useState(false);
   const cancelScrollRef = useRef<() => void>(() => undefined);
 
   const navigateToSection = useCallback((event: ReactMouseEvent<HTMLAnchorElement>, id: string) => {
@@ -32,6 +33,7 @@ export function Navigation() {
     if (!target) return;
 
     event.preventDefault();
+    setMenuOpen(false);
     cancelScrollRef.current();
     cancelScrollRef.current = startCancellableScroll(window, target, `#${id}`);
   }, []);
@@ -57,12 +59,21 @@ export function Navigation() {
 
   useEffect(() => () => cancelScrollRef.current(), []);
 
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [menuOpen, setMenuOpen]);
+
   return (
-    <header className="site-header">
+    <header className={`site-header${menuOpen ? " is-menu-open" : ""}`}>
       <a className="wordmark" href="#hero" aria-label="Jaxon, back to top" onClick={(event) => navigateToSection(event, "hero")}>
         <span aria-hidden="true">›_</span> JAXON
       </a>
-      <nav className="nav-scroll" aria-label="Primary navigation">
+      <nav className="nav-scroll" id="primary-navigation" aria-label="Primary navigation">
         {links.map(([id, label]) => (
           <a
             href={`#${id}`}
@@ -75,7 +86,16 @@ export function Navigation() {
           </a>
         ))}
       </nav>
-      <span className="system-mark" aria-hidden="true"><i /><i /><i /><i /></span>
+      <button
+        type="button"
+        className="system-mark"
+        aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
+        aria-expanded={menuOpen}
+        aria-controls="primary-navigation"
+        onClick={() => setMenuOpen((open) => !open)}
+      >
+        <span className="system-mark-dots" aria-hidden="true"><i /><i /><i /><i /></span>
+      </button>
     </header>
   );
 }

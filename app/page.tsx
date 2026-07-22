@@ -157,14 +157,19 @@ export default function Home() {
                 <span className="square-end" aria-hidden="true" />
               </div>
               <div className="education-timeline">
-                <article className="education-item">
+                <article className="education-item has-crest">
                   <span className="education-node" aria-hidden="true" />
+                  {/* Static export serves the local SVG directly; Next image optimizer is not used. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="education-crest" src="/assets/logo-ntu.svg" alt="" aria-hidden="true" />
                   <h3>南洋理工大学</h3>
                   <p>计算机控制及其自动化，硕士</p>
                   <time dateTime="2020-12/2022-03">2020.12–2022.03</time>
                 </article>
-                <article className="education-item">
+                <article className="education-item has-crest">
                   <span className="education-node" aria-hidden="true" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img className="education-crest" src="/assets/logo-seu-color.svg" alt="" aria-hidden="true" />
                   <h3>东南大学</h3>
                   <p>电气工程及其自动化，学士</p>
                   <time dateTime="2016-09/2020-06">2016.09–2020.06</time>

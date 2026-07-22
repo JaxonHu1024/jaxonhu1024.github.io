@@ -42,3 +42,7 @@ next-env.d.ts
 /.openai/
 /outputs/
 /work/
+
+# agents
+.trae/
+.codex/
