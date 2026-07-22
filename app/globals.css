@@ -150,7 +150,7 @@ a { color: inherit; text-decoration: none; }
 .section {
   position: relative;
   min-height: 100svh;
-  overflow: hidden;
+  overflow: clip;
   isolation: isolate;
 }
 
@@ -602,17 +602,6 @@ a { color: inherit; text-decoration: none; }
 
 .toolchain-module:last-child { border-bottom: 1px solid rgba(233,255,249,.18); }
 
-.toolchain-module::before {
-  content: attr(data-index);
-  position: absolute;
-  top: 20px;
-  left: -58px;
-  width: 38px;
-  color: rgba(233,255,249,.48);
-  font-size: 11px;
-  letter-spacing: .12em;
-}
-
 .toolchain-module::after {
   content: "";
   position: absolute;
@@ -925,14 +914,17 @@ a { color: inherit; text-decoration: none; }
   .wordmark > span { margin-right: 8px; font-size: 19px; }
 
   /* System mark becomes the menu trigger on mobile */
-  .system-mark { position: relative; cursor: pointer; transition: background .25s ease; }
+  .system-mark { position: relative; cursor: pointer; transition: background .22s ease; }
   .system-mark:hover, .system-mark:focus-visible { background: rgba(79,247,213,.06); }
-  .system-mark-dots { transition: transform .28s ease; }
+  .system-mark-dots {
+    transition: transform .36s cubic-bezier(.34, 1.56, .64, 1);
+    will-change: transform;
+  }
   .site-header.is-menu-open .system-mark { background: rgba(79,247,213,.1); }
-  .site-header.is-menu-open .system-mark-dots { transform: rotate(45deg); }
+  .site-header.is-menu-open .system-mark-dots { transform: rotate(45deg) scale(.86); }
   .site-header.is-menu-open .system-mark-dots i { background: var(--mint); }
 
-  /* Collapsed by default; expands into a dropdown panel when open */
+  /* The absolute panel keeps its natural height and reveals from the trigger corner. */
   .nav-scroll {
     position: absolute;
     top: calc(100% + 6px);
@@ -941,22 +933,36 @@ a { color: inherit; text-decoration: none; }
     display: grid;
     grid-template-columns: 1fr;
     overflow: hidden;
-    max-height: 0;
     border: 1px solid transparent;
-    background: rgba(3,5,7,.96);
+    background: rgba(3,5,7,.985);
     backdrop-filter: blur(16px);
+    clip-path: inset(0 0 100% 0);
     opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px) scale(.985);
+    transform-origin: top right;
     visibility: hidden;
-    transition: max-height .3s ease, opacity .25s ease, visibility .25s ease, border-color .25s ease;
+    will-change: clip-path, opacity, transform;
+    transition:
+      clip-path .28s cubic-bezier(.22, 1, .36, 1),
+      transform .28s cubic-bezier(.22, 1, .36, 1),
+      opacity .18s ease,
+      visibility 0s linear .28s,
+      border-color .18s ease,
+      box-shadow .28s ease;
   }
   .site-header.is-menu-open .nav-scroll {
-    max-height: 320px;
     border-color: rgba(233,255,249,.19);
+    clip-path: inset(0);
     opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
     visibility: visible;
     box-shadow: 0 18px 50px rgba(0,0,0,.4);
+    transition-delay: 0s;
   }
   .nav-scroll a {
+    --menu-delay: 45ms;
     justify-content: flex-start;
     place-items: center start;
     min-height: 56px;
@@ -965,6 +971,23 @@ a { color: inherit; text-decoration: none; }
     border-bottom: 1px solid rgba(233,255,249,.1);
     font-size: 13px;
     letter-spacing: .16em;
+    opacity: 0;
+    transform: translateY(-8px);
+    transition:
+      color .2s ease,
+      background .2s ease,
+      opacity .18s ease,
+      transform .26s cubic-bezier(.22, 1, .36, 1);
+    transition-delay: 0s;
+    will-change: opacity, transform;
+  }
+  .nav-scroll a:nth-child(2) { --menu-delay: 78ms; }
+  .nav-scroll a:nth-child(3) { --menu-delay: 111ms; }
+  .nav-scroll a:nth-child(4) { --menu-delay: 144ms; }
+  .site-header.is-menu-open .nav-scroll a {
+    opacity: 1;
+    transform: translateY(0);
+    transition-delay: 0s, 0s, var(--menu-delay), var(--menu-delay);
   }
   .nav-scroll a:last-child { border-bottom: 0; }
   .nav-scroll a.is-active::before { content: "›"; left: auto; right: 22px; transform: translateY(-54%); }
@@ -976,7 +999,7 @@ a { color: inherit; text-decoration: none; }
   .hero-copy { left: 20px; right: 20px; bottom: 48px; gap: 415px; }
   .hero-statement { font-size: clamp(19px, 5.45vw, 26px); line-height: 1.55; letter-spacing: .03em; }
   .hero-statement span { white-space: normal; }
-  .hero-media { right: -23vw; bottom: 126px; width: 123vw; opacity: .72; }
+  .hero-media { right: 0; bottom: 126px; width: min(112vw, 500px); opacity: .76; }
   .terminal-button { width: min(100%, 330px); min-height: 62px; font-size: 14px; }
 
   .experience { min-height: auto; padding: 132px 20px 70px; }
@@ -1010,15 +1033,31 @@ a { color: inherit; text-decoration: none; }
   .foundations-grid { grid-template-columns: 1fr; min-height: 0; margin-top: 44px; }
   .education-timeline { padding-left: 70px; }
   .education-timeline::before { left: 24px; }
+  .education-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 48px;
+    column-gap: 8px;
+    align-items: start;
+  }
   .education-node { left: -58px; }
-  .education-item h3 { font-size: 31px; }
+  .education-item h3 { grid-column: 1; grid-row: 1; align-self: center; margin-bottom: 0; font-size: clamp(27px, 7.5vw, 31px); }
+  .education-item p { grid-column: 1 / -1; grid-row: 2; margin-top: 10px; }
+  .education-item time { grid-column: 1 / -1; grid-row: 3; }
   .education-item p, .education-item time { font-size: 15px; line-height: 1.65; }
-  .education-crest { top: auto; bottom: 12px; right: 2px; width: 62px; height: 62px; transform: none; opacity: .42; }
+  .education-crest {
+    position: static;
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
+    width: 48px;
+    height: 48px;
+    transform: none;
+    opacity: .5;
+  }
   .toolchain-column { margin-top: 54px; }
   .toolchain-list { padding-left: 48px; }
   .toolchain-list::before { left: 15px; }
   .toolchain-module { grid-template-columns: 1fr; gap: 10px; min-height: 0; padding: 20px 0 22px; }
-  .toolchain-module::before { left: -48px; }
   .toolchain-module::after { left: -37px; }
   .toolchain-list dd { font-size: 18px; line-height: 1.45; }
   .section-footer { gap: 16px; }

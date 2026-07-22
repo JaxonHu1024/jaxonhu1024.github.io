@@ -60,6 +60,22 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /JAXON\.EXE/);
 });
 
+test("orders foundations before research and omits toolchain number labels", async () => {
+  const response = await render();
+  const html = await response.text();
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.ok(html.indexOf('href="#foundations"') < html.indexOf('href="#research"'));
+  assert.ok(
+    html.indexOf('class="section foundations grid-surface"')
+      < html.indexOf('class="section research grid-surface"'),
+  );
+  assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ FOUNDATION LAYER/);
+  assert.match(html, /<b>03<\/b>\s*(?:<!-- -->)?\s*\/\/ RESEARCH LAYER/);
+  assert.doesNotMatch(html, /class="toolchain-module"[^>]*data-index=/);
+  assert.doesNotMatch(css, /content:\s*attr\(data-index\)/);
+});
+
 test("keeps the hero private, English-only, and decoupled from paper topics", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const heroStart = page.indexOf('<section className="section hero');
@@ -90,4 +106,23 @@ test("implements ambient motion as accessible code-native layers", async () => {
   assert.match(researchMotion, /const roadRoutes/);
   assert.match(researchMotion, /pointOnRoute/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("keeps mobile visual anchors and menu motion layout-safe", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(css, /\.hero-media \{ right: 0; bottom: 126px; width: min\(112vw, 500px\);/);
+  assert.match(css, /\.education-item \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 48px;/);
+  assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
+  assert.match(css, /clip-path: inset\(0 0 100% 0\)/);
+  assert.match(css, /\.site-header\.is-menu-open \.nav-scroll a \{/);
+  assert.doesNotMatch(css, /transition:\s*max-height|max-height:\s*320px/);
+});
+
+test("keeps focusable sections out of hidden scroll containers", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const sectionRule = css.match(/\.section \{[^}]+\}/)?.[0] ?? "";
+
+  assert.match(sectionRule, /overflow:\s*clip;/);
+  assert.doesNotMatch(sectionRule, /overflow:\s*hidden;/);
 });

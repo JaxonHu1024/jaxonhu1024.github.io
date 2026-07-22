@@ -7,8 +7,8 @@ import { startCancellableScroll } from "../lib/cancellable-scroll";
 
 const links = [
   ["experience", "EXPERIENCE"],
-  ["research", "RESEARCH"],
   ["foundations", "FOUNDATIONS"],
+  ["research", "RESEARCH"],
   ["contact", "CONTACT"],
 ] as const;
 

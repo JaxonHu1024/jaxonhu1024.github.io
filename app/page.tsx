@@ -112,46 +112,6 @@ export default function Home() {
         </section>
 
         <section
-          className="section research grid-surface"
-          id="research"
-          aria-labelledby="research-title"
-          tabIndex={-1}
-        >
-          <h2 className="section-kicker reveal" id="research-title">
-            <span>RESEARCH.INDEX</span>
-            <span className="kicker-rule" aria-hidden="true" />
-            <span className="square-end" aria-hidden="true" />
-          </h2>
-          <div className="research-frame reveal">
-            {papers.map((paper) => (
-              <article className={`research-packet is-${paper.visual}`} key={paper.id}>
-                <div className="paper-copy">
-                  <p className="paper-index">PUBLICATION {paper.id}</p>
-                  <h3>
-                    {paper.title.map((line) => (
-                      <span key={line}>{line}</span>
-                    ))}
-                  </h3>
-                  <p className="paper-venue">{paper.venue}</p>
-                  <p className="paper-meta">{paper.meta}</p>
-                  <a className="terminal-button paper-link" href={paper.href} target="_blank" rel="noreferrer">
-                    <span>VIEW PAPER ↗</span>
-                    <span className="button-arrow" aria-hidden="true">›</span>
-                  </a>
-                </div>
-                <div className={`paper-visual is-${paper.visual}`}>
-                  <ResearchVisual variant={paper.visual} />
-                </div>
-              </article>
-            ))}
-          </div>
-          <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>02</b> {"// RESEARCH LAYER"}</span>
-            <span className="section-footer-rule" />
-          </p>
-        </section>
-
-        <section
           className="section foundations grid-surface"
           id="foundations"
           aria-labelledby="foundations-title"
@@ -196,15 +156,15 @@ export default function Home() {
                 <span className="square-end" aria-hidden="true" />
               </div>
               <dl className="toolchain-list" aria-label="Technical toolchain">
-                <div className="toolchain-module" data-index="01">
+                <div className="toolchain-module">
                   <dt>LANGUAGES</dt>
                   <dd><span>PYTHON</span><span>C++</span><span>SQL</span></dd>
                 </div>
-                <div className="toolchain-module" data-index="02">
+                <div className="toolchain-module">
                   <dt>FRAMEWORK</dt>
                   <dd><span>PYTORCH</span></dd>
                 </div>
-                <div className="toolchain-module" data-index="03">
+                <div className="toolchain-module">
                   <dt>SYSTEMS</dt>
                   <dd><span>LINUX</span><span>DOCKER</span><span>MYSQL</span></dd>
                 </div>
@@ -212,7 +172,47 @@ export default function Home() {
             </div>
           </div>
           <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>03</b> {"// FOUNDATION LAYER"}</span>
+            <span className="section-footer-index"><b>02</b> {"// FOUNDATION LAYER"}</span>
+            <span className="section-footer-rule" />
+          </p>
+        </section>
+
+        <section
+          className="section research grid-surface"
+          id="research"
+          aria-labelledby="research-title"
+          tabIndex={-1}
+        >
+          <h2 className="section-kicker reveal" id="research-title">
+            <span>RESEARCH.INDEX</span>
+            <span className="kicker-rule" aria-hidden="true" />
+            <span className="square-end" aria-hidden="true" />
+          </h2>
+          <div className="research-frame reveal">
+            {papers.map((paper) => (
+              <article className={`research-packet is-${paper.visual}`} key={paper.id}>
+                <div className="paper-copy">
+                  <p className="paper-index">PUBLICATION {paper.id}</p>
+                  <h3>
+                    {paper.title.map((line) => (
+                      <span key={line}>{line}</span>
+                    ))}
+                  </h3>
+                  <p className="paper-venue">{paper.venue}</p>
+                  <p className="paper-meta">{paper.meta}</p>
+                  <a className="terminal-button paper-link" href={paper.href} target="_blank" rel="noreferrer">
+                    <span>VIEW PAPER ↗</span>
+                    <span className="button-arrow" aria-hidden="true">›</span>
+                  </a>
+                </div>
+                <div className={`paper-visual is-${paper.visual}`}>
+                  <ResearchVisual variant={paper.visual} />
+                </div>
+              </article>
+            ))}
+          </div>
+          <p className="section-footer reveal" aria-hidden="true">
+            <span className="section-footer-index"><b>03</b> {"// RESEARCH LAYER"}</span>
             <span className="section-footer-rule" />
           </p>
         </section>
