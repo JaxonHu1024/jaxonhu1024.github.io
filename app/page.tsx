@@ -82,11 +82,11 @@ export default function Home() {
           aria-labelledby="experience-title"
           tabIndex={-1}
         >
-          <div className="section-kicker reveal" id="experience-title">
+          <h2 className="section-kicker reveal" id="experience-title">
             <span>EXPERIENCE.LOG</span>
             <span className="kicker-rule" aria-hidden="true" />
             <span className="square-end" aria-hidden="true" />
-          </div>
+          </h2>
           <div className="experience-log reveal">
             {experiences.map((item) => (
               <article className={`experience-row${item.current ? " is-current" : ""}`} key={item.company}>
@@ -95,7 +95,7 @@ export default function Home() {
                   <span className="node-lead" />
                 </div>
                 <div className="experience-copy">
-                  <h2>{item.company}</h2>
+                  <h3>{item.company}</h3>
                   <p>AI 算法工程师 / AI Algorithm Engineer</p>
                 </div>
                 <time className="experience-date" dateTime={item.dateTime}>
@@ -105,24 +105,33 @@ export default function Home() {
               </article>
             ))}
           </div>
+          <p className="section-footer reveal" aria-hidden="true">
+            <span className="section-footer-index"><b>01</b> {"// EXPERIENCE LAYER"}</span>
+            <span className="section-footer-rule" />
+          </p>
         </section>
 
         <section
           className="section research grid-surface"
           id="research"
-          aria-label="Research publications"
+          aria-labelledby="research-title"
           tabIndex={-1}
         >
+          <h2 className="section-kicker reveal" id="research-title">
+            <span>RESEARCH.INDEX</span>
+            <span className="kicker-rule" aria-hidden="true" />
+            <span className="square-end" aria-hidden="true" />
+          </h2>
           <div className="research-frame reveal">
             {papers.map((paper) => (
               <article className={`research-packet is-${paper.visual}`} key={paper.id}>
                 <div className="paper-copy">
                   <p className="paper-index">PUBLICATION {paper.id}</p>
-                  <h2>
+                  <h3>
                     {paper.title.map((line) => (
                       <span key={line}>{line}</span>
                     ))}
-                  </h2>
+                  </h3>
                   <p className="paper-venue">{paper.venue}</p>
                   <p className="paper-meta">{paper.meta}</p>
                   <a className="terminal-button paper-link" href={paper.href} target="_blank" rel="noreferrer">
@@ -136,6 +145,10 @@ export default function Home() {
               </article>
             ))}
           </div>
+          <p className="section-footer reveal" aria-hidden="true">
+            <span className="section-footer-index"><b>02</b> {"// RESEARCH LAYER"}</span>
+            <span className="section-footer-rule" />
+          </p>
         </section>
 
         <section
@@ -144,7 +157,7 @@ export default function Home() {
           aria-labelledby="foundations-title"
           tabIndex={-1}
         >
-          <h2 className="section-kicker foundations-kicker reveal" id="foundations-title">
+          <h2 className="section-kicker reveal" id="foundations-title">
             <span>FOUNDATIONS.INDEX</span>
             <span className="kicker-rule" aria-hidden="true" />
             <span className="square-end" aria-hidden="true" />
@@ -198,11 +211,10 @@ export default function Home() {
               </dl>
             </div>
           </div>
-          <div className="foundation-footer reveal" aria-hidden="true">
-            <span className="matrix-dots" />
-            <span className="foundation-index"><b>04</b> / FOUNDATION LAYER</span>
-            <span className="foundation-rule" />
-          </div>
+          <p className="section-footer reveal" aria-hidden="true">
+            <span className="section-footer-index"><b>03</b> {"// FOUNDATION LAYER"}</span>
+            <span className="section-footer-rule" />
+          </p>
         </section>
 
         <section
@@ -211,27 +223,82 @@ export default function Home() {
           aria-labelledby="contact-title"
           tabIndex={-1}
         >
-          <div className="channel-label reveal" id="contact-title">
-            <span aria-hidden="true">⌜</span>
-            OPEN_CHANNEL
-          </div>
           <div className="contact-trace trace-in" aria-hidden="true">
             <i /><i /><i /><i />
           </div>
-          <a className="email-link" href="mailto:hujiaxingseu@163.com">
-            <span>hujiaxingseu</span><span>@163.com</span><i aria-hidden="true" />
-          </a>
           <div className="contact-trace trace-out" aria-hidden="true">
             <i /><i /><i /><i /><span>➤</span>
           </div>
-          <a className="terminal-button contact-cta reveal" href="mailto:hujiaxingseu@163.com">
-            <span>SEND SIGNAL</span>
-            <span className="button-arrow" aria-hidden="true">›</span>
-          </a>
-          <footer className="site-footer reveal">
-            <span aria-hidden="true" />
-            JAXON / 2026
-          </footer>
+
+          <div className="contact-inner">
+            <h2 className="section-kicker reveal" id="contact-title">
+              <span>CONTACT.CHANNEL</span>
+              <span className="kicker-rule" aria-hidden="true" />
+              <span className="square-end" aria-hidden="true" />
+            </h2>
+
+            <header className="contact-primary reveal">
+              <p className="contact-channel">GET IN TOUCH</p>
+              <h2 className="contact-heading">
+                SEND A
+                <span>SIGNAL.</span>
+              </h2>
+              <p className="contact-note">COLLABORATION · RESEARCH · TECHNICAL EXCHANGE</p>
+            </header>
+
+            <nav className="contact-directory reveal" aria-label="Contact channels">
+              <p className="directory-heading">CONTACT ENDPOINTS</p>
+              <ul className="contact-socials">
+                <li>
+                  <a href="mailto:jaxonhu01@gmail.com" aria-label="Email · jaxonhu01@gmail.com">
+                    <span className="endpoint-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M2.5 7.2 12 13l9.5-5.8V6.5A2.5 2.5 0 0 0 19 4H5a2.5 2.5 0 0 0-2.5 2.5v.7Z" />
+                        <path d="M21.5 9.3 12 15 2.5 9.3v8.2A2.5 2.5 0 0 0 5 20h14a2.5 2.5 0 0 0 2.5-2.5V9.3Z" />
+                      </svg>
+                    </span>
+                    <span className="endpoint-copy"><b>EMAIL</b><small>jaxonhu01@gmail.com</small></span>
+                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://github.com/JaxonHu1024" target="_blank" rel="noreferrer noopener" aria-label="GitHub · JaxonHu1024">
+                    <span className="endpoint-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.7.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11 11 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5Z" />
+                      </svg>
+                    </span>
+                    <span className="endpoint-copy"><b>GITHUB</b><small>JaxonHu1024</small></span>
+                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://x.com/HuEnzo33232" target="_blank" rel="noreferrer noopener" aria-label="X · HuEnzo33232">
+                    <span className="endpoint-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M18.24 2.25h3.31l-7.23 8.26L22.83 21.75h-6.66l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.08 4.13H5.12l11.96 15.64Z" />
+                      </svg>
+                    </span>
+                    <span className="endpoint-copy"><b>X / TWITTER</b><small>@HuEnzo33232</small></span>
+                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="https://www.linkedin.com/in/jaxon-hu-10977a221/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BKILu4juHSq2jTdt856M16A%3D%3D" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn · Jaxon">
+                    <span className="endpoint-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" focusable="false">
+                        <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.44-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13ZM7.12 20.45H3.55V9h3.57v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z" />
+                      </svg>
+                    </span>
+                    <span className="endpoint-copy"><b>LINKEDIN</b><small>Jaxon</small></span>
+                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                  </a>
+                </li>
+              </ul>
+            </nav>
+
+            <footer className="site-footer reveal">JAXON / 2026</footer>
+          </div>
         </section>
       </main>
     </>

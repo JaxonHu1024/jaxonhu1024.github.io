@@ -43,7 +43,12 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   }
   assert.doesNotMatch(html, /class="foundations-title/);
   assert.doesNotMatch(html, /foundation-spine/);
-  assert.match(html, /mailto:hujiaxingseu@163\.com/);
+  assert.match(html, /mailto:jaxonhu01@gmail\.com/);
+  assert.match(html, /CONTACT ENDPOINTS/);
+  assert.match(html, /https:\/\/github\.com\/JaxonHu1024/);
+  assert.match(html, /https:\/\/x\.com\/HuEnzo33232/);
+  assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jaxon-hu-10977a221/);
+  assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9170807/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9831898/);
   assert.match(html, /PUBLICATION\s*(?:<!-- -->)?\s*01/);
