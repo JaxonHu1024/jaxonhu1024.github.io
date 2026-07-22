@@ -1,0 +1,30 @@
+app/components/Navigation.tsx
+  s_733b647529eab2::t_3fb25f1f46af83 19-20,67-71,75-81,89,91,102-104,106,108
+app/layout.tsx
+  s_733b647529eab2::t_eb8a9891dee00d 36
+app/page.tsx
+  s_733b647529eab2::t_c8641d3d11eb09 8,67,98-99,138-139,146-147,196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e8de9b80118a6f7f25dbaaffb23ed036573adc4c",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_733b647529eab2": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8a4c-4d3c-7a00-8b3f-98c7b8ececae",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
