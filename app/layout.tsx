@@ -16,18 +16,19 @@ export async function generateMetadata(): Promise<Metadata> {
 
   return {
     title: "JAXON — Compiling Intelligence for the Real World",
-    description: "Experience, research, and technical foundations from Jaxon.",
+    description:
+      "AI algorithm engineer portfolio featuring production experience, deep learning research, and technical foundations in sensing and geospatial intelligence.",
     icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
     openGraph: {
-      title: "JAXON",
-      description: "Compiling intelligence for the real world.",
+      title: "JAXON — AI Algorithm Engineer",
+      description: "Production AI systems, signal-aware learning, and geospatial intelligence research from Jaxon.",
       type: "website",
       images: [{ url: `${origin}/og.png`, width: 1200, height: 630, alt: "JAXON" }],
     },
     twitter: {
       card: "summary_large_image",
-      title: "JAXON",
-      description: "Compiling intelligence for the real world.",
+      title: "JAXON — AI Algorithm Engineer",
+      description: "Production AI systems, signal-aware learning, and geospatial intelligence research from Jaxon.",
       images: [`${origin}/og.png`],
     },
   };

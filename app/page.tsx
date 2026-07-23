@@ -21,6 +21,37 @@ const alibabaExperiences = [
   },
 ];
 
+const experienceDetails = {
+  ByteDance: [
+    "Building production AI systems with an emphasis on model quality, evaluation discipline, and deployment reliability.",
+    "Translating research-grade signals into engineering workflows that can survive real traffic and fast iteration cycles.",
+  ],
+  "International Digital Commerce Group": [
+    "Worked on applied algorithm systems for international commerce scenarios, balancing ranking quality, data scale, and product constraints.",
+  ],
+  "Damo Academy": [
+    "Connected academic research habits with deployable deep-learning prototypes across sensing and geospatial intelligence topics.",
+  ],
+};
+
+const systemHighlights = [
+  {
+    title: "Production AI loops",
+    eyebrow: "MODEL QUALITY",
+    copy: "Evaluation, iteration, and deployment workflows for algorithm systems that need to improve under real product constraints.",
+  },
+  {
+    title: "Signal-aware learning",
+    eyebrow: "SENSING",
+    copy: "Deep-learning approaches for extracting useful structure from noisy physical-world signals and device-free sensing setups.",
+  },
+  {
+    title: "Geospatial reasoning",
+    eyebrow: "LOCATION INTELLIGENCE",
+    copy: "Road-network and remote-sensing research experience for fast localization and spatial matching problems.",
+  },
+];
+
 const papers = [
   {
     id: "01",
@@ -61,6 +92,9 @@ export default function Home() {
               <span>COMPILING INTELLIGENCE</span>
               <span>FOR THE REAL WORLD_</span>
             </p>
+            <p className="hero-intro">
+              AI algorithm engineer focused on production learning systems, signal-aware models, and geospatial intelligence.
+            </p>
             <a className="terminal-button hero-cta" href="#experience">
               <span>VIEW EXPERIENCE</span>
               <span className="button-arrow" aria-hidden="true">›</span>
@@ -99,6 +133,11 @@ export default function Home() {
                       <span className="experience-status">CURRENT</span>
                     </div>
                     <p>AI Algorithm Engineer</p>
+                    <ul className="experience-bullets">
+                      {experienceDetails.ByteDance.map((detail) => (
+                        <li key={detail}>{detail}</li>
+                      ))}
+                    </ul>
                   </div>
                   <time className="experience-date" dateTime={currentExperience.dateTime}>
                     {currentExperience.period}
@@ -120,6 +159,11 @@ export default function Home() {
                     <div className="experience-subentry-copy">
                       <h4>{item.organization}</h4>
                       <p>AI Algorithm Engineer</p>
+                      <ul className="experience-bullets">
+                        {experienceDetails[item.organization].map((detail) => (
+                          <li key={detail}>{detail}</li>
+                        ))}
+                      </ul>
                     </div>
                     <time className="experience-date" dateTime={item.dateTime}>
                       {item.period}
@@ -133,6 +177,35 @@ export default function Home() {
             <span className="section-footer-index"><b>01</b> {"// EXPERIENCE LAYER"}</span>
             <span className="section-footer-rule" />
           </p>
+        </section>
+
+        <section className="section systems grid-surface" id="systems" aria-labelledby="systems-title" tabIndex={-1}>
+          <div className="systems-inner">
+            <h2 className="section-kicker reveal" id="systems-title">
+              <span>SELECTED.SYSTEMS</span>
+              <span className="kicker-rule" aria-hidden="true" />
+              <span className="square-end" aria-hidden="true" />
+            </h2>
+            <div className="systems-grid reveal">
+              <p className="systems-lede">
+                The thread across my work is simple: make models measurable, make signals usable, and make research
+                survive contact with production constraints.
+              </p>
+              <div className="systems-cards">
+                {systemHighlights.map((item) => (
+                  <article className="system-card" key={item.title}>
+                    <p>{item.eyebrow}</p>
+                    <h3>{item.title}</h3>
+                    <span>{item.copy}</span>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <p className="section-footer reveal" aria-hidden="true">
+              <span className="section-footer-index"><b>01A</b> {"// SYSTEMS LAYER"}</span>
+              <span className="section-footer-rule" />
+            </p>
+          </div>
         </section>
 
         <section
@@ -181,16 +254,20 @@ export default function Home() {
               </div>
               <dl className="toolchain-list" aria-label="Technical toolchain">
                 <div className="toolchain-module">
-                  <dt>LANGUAGES</dt>
+                  <dt>MODELING</dt>
+                  <dd><span>PYTORCH</span><span>DEEP LEARNING</span><span>EVALUATION</span></dd>
+                </div>
+                <div className="toolchain-module">
+                  <dt>ENGINEERING</dt>
                   <dd><span>PYTHON</span><span>C++</span><span>SQL</span></dd>
                 </div>
                 <div className="toolchain-module">
-                  <dt>FRAMEWORK</dt>
-                  <dd><span>PYTORCH</span></dd>
+                  <dt>PRODUCTION</dt>
+                  <dd><span>LINUX</span><span>DOCKER</span><span>MYSQL</span></dd>
                 </div>
                 <div className="toolchain-module">
-                  <dt>SYSTEMS</dt>
-                  <dd><span>LINUX</span><span>DOCKER</span><span>MYSQL</span></dd>
+                  <dt>RESEARCH</dt>
+                  <dd><span>SENSING</span><span>GEOLOCALIZATION</span><span>REMOTE SENSING</span></dd>
                 </div>
               </dl>
             </div>
@@ -268,6 +345,9 @@ export default function Home() {
                 <span>SIGNAL.</span>
               </h2>
               <p className="contact-note">COLLABORATION · RESEARCH · TECHNICAL EXCHANGE</p>
+              <p className="contact-context">
+                For AI engineering roles, research collaboration, or technical discussions, email is the fastest route.
+              </p>
             </header>
 
             <nav className="contact-directory reveal" aria-label="Contact channels">
@@ -321,7 +401,7 @@ export default function Home() {
               </ul>
             </nav>
 
-            <footer className="site-footer reveal">JAXON / 2026</footer>
+            <footer className="site-footer reveal">© 2026 JAXON · BUILT FOR RESEARCH AND ENGINEERING CONVERSATIONS</footer>
           </div>
         </section>
       </main>
