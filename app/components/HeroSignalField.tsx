@@ -16,31 +16,31 @@ const signalPaths: readonly SignalPath[] = [
     color: [79, 247, 213],
     phase: 0.04,
     speed: 0.000078,
-    points: [[0.03, 0.31], [0.2, 0.31], [0.28, 0.39], [0.49, 0.39], [0.58, 0.46], [0.69, 0.47]],
+    points: [[0.03, 0.31], [0.2, 0.31], [0.28, 0.39], [0.49, 0.39], [0.58, 0.44], [0.69, 0.44]],
   },
   {
     color: [184, 255, 241],
     phase: 0.38,
     speed: 0.000064,
-    points: [[0.01, 0.39], [0.24, 0.39], [0.31, 0.45], [0.53, 0.45], [0.61, 0.48], [0.69, 0.48]],
+    points: [[0.01, 0.39], [0.24, 0.39], [0.31, 0.44], [0.53, 0.44], [0.61, 0.45], [0.69, 0.45]],
   },
   {
     color: [124, 92, 255],
     phase: 0.66,
     speed: 0.000092,
-    points: [[0.11, 0.48], [0.31, 0.48], [0.39, 0.51], [0.56, 0.51], [0.63, 0.49], [0.69, 0.49]],
+    points: [[0.11, 0.48], [0.31, 0.48], [0.39, 0.49], [0.56, 0.49], [0.63, 0.46], [0.69, 0.46]],
   },
   {
     color: [79, 247, 213],
     phase: 0.82,
     speed: 0.000071,
-    points: [[0.05, 0.58], [0.28, 0.58], [0.35, 0.53], [0.53, 0.53], [0.61, 0.5], [0.69, 0.5]],
+    points: [[0.05, 0.58], [0.28, 0.58], [0.35, 0.52], [0.53, 0.52], [0.61, 0.47], [0.69, 0.47]],
   },
   {
     color: [207, 255, 246],
     phase: 0.2,
     speed: 0.000105,
-    points: [[0.18, 0.66], [0.37, 0.66], [0.44, 0.58], [0.57, 0.58], [0.63, 0.52], [0.69, 0.51]],
+    points: [[0.18, 0.66], [0.37, 0.66], [0.44, 0.56], [0.57, 0.56], [0.63, 0.48], [0.69, 0.48]],
   },
 ];
 
@@ -127,15 +127,50 @@ export function HeroSignalField() {
         drawPacket(path, progress, cssWidth, cssHeight);
       });
 
-      const coreX = cssWidth * 0.715;
-      const coreY = cssHeight * 0.472;
+      const coreX = cssWidth * 0.716;
+      const coreY = cssHeight * 0.457;
+      const coreW = cssWidth * 0.05;
+      const coreH = cssHeight * 0.066;
       const pulse = reducedMotion ? 0.32 : (Math.sin(time * 0.0022) + 1) / 2;
-      context.strokeStyle = `rgba(141, 255, 232, ${0.14 + pulse * 0.22})`;
-      context.lineWidth = 1;
-      context.shadowColor = "rgba(79, 247, 213, .7)";
-      context.shadowBlur = 9 + pulse * 12;
-      const coreSize = 29 + pulse * 7;
-      context.strokeRect(coreX - coreSize / 2, coreY - coreSize / 2, coreSize, coreSize);
+
+      // Expanding square rings radiate outward from the die (the "small-to-large" pulse).
+      if (!reducedMotion) {
+        const ringPeriod = 2600;
+        const ringCount = 2;
+        for (let ring = 0; ring < ringCount; ring += 1) {
+          const t = (((time / ringPeriod) + ring / ringCount) % 1 + 1) % 1;
+          const scale = 1 + t * 1.85;
+          const fade = Math.pow(1 - t, 1.7);
+          const ringW = coreW * scale;
+          const ringH = coreH * scale;
+          context.strokeStyle = `rgba(126, 255, 231, ${fade * 0.5})`;
+          context.lineWidth = 1.4;
+          context.shadowColor = `rgba(79, 247, 213, ${fade * 0.7})`;
+          context.shadowBlur = 10 + fade * 14;
+          context.strokeRect(coreX - ringW / 2, coreY - ringH / 2, ringW, ringH);
+        }
+        context.shadowBlur = 0;
+      }
+
+      // Bright breathing glow that keeps the core alive between ring pulses.
+      const glowRadius = Math.max(coreW, coreH) * (0.9 + pulse * 0.45);
+      const glow = context.createRadialGradient(coreX, coreY, 0, coreX, coreY, glowRadius);
+      glow.addColorStop(0, `rgba(196, 255, 244, ${0.5 + pulse * 0.4})`);
+      glow.addColorStop(0.4, `rgba(79, 247, 213, ${0.28 + pulse * 0.28})`);
+      glow.addColorStop(1, "rgba(79, 247, 213, 0)");
+      context.fillStyle = glow;
+      context.beginPath();
+      context.arc(coreX, coreY, glowRadius, 0, Math.PI * 2);
+      context.fill();
+
+      // Crisp die outline as a stable anchor over the glow.
+      const outlineW = coreW + pulse * 3;
+      const outlineH = coreH + pulse * 3;
+      context.strokeStyle = `rgba(210, 255, 246, ${0.4 + pulse * 0.4})`;
+      context.lineWidth = 1.2;
+      context.shadowColor = "rgba(79, 247, 213, .85)";
+      context.shadowBlur = 8 + pulse * 14;
+      context.strokeRect(coreX - outlineW / 2, coreY - outlineH / 2, outlineW, outlineH);
       context.shadowBlur = 0;
       context.globalCompositeOperation = "source-over";
 

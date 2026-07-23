@@ -71,7 +71,7 @@ export default function Home() {
           <div className="hero-media" aria-hidden="true">
             {/* The static export serves this local WebP directly; its Next image optimizer is not used. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/hero-processor-field.webp" alt="" width="1448" height="1086" />
+            <img src="/assets/hero-processor-field-optimized.webp" alt="" width="1448" height="1086" />
             <HeroSignalField />
           </div>
         </section>

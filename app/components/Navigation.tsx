@@ -16,6 +16,7 @@ export function Navigation() {
   const [active, setActive] = useState("hero");
   const [menuOpen, setMenuOpen] = useState(false);
   const cancelScrollRef = useRef<() => void>(() => undefined);
+  const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstNavLinkRef = useRef<HTMLAnchorElement>(null);
 
@@ -76,12 +77,26 @@ export function Navigation() {
 
   useEffect(() => {
     if (!menuOpen) return;
-    const frame = window.requestAnimationFrame(() => firstNavLinkRef.current?.focus());
+    const closeOnPointer = (event: PointerEvent) => {
+      if (!headerRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const closeOnScroll = () => setMenuOpen(false);
+    document.addEventListener("pointerdown", closeOnPointer);
+    window.addEventListener("scroll", closeOnScroll, { passive: true });
+    return () => {
+      document.removeEventListener("pointerdown", closeOnPointer);
+      window.removeEventListener("scroll", closeOnScroll);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const frame = window.requestAnimationFrame(() => firstNavLinkRef.current?.focus({ preventScroll: true }));
     return () => window.cancelAnimationFrame(frame);
   }, [menuOpen]);
 
   return (
-    <header className={`site-header${menuOpen ? " is-menu-open" : ""}`}>
+    <header ref={headerRef} className={`site-header${menuOpen ? " is-menu-open" : ""}`}>
       <a className="wordmark" href="#hero" aria-label="Jaxon, back to top" onClick={(event) => navigateToSection(event, "hero")}>
         <span aria-hidden="true">›_</span> JAXON
       </a>

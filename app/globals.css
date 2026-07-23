@@ -277,6 +277,8 @@ a { color: inherit; text-decoration: none; }
   width: min(58vw, 920px);
   isolation: isolate;
   pointer-events: none;
+  /* Shared falloff so the chip photo and the signal canvas fade out identically. */
+  --hero-fade: radial-gradient(ellipse 88% 82% at 58% 50%, #000 57%, transparent 92%);
 }
 
 .hero-media img {
@@ -285,7 +287,8 @@ a { color: inherit; text-decoration: none; }
   display: block;
   width: 100%;
   height: auto;
-  mask-image: radial-gradient(ellipse 88% 82% at 58% 50%, #000 56%, transparent 92%);
+  mask-image: var(--hero-fade);
+  will-change: filter;
   animation: processor-breathe 7.5s ease-in-out infinite;
 }
 
@@ -297,23 +300,7 @@ a { color: inherit; text-decoration: none; }
   width: 100%;
   height: 100%;
   mix-blend-mode: screen;
-  mask-image: radial-gradient(ellipse 88% 82% at 58% 50%, #000 58%, transparent 92%);
-}
-
-.hero-media::after {
-  content: "";
-  position: absolute;
-  z-index: 3;
-  top: 12%;
-  bottom: 11%;
-  left: -22%;
-  width: 18%;
-  background: linear-gradient(90deg, transparent, rgba(167,255,238,.06), rgba(79,247,213,.18), transparent);
-  filter: blur(2px);
-  transform: skewX(-9deg);
-  mix-blend-mode: screen;
-  mask-image: linear-gradient(transparent, #000 20%, #000 78%, transparent);
-  animation: processor-scan 8.8s linear infinite;
+  mask-image: var(--hero-fade);
 }
 
 /* Experience */
@@ -832,13 +819,6 @@ a { color: inherit; text-decoration: none; }
   50% { filter: brightness(1.08) saturate(1.08); }
 }
 
-@keyframes processor-scan {
-  0% { transform: translateX(0) skewX(-9deg); opacity: 0; }
-  10% { opacity: .75; }
-  55% { opacity: .42; }
-  100% { transform: translateX(690%) skewX(-9deg); opacity: 0; }
-}
-
 @keyframes timeline-scan {
   0% { transform: translateY(-42px); opacity: 0; }
   12%, 82% { opacity: 1; }
@@ -866,6 +846,11 @@ a { color: inherit; text-decoration: none; }
     animation: section-rise linear both;
     animation-timeline: view();
     animation-range: entry 5% cover 25%;
+  }
+
+  /* Scroll-driven timelines recompute every frame; on phones that stutters the scroll. */
+  @media (max-width: 760px) {
+    .reveal { animation: none; opacity: 1; transform: none; }
   }
 }
 
@@ -915,7 +900,14 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 760px) {
   :root { --nav-height: 60px; }
   html { scroll-padding-top: 0; }
-  .site-header { top: 8px; right: 8px; left: 8px; height: var(--nav-height); grid-template: var(--nav-height) / 1fr var(--nav-height); align-items: stretch; }
+  /* Drop the live blur on mobile: a fixed backdrop-filter repaints every scroll frame and stutters. */
+  .site-header {
+    top: 8px; right: 8px; left: 8px; height: var(--nav-height);
+    grid-template: var(--nav-height) / 1fr var(--nav-height); align-items: stretch;
+    background: rgba(3,5,7,.94);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
   .wordmark { padding: 0 16px; border-right: 1px solid rgba(233,255,249,.12); font-size: 14px; }
   .wordmark > span { margin-right: 8px; font-size: 19px; }
 
@@ -1012,7 +1004,7 @@ a { color: inherit; text-decoration: none; }
   .hero-copy { left: 20px; right: 20px; bottom: 48px; gap: 415px; }
   .hero-statement { font-size: clamp(19px, 5.45vw, 26px); line-height: 1.55; letter-spacing: .03em; }
   .hero-statement span { white-space: normal; }
-  .hero-media { right: 0; bottom: 126px; width: min(112vw, 500px); opacity: .76; }
+  .hero-media { right: 1vw; bottom: 126px; width: min(103vw, 460px); opacity: .76; }
   .terminal-button { width: min(100%, 330px); min-height: 62px; font-size: 14px; }
 
   .experience { min-height: auto; padding: 132px 20px 70px; }
