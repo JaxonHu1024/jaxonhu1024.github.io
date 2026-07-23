@@ -1,0 +1,34 @@
+app/globals.css
+  s_8110710130714b::t_5cb992c1f3b881 78-81,695-702,707-711,714,722-724,1055,1076,1119-1124,1137-1138,1154-1155,1158-1160,1164-1168,1197-1200,1211-1227,1239-1249,1273-1282,1285-1294
+app/page.tsx
+  s_8110710130714b::t_fd91dd44f52900 163,171
+app/scroll-performance.css
+  s_8110710130714b::t_94a202c2ece60b 30,38
+tests/rendered-html.test.mjs
+  s_8110710130714b::t_b966d5185c9f3f 90,92,174-175,180-184
+tests/scroll-performance-contract.test.mjs
+  s_8110710130714b::t_1fb220542bd8d9 43,47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e46770ffcfde713488118053aea8d16a7f154a75",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_8110710130714b": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f13-1a36-7da2-a98f-105efab4977a",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
