@@ -27,9 +27,9 @@
 
 @media (max-width: 1100px) {
   .site-header {
-    background: rgba(3, 5, 7, .94);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+    background: rgba(3, 5, 7, .78);
+    -webkit-backdrop-filter: blur(6px) saturate(112%);
+    backdrop-filter: blur(6px) saturate(112%);
   }
 }
 
