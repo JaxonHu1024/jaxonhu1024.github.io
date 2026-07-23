@@ -32,7 +32,9 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /<title>JAXON — Compiling Intelligence for the Real World<\/title>/i);
   assert.match(html, /COMPILING INTELLIGENCE/);
   assert.match(html, /FOR THE REAL WORLD_/);
-  assert.match(html, /字节跳动/);
+  assert.match(html, /ByteDance/);
+  assert.match(html, /Alibaba International Digital Commerce Group/);
+  assert.match(html, /Damo Academy/);
   assert.match(html, /FOUNDATIONS/);
   assert.match(html, /FOUNDATIONS\.INDEX/);
   for (const id of ["hero", "experience", "research", "foundations", "contact"]) {
@@ -56,7 +58,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /JAXON\s*\/\s*PUBLICATION/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));
   assert.doesNotMatch(html, /road-network-geolocalization\.png/);
-  assert.doesNotMatch(html, /胡嘉星/);
+  assert.doesNotMatch(html, /Jaxon Hu|Hu Jiaxing/i);
   assert.doesNotMatch(html, /JAXON\.EXE/);
 });
 
@@ -74,7 +76,7 @@ test("research titles expose complete readable names", async () => {
   );
 });
 
-test("renders clear portfolio copy with explicit language boundaries", async () => {
+test("renders all public portfolio copy in English", async () => {
   const response = await render();
   const html = await response.text();
 
@@ -82,8 +84,13 @@ test("renders clear portfolio copy with explicit language boundaries", async () 
   assert.match(html, /VIEW EXPERIENCE/);
   assert.match(html, /2025\.02–PRESENT/);
   assert.doesNotMatch(html, /2025\.02–NOW/);
-  assert.match(html, /<h3 lang="zh-CN">字节跳动<\/h3>/);
-  assert.match(html, /<h3 lang="zh-CN">南洋理工大学<\/h3>/);
+  assert.match(html, /<h3>ByteDance<\/h3>/);
+  assert.match(html, /<p>AI Algorithm Engineer<\/p>/);
+  assert.match(html, /<h3>Nanyang Technological University<\/h3>/);
+  assert.match(html, /Master of Science in Computer Control and Automation/);
+  assert.match(html, /<h3>Southeast University<\/h3>/);
+  assert.match(html, /Bachelor of Engineering in Electrical Engineering and Automation/);
+  assert.doesNotMatch(html, /[\u3400-\u9fff]/);
 });
 
 test("orders foundations before research and omits toolchain number labels", async () => {
@@ -115,8 +122,8 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
   assert.match(hero, /hero-processor-field-optimized\.webp/);
   assert.match(hero, /HeroSignalField/);
   assert.doesNotMatch(hero, /[\u4e00-\u9fff]/);
-  assert.doesNotMatch(hero, /字节|阿里巴巴|Road|ResFi|Respiration/i);
-  assert.doesNotMatch(page, /胡嘉星/);
+  assert.doesNotMatch(hero, /Road|ResFi|Respiration/i);
+  assert.doesNotMatch(page, /[\u3400-\u9fff]/);
 });
 
 test("implements ambient motion as accessible code-native layers", async () => {

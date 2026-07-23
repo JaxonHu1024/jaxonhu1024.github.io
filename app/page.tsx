@@ -4,19 +4,19 @@ import { ResearchVisual } from "./components/ResearchVisual";
 
 const experiences = [
   {
-    company: "字节跳动",
+    company: "ByteDance",
     period: "2025.02–PRESENT",
     dateTime: "2025-02",
     current: true,
   },
   {
-    company: "阿里巴巴国际数字商业集团",
+    company: "Alibaba International Digital Commerce Group",
     period: "2023.07–2025.01",
     dateTime: "2023-07/2025-01",
     current: false,
   },
   {
-    company: "阿里巴巴达摩院",
+    company: "Damo Academy",
     period: "2022.06–2023.06",
     dateTime: "2022-06/2023-06",
     current: false,
@@ -95,8 +95,8 @@ export default function Home() {
                   <span className="node-lead" />
                 </div>
                 <div className="experience-copy">
-                  <h3 lang="zh-CN">{item.company}</h3>
-                  <p><span lang="zh-CN">AI 算法工程师</span> / AI Algorithm Engineer</p>
+                  <h3>{item.company}</h3>
+                  <p>AI Algorithm Engineer</p>
                 </div>
                 <time className="experience-date" dateTime={item.dateTime}>
                   {item.period}
@@ -135,16 +135,16 @@ export default function Home() {
                   {/* Static export serves the local SVG directly; Next image optimizer is not used. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="education-crest" src="/assets/logo-ntu.svg" alt="" aria-hidden="true" />
-                  <h3 lang="zh-CN">南洋理工大学</h3>
-                  <p lang="zh-CN">计算机控制及其自动化，硕士</p>
+                  <h3>Nanyang Technological University</h3>
+                  <p>Master of Science in Computer Control and Automation</p>
                   <time dateTime="2020-12/2022-03">2020.12–2022.03</time>
                 </article>
                 <article className="education-item has-crest">
                   <span className="education-node" aria-hidden="true" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="education-crest" src="/assets/logo-seu-color.svg" alt="" aria-hidden="true" />
-                  <h3 lang="zh-CN">东南大学</h3>
-                  <p lang="zh-CN">电气工程及其自动化，学士</p>
+                  <h3>Southeast University</h3>
+                  <p>Bachelor of Engineering in Electrical Engineering and Automation</p>
                   <time dateTime="2016-09/2020-06">2016.09–2020.06</time>
                 </article>
               </div>
