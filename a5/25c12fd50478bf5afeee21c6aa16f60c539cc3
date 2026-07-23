@@ -1,0 +1,28 @@
+app/scroll-performance.css
+  s_bdd933bd40cc68::t_da89920fa6760a 30-32
+tests/scroll-performance-contract.test.mjs
+  s_bdd933bd40cc68::t_54c411b21f0ff1 35-36,40-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a525c12fd50478bf5afeee21c6aa16f60c539cc3",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_bdd933bd40cc68": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8ea9-3ec0-7dd1-b46e-2388fc41be66",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
