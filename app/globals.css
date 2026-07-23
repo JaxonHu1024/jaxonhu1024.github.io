@@ -931,21 +931,22 @@ a { color: inherit; text-decoration: none; }
   .site-header.is-menu-open .system-mark-dots { transform: rotate(45deg) scale(.86); }
   .site-header.is-menu-open .system-mark-dots i { background: var(--mint); }
 
-  /* The viewport-height panel prevents hero content from colliding with open navigation. */
+  /* Panel height hugs its links; max-height only guards against overflow. */
   .nav-scroll {
     position: absolute;
     top: calc(100% + 6px);
     right: 0;
     left: 0;
-    height: calc(100dvh - 82px);
+    max-height: calc(100dvh - 82px);
     display: grid;
     grid-template-columns: 1fr;
     align-content: start;
+    perspective: 820px;
+    perspective-origin: top center;
     overflow-x: hidden;
     overflow-y: auto;
     border: 1px solid transparent;
     background: var(--terminal);
-    backdrop-filter: blur(16px);
     clip-path: inset(0 0 100% 0);
     opacity: 0;
     pointer-events: none;
@@ -972,7 +973,7 @@ a { color: inherit; text-decoration: none; }
     transition-delay: 0s;
   }
   .nav-scroll a {
-    --menu-delay: 45ms;
+    --menu-delay: 0ms;
     justify-content: flex-start;
     place-items: center start;
     min-height: 56px;
@@ -982,21 +983,23 @@ a { color: inherit; text-decoration: none; }
     font-size: 13px;
     letter-spacing: .16em;
     opacity: 0;
-    transform: translateY(-8px);
+    transform-origin: top center;
+    transform: rotateX(-92deg);
+    backface-visibility: hidden;
     transition:
       color .2s ease,
       background .2s ease,
-      opacity .18s ease,
-      transform .26s cubic-bezier(.22, 1, .36, 1);
+      opacity .34s ease,
+      transform .62s cubic-bezier(.34, 1.56, .64, 1);
     transition-delay: 0s;
     will-change: opacity, transform;
   }
-  .nav-scroll a:nth-child(2) { --menu-delay: 78ms; }
-  .nav-scroll a:nth-child(3) { --menu-delay: 111ms; }
-  .nav-scroll a:nth-child(4) { --menu-delay: 144ms; }
+  .nav-scroll a:nth-child(2) { --menu-delay: 120ms; }
+  .nav-scroll a:nth-child(3) { --menu-delay: 240ms; }
+  .nav-scroll a:nth-child(4) { --menu-delay: 360ms; }
   .site-header.is-menu-open .nav-scroll a {
     opacity: 1;
-    transform: translateY(0);
+    transform: rotateX(0deg);
     transition-delay: 0s, 0s, var(--menu-delay), var(--menu-delay);
   }
   .nav-scroll a:last-child { border-bottom: 0; }
@@ -1023,7 +1026,7 @@ a { color: inherit; text-decoration: none; }
   .timeline-node::after { inset: 9px; }
   .node-lead { display: none; }
   .experience-copy { grid-column: 2; padding-left: 0; }
-  .experience-copy h3, .experience-row.is-current .experience-copy h3 { font-size: clamp(28px, 8.8vw, 39px); line-height: 1.2; }
+  .experience-copy h3, .experience-row.is-current .experience-copy h3 { font-size: clamp(22px, 6.4vw, 28px); line-height: 1.22; }
   .experience-copy p { margin-top: 14px; font-size: 13px; line-height: 1.75; }
   .experience-date { grid-column: 2; justify-self: start; margin-top: 18px; font-size: 16px; }
   .process-state { top: 8px; right: 0; font-size: 10px; }
@@ -1050,7 +1053,7 @@ a { color: inherit; text-decoration: none; }
     align-items: start;
   }
   .education-node { left: -58px; }
-  .education-item h3 { grid-column: 1; grid-row: 1; align-self: center; margin-bottom: 0; font-size: clamp(27px, 7.5vw, 31px); }
+  .education-item h3 { grid-column: 1; grid-row: 1; align-self: center; margin-bottom: 0; font-size: clamp(21px, 5.6vw, 26px); letter-spacing: .03em; }
   .education-item p { grid-column: 1 / -1; grid-row: 2; margin-top: 10px; }
   .education-item time { grid-column: 1 / -1; grid-row: 3; }
   .education-item p, .education-item time { font-size: 15px; line-height: 1.65; }
