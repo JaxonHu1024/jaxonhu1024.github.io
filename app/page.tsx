@@ -160,7 +160,7 @@ export default function Home() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="education-crest" src="/assets/logo-ntu.svg" alt="" aria-hidden="true" />
                   <h3>Nanyang Technological University</h3>
-                  <p>Master of Science in Computer Control and Automation</p>
+                  <p>MSc in Computer Control and Automation</p>
                   <time dateTime="2020-12/2022-03">2020.12–2022.03</time>
                 </article>
                 <article className="education-item has-crest">
@@ -168,7 +168,7 @@ export default function Home() {
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img className="education-crest" src="/assets/logo-seu-color.svg" alt="" aria-hidden="true" />
                   <h3>Southeast University</h3>
-                  <p>Bachelor of Engineering in Electrical Engineering and Automation</p>
+                  <p>BEng in Electrical Engineering and Automation</p>
                   <time dateTime="2016-09/2020-06">2016.09–2020.06</time>
                 </article>
               </div>

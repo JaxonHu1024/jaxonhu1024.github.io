@@ -27,7 +27,7 @@
 
 @media (max-width: 1100px) {
   .site-header {
-    background: rgba(3, 5, 7, .78);
+    background: rgba(3, 5, 7, .68);
     -webkit-backdrop-filter: blur(6px) saturate(112%);
     backdrop-filter: blur(6px) saturate(112%);
   }
@@ -35,7 +35,7 @@
 
 @media (max-width: 760px) {
   .site-header {
-    background: rgba(3, 5, 7, .64);
+    background: rgba(3, 5, 7, .54);
     -webkit-backdrop-filter: blur(10px) saturate(120%);
     backdrop-filter: blur(10px) saturate(120%);
   }

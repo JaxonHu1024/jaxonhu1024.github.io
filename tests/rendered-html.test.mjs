@@ -87,9 +87,9 @@ test("renders all public portfolio copy in English", async () => {
   assert.match(html, /<h3>ByteDance<\/h3>/);
   assert.match(html, /<p>AI Algorithm Engineer<\/p>/);
   assert.match(html, /<h3>Nanyang Technological University<\/h3>/);
-  assert.match(html, /Master of Science in Computer Control and Automation/);
+  assert.match(html, /<p>MSc in Computer Control and Automation<\/p>/);
   assert.match(html, /<h3>Southeast University<\/h3>/);
-  assert.match(html, /Bachelor of Engineering in Electrical Engineering and Automation/);
+  assert.match(html, /<p>BEng in Electrical Engineering and Automation<\/p>/);
   assert.doesNotMatch(html, /[\u3400-\u9fff]/);
 });
 
@@ -171,10 +171,17 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(css, /\.hero-media \{ right: [^;]+; bottom: 126px; width: min\([^)]+\);/);
+  assert.match(css, /\.education-item \{\s*position: relative;\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 96px;/);
+  assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1 \/ span 3;/);
   assert.match(css, /\.education-item \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 48px;/);
   assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
   assert.match(css, /clip-path: inset\(0 0 100% 0\)/);
   assert.match(css, /max-height: calc\(100dvh - 82px\)/);
+  assert.match(css, /visibility 0s linear \.54s/);
+  assert.match(css, /--menu-open-delay: 0ms;/);
+  assert.match(css, /--menu-close-delay: 150ms;/);
+  assert.match(css, /opacity \.22s ease var\(--menu-close-delay\)/);
+  assert.match(css, /opacity \.34s ease var\(--menu-open-delay\)/);
   assert.match(css, /\.site-header\.is-menu-open \.nav-scroll a \{/);
   assert.doesNotMatch(css, /transition:\s*max-height|max-height:\s*320px/);
   assert.match(css, /\.experience-copy h3 \{/);
