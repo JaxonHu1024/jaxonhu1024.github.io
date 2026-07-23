@@ -2,24 +2,22 @@ import { Navigation } from "./components/Navigation";
 import { HeroSignalField } from "./components/HeroSignalField";
 import { ResearchVisual } from "./components/ResearchVisual";
 
-const experiences = [
+const currentExperience = {
+  company: "ByteDance",
+  period: "2025.02–PRESENT",
+  dateTime: "2025-02",
+};
+
+const alibabaExperiences = [
   {
-    company: "ByteDance",
-    period: "2025.02–PRESENT",
-    dateTime: "2025-02",
-    current: true,
-  },
-  {
-    company: "Alibaba International Digital Commerce Group",
+    organization: "International Digital Commerce Group",
     period: "2023.07–2025.01",
     dateTime: "2023-07/2025-01",
-    current: false,
   },
   {
-    company: "Damo Academy",
+    organization: "Damo Academy",
     period: "2022.06–2023.06",
     dateTime: "2022-06/2023-06",
-    current: false,
   },
 ];
 
@@ -88,22 +86,48 @@ export default function Home() {
             <span className="square-end" aria-hidden="true" />
           </h2>
           <div className="experience-log reveal">
-            {experiences.map((item) => (
-              <article className={`experience-row${item.current ? " is-current" : ""}`} key={item.company}>
-                <div className="timeline-cell" aria-hidden="true">
-                  <span className="timeline-node" />
-                  <span className="node-lead" />
+            <article className="experience-row is-current">
+              <div className="timeline-cell" aria-hidden="true">
+                <span className="timeline-node" />
+                <span className="node-lead" />
+              </div>
+              <div className="experience-copy">
+                <div className="experience-entry-heading">
+                  <div className="experience-entry-copy">
+                    <div className="experience-title-line">
+                      <h3>{currentExperience.company}</h3>
+                      <span className="experience-status">CURRENT</span>
+                    </div>
+                    <p>AI Algorithm Engineer</p>
+                  </div>
+                  <time className="experience-date" dateTime={currentExperience.dateTime}>
+                    {currentExperience.period}
+                  </time>
                 </div>
-                <div className="experience-copy">
-                  <h3>{item.company}</h3>
-                  <p>AI Algorithm Engineer</p>
+              </div>
+            </article>
+
+            <section className="experience-group" aria-labelledby="alibaba-group-title">
+              <header className="experience-group-header">
+                <span className="experience-group-branch" aria-hidden="true" />
+                <div className="experience-group-heading">
+                  <h3 id="alibaba-group-title">Alibaba</h3>
                 </div>
-                <time className="experience-date" dateTime={item.dateTime}>
-                  {item.period}
-                </time>
-                {item.current ? <span className="process-state">PROCESS ACTIVE</span> : null}
-              </article>
-            ))}
+              </header>
+              <div className="experience-subentries">
+                {alibabaExperiences.map((item) => (
+                  <article className="experience-subentry" key={item.organization}>
+                    <div className="experience-subentry-copy">
+                      <h4>{item.organization}</h4>
+                      <p>AI Algorithm Engineer</p>
+                    </div>
+                    <time className="experience-date" dateTime={item.dateTime}>
+                      {item.period}
+                    </time>
+                  </article>
+                ))}
+              </div>
+            </section>
           </div>
           <p className="section-footer reveal" aria-hidden="true">
             <span className="section-footer-index"><b>01</b> {"// EXPERIENCE LAYER"}</span>

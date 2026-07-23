@@ -33,7 +33,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /COMPILING INTELLIGENCE/);
   assert.match(html, /FOR THE REAL WORLD_/);
   assert.match(html, /ByteDance/);
-  assert.match(html, /Alibaba International Digital Commerce Group/);
+  assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(html, /Damo Academy/);
   assert.match(html, /FOUNDATIONS/);
   assert.match(html, /FOUNDATIONS\.INDEX/);
@@ -91,6 +91,32 @@ test("renders all public portfolio copy in English", async () => {
   assert.match(html, /<h3>Southeast University<\/h3>/);
   assert.match(html, /Bachelor of Engineering in Electrical Engineering and Automation/);
   assert.doesNotMatch(html, /[\u3400-\u9fff]/);
+});
+
+test("groups both Alibaba organizations under one company heading", async () => {
+  const response = await render();
+  const html = await response.text();
+
+  assert.match(
+    html,
+    /<section class="experience-group" aria-labelledby="alibaba-group-title">/,
+  );
+  assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
+  assert.match(
+    html,
+    /<article class="experience-subentry"><div class="experience-subentry-copy"><h4>International Digital Commerce Group<\/h4>/,
+  );
+  assert.match(
+    html,
+    /<article class="experience-subentry"><div class="experience-subentry-copy"><h4>Damo Academy<\/h4>/,
+  );
+  assert.ok(
+    html.indexOf("International Digital Commerce Group")
+      < html.indexOf("Damo Academy"),
+  );
+  assert.doesNotMatch(html, /Alibaba International Digital Commerce Group/);
+  assert.doesNotMatch(html, /ORGANIZATION GROUP|02 UNITS|UNIT 0[12]/);
+  assert.doesNotMatch(html, /PROCESS ACTIVE/);
 });
 
 test("orders foundations before research and omits toolchain number labels", async () => {
