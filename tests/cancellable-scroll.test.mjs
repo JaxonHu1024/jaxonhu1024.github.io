@@ -110,3 +110,14 @@ test("section navigation moves the sequential focus origin without forcing anoth
 
   assert.deepEqual(harness.focusCalls, [{ preventScroll: true }]);
 });
+
+test("a new caller cancels an active section navigation on the same window", () => {
+  const harness = createScrollHarness();
+
+  startCancellableScroll(harness.window, harness.target, "#experience");
+  startCancellableScroll(harness.window, harness.target, "#research");
+
+  assert.deepEqual(harness.historyEntries, ["#experience", "#research"]);
+  assert.equal(harness.cancelledFrames.length, 1);
+  assert.equal(harness.frames.size, 1);
+});

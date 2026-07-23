@@ -1,0 +1,30 @@
+/*
+ * Runtime performance overrides are kept separate from the visual system so
+ * they remain easy to audit against measured scroll regressions.
+ */
+
+.hero-media img {
+  animation-play-state: paused;
+}
+
+.hero-media[data-hero-visible="true"] img {
+  animation-play-state: running;
+}
+
+@supports (animation-timeline: view()) {
+  @media (max-width: 1100px) {
+    .reveal {
+      animation: none;
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@media (max-width: 1100px) {
+  .site-header {
+    background: rgba(3, 5, 7, .94);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

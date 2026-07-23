@@ -19,6 +19,7 @@ type ScrollOptions = {
 
 const passiveCancelOptions = { capture: true, passive: true } as const;
 const cancelOptions = { capture: true } as const;
+const activeScrolls = new WeakMap<object, () => void>();
 
 export function startCancellableScroll(
   window: ScrollWindow,
@@ -26,6 +27,8 @@ export function startCancellableScroll(
   hash: string,
   { duration = 640 }: ScrollOptions = {},
 ) {
+  activeScrolls.get(window)?.();
+
   const startY = window.scrollY;
   const targetY = startY + target.getBoundingClientRect().top;
   const distance = targetY - startY;
@@ -46,6 +49,7 @@ export function startCancellableScroll(
     window.removeEventListener("wheel", cancel, passiveCancelOptions);
     window.removeEventListener("touchstart", cancel, passiveCancelOptions);
     window.removeEventListener("keydown", cancel, cancelOptions);
+    if (activeScrolls.get(window) === cancel) activeScrolls.delete(window);
   };
 
   const cancel = () => {
@@ -73,6 +77,7 @@ export function startCancellableScroll(
   window.addEventListener("wheel", cancel, passiveCancelOptions);
   window.addEventListener("touchstart", cancel, passiveCancelOptions);
   window.addEventListener("keydown", cancel, cancelOptions);
+  activeScrolls.set(window, cancel);
   animationFrame = window.requestAnimationFrame(animate);
 
   return cancel;
