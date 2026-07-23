@@ -1,0 +1,26 @@
+tests/rendered-html.test.mjs
+  s_bdd933bd40cc68::t_104a7e5c178b80 36,96-121
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "783d71385b54c10206f9ae2920b0d16ffb0bd1ec",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_bdd933bd40cc68": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8ea9-3ec0-7dd1-b46e-2388fc41be66",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
