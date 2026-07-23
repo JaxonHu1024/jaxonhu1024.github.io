@@ -1,7 +1,11 @@
 /*
- * Runtime performance overrides are kept separate from the visual system so
- * they remain easy to audit against measured scroll regressions.
+ * Runtime viewport overrides are kept separate from the main visual system so
+ * they remain easy to audit against measured interaction regressions.
  */
+
+.hero-frame {
+  display: none;
+}
 
 .hero-media img {
   animation-play-state: paused;
@@ -26,5 +30,13 @@
     background: rgba(3, 5, 7, .94);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    background: rgba(3, 5, 7, .64);
+    -webkit-backdrop-filter: blur(10px) saturate(120%);
+    backdrop-filter: blur(10px) saturate(120%);
   }
 }
