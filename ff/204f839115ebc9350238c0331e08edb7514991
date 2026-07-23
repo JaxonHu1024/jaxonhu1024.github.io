@@ -1,0 +1,44 @@
+app/components/HeroSignalField.tsx
+  s_07623a3ab5039f::t_ab60f88184879d 132-133,135-173
+  s_07623a3ab5039f::t_25e594368e2858 130-131
+  s_07623a3ab5039f::t_4e87ed7a644b1d 19,25,31,37,43
+tests/rendered-html.test.mjs
+  s_07623a3ab5039f::t_ba1d405b7345f5 144
+  s_07623a3ab5039f::t_8beadb557ca08c 140
+  s_07623a3ab5039f::t_e238afb547436d 115
+app/page.tsx
+  s_07623a3ab5039f::t_3ad20f7c61523e 74
+app/components/Navigation.tsx
+  s_07623a3ab5039f::t_4111e72608c539 99
+  s_07623a3ab5039f::t_9e78fd619e672a 80-93
+  s_07623a3ab5039f::t_bb6dc7fcf1a776 19
+  s_07623a3ab5039f::t_362d20c6ecaf38 94
+app/globals.css
+  s_07623a3ab5039f::t_f64067a5f76847 903-910
+  s_07623a3ab5039f::t_d2e8bc03583d8b 850-854
+  s_07623a3ab5039f::t_c1b971188721c3 1007
+  s_07623a3ab5039f::t_0440de4d31e154 280-281,290-291,303
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ff204f839115ebc9350238c0331e08edb7514991",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_07623a3ab5039f": {
+      "agent_id": {
+        "tool": "trae",
+        "id": "6a617ef3f027a7d0e69e2c0c",
+        "model": "openrouter-3o__max"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
