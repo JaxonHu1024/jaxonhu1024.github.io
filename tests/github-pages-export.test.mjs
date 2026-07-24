@@ -22,7 +22,7 @@ test("exports a complete static GitHub Pages artifact", async () => {
 
   const html = await readFile(resolve(output, "index.html"), "utf8");
   const notFoundHtml = await readFile(resolve(output, "404.html"), "utf8");
-  assert.match(html, /<title>JAXON — Compiling Intelligence for the Real World<\/title>/i);
+  assert.match(html, /<title>Jaxon \| AI Engineer<\/title>/);
   assert.match(html, /Road-Network-Based/);
   assert.match(html, /ResFi:/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));

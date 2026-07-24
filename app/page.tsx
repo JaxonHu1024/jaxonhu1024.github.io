@@ -15,7 +15,7 @@ const alibabaExperiences = [
     dateTime: "2023-07/2025-01",
   },
   {
-    organization: "Damo Academy",
+    organization: "DAMO Academy",
     period: "2022.06–2023.06",
     dateTime: "2022-06/2023-06",
   },
@@ -30,7 +30,6 @@ const papers = [
     ],
     venue: "IEEE 17th International Conference on Control and Automation",
     year: "2022",
-    doi: "10.1109/ICCA54724.2022.9831898",
     href: "https://ieeexplore.ieee.org/document/9831898",
     visual: "wave" as const,
   },
@@ -39,7 +38,6 @@ const papers = [
     title: ["Road-Network-Based", "Fast Geolocalization"],
     venue: "IEEE Transactions on Geoscience and Remote Sensing",
     year: "2021",
-    doi: "10.1109/TGRS.2020.3011034",
     href: "https://ieeexplore.ieee.org/document/9170807",
     visual: "road" as const,
   },
@@ -62,7 +60,6 @@ export default function Home() {
             <p className="hero-statement">
               <span>COMPILING INTELLIGENCE</span>
               <span>FOR THE REAL WORLD_</span>
-              <small className="hero-role">AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH</small>
             </p>
             <a className="terminal-button hero-cta" href="#experience">
               <span>VIEW EXPERIENCE</span>
@@ -97,11 +94,8 @@ export default function Home() {
               <div className="experience-copy">
                 <div className="experience-entry-heading">
                   <div className="experience-entry-copy">
-                    <div className="experience-title-line">
-                      <h3>{currentExperience.company}</h3>
-                      <span className="experience-status">CURRENT</span>
-                    </div>
-                    <p>AI Algorithm Engineer</p>
+                    <h3>{currentExperience.company}</h3>
+                    <p>Senior AI Engineer</p>
                   </div>
                   <time className="experience-date" dateTime={currentExperience.dateTime}>
                     {currentExperience.period}
@@ -115,7 +109,7 @@ export default function Home() {
                 <span className="experience-group-branch" aria-hidden="true" />
                 <div className="experience-group-heading">
                   <h3 id="alibaba-group-title">Alibaba</h3>
-                  <p>AI Algorithm Engineer</p>
+                  <p>Machine Learning Engineer</p>
                 </div>
               </header>
               <div className="experience-subentries">
@@ -184,16 +178,16 @@ export default function Home() {
               </div>
               <dl className="toolchain-list" aria-label="Technical toolchain">
                 <div className="toolchain-module">
+                  <dt>AI SPECIALTIES</dt>
+                  <dd><span>AI Agents</span><span>AIGC</span><span>LLMs</span><span>VLMs</span><span>Autonomous Driving</span></dd>
+                </div>
+                <div className="toolchain-module">
                   <dt>LANGUAGES</dt>
                   <dd><span>Python</span><span>C++</span><span>SQL</span></dd>
                 </div>
                 <div className="toolchain-module">
-                  <dt>FRAMEWORK</dt>
-                  <dd><span>PyTorch</span></dd>
-                </div>
-                <div className="toolchain-module">
-                  <dt>SYSTEMS</dt>
-                  <dd><span>Linux</span><span>Docker</span><span>MySQL</span></dd>
+                  <dt>PLATFORM</dt>
+                  <dd><span>Linux</span><span>Docker</span></dd>
                 </div>
               </dl>
             </div>
@@ -226,10 +220,7 @@ export default function Home() {
                     ))}
                   </h3>
                   <p className="paper-venue">{paper.venue}</p>
-                  <p className="paper-meta">
-                    <span>{paper.year}</span>
-                    <span>DOI {paper.doi}</span>
-                  </p>
+                  <time className="paper-meta" dateTime={paper.year}>{paper.year}</time>
                   <a className="terminal-button paper-link" href={paper.href} target="_blank" rel="noreferrer">
                     <span>VIEW PAPER</span>
                     <span className="button-arrow" aria-hidden="true">↗</span>
@@ -256,9 +247,6 @@ export default function Home() {
           <div className="contact-trace trace-in" aria-hidden="true">
             <i /><i /><i /><i />
           </div>
-          <div className="contact-trace trace-out" aria-hidden="true">
-            <i /><i /><i /><i /><span>➤</span>
-          </div>
 
           <div className="contact-inner">
             <h2 className="section-kicker reveal" id="contact-title">
@@ -274,7 +262,7 @@ export default function Home() {
                 <span>SIGNAL.</span>
               </h2>
               <p className="contact-note">
-                For research discussion or technical collaboration, use any channel below.
+                For project collaborations, technical consulting, or career opportunities, feel free to reach out.
               </p>
             </header>
 

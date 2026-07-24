@@ -12,13 +12,36 @@ const links = [
   ["contact", "CONTACT"],
 ] as const;
 
+const sectionIds = ["hero", ...links.map(([id]) => id)];
+
 export function Navigation() {
   const [active, setActive] = useState("hero");
   const [menuOpen, setMenuOpen] = useState(false);
   const cancelScrollRef = useRef<() => void>(() => undefined);
+  const navigationTargetRef = useRef<string | null>(null);
+  const navigationRunRef = useRef(0);
+  const mountedRef = useRef(true);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstNavLinkRef = useRef<HTMLAnchorElement>(null);
+
+  const syncActiveFromViewport = useCallback(() => {
+    if (navigationTargetRef.current) return;
+
+    const marker = window.innerHeight * 0.3;
+    let current = "hero";
+
+    for (const id of sectionIds) {
+      const section = document.getElementById(id);
+      if (!section) continue;
+
+      const rect = section.getBoundingClientRect();
+      if (rect.top <= marker) current = id;
+      if (rect.top <= marker && rect.bottom > marker) break;
+    }
+
+    setActive(current);
+  }, []);
 
   const navigateToSection = useCallback((event: ReactMouseEvent<HTMLAnchorElement>, id: string) => {
     if (
@@ -36,30 +59,31 @@ export function Navigation() {
     if (!target) return;
 
     event.preventDefault();
+    const run = navigationRunRef.current + 1;
+    navigationRunRef.current = run;
+    cancelScrollRef.current();
+    navigationTargetRef.current = id;
     setActive(id);
     setMenuOpen(false);
-    cancelScrollRef.current();
-    cancelScrollRef.current = startCancellableScroll(window, target, `#${id}`);
-  }, []);
+    cancelScrollRef.current = startCancellableScroll(window, target, `#${id}`, {
+      onSettled: (result) => {
+        if (!mountedRef.current || navigationRunRef.current !== run) return;
+
+        navigationTargetRef.current = null;
+        if (result === "finished") {
+          setActive(id);
+          return;
+        }
+        syncActiveFromViewport();
+      },
+    });
+  }, [syncActiveFromViewport]);
 
   useEffect(() => {
-    const sections = ["hero", ...links.map(([id]) => id)]
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => Boolean(section));
-
     let frame = 0;
     const updateActiveSection = () => {
       frame = 0;
-      const marker = window.innerHeight * 0.3;
-      let current = sections[0]?.id ?? "hero";
-
-      for (const section of sections) {
-        const rect = section.getBoundingClientRect();
-        if (rect.top <= marker) current = section.id;
-        if (rect.top <= marker && rect.bottom > marker) break;
-      }
-
-      setActive(current);
+      syncActiveFromViewport();
     };
     const scheduleUpdate = () => {
       if (frame) return;
@@ -75,9 +99,16 @@ export function Navigation() {
       window.removeEventListener("resize", scheduleUpdate);
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [syncActiveFromViewport]);
 
-  useEffect(() => () => cancelScrollRef.current(), []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      navigationRunRef.current += 1;
+      cancelScrollRef.current();
+    };
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -112,12 +143,19 @@ export function Navigation() {
     return () => window.cancelAnimationFrame(frame);
   }, [menuOpen]);
 
+  const activeIndex = links.findIndex(([id]) => active === id);
+
   return (
     <header ref={headerRef} className={`site-header${menuOpen ? " is-menu-open" : ""}`}>
       <a className="wordmark" href="#hero" aria-label="Jaxon, back to top" onClick={(event) => navigateToSection(event, "hero")}>
         <span aria-hidden="true">›_</span> JAXON
       </a>
-      <nav className="nav-scroll" id="primary-navigation" aria-label="Primary navigation">
+      <nav
+        className="nav-scroll"
+        id="primary-navigation"
+        aria-label="Primary navigation"
+        data-active-index={activeIndex}
+      >
         {links.map(([id, label], index) => (
           <a
             ref={index === 0 ? firstNavLinkRef : undefined}
@@ -130,6 +168,7 @@ export function Navigation() {
             {label}
           </a>
         ))}
+        <span className="nav-active-indicator" aria-hidden="true" />
       </nav>
       <span className="system-mark system-mark-static" aria-hidden="true">
         <span className="system-mark-dots"><i /><i /><i /><i /></span>

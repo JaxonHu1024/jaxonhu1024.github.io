@@ -29,19 +29,22 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>JAXON — Compiling Intelligence for the Real World<\/title>/i);
+  assert.match(html, /<title>Jaxon \| AI Engineer<\/title>/);
   assert.match(
     html,
-    /Portfolio of Jaxon, an AI Algorithm Engineer, featuring selected experience, education, and research publications\./,
+    /AI Engineer specializing in AI agents, AIGC, VLMs, LLMs, and autonomous driving\./,
   );
+  assert.match(html, /property="og:title" content="Jaxon \| AI Engineer"/);
+  assert.match(html, /name="twitter:title" content="Jaxon \| AI Engineer"/);
+  assert.match(html, /property="og:image:alt" content="Jaxon \| AI Engineer"/);
   assert.match(html, /rel="canonical" href="http:\/\/localhost:3000\/"/);
   assert.match(html, /property="og:url" content="http:\/\/localhost:3000"/);
   assert.match(html, /COMPILING INTELLIGENCE/);
   assert.match(html, /FOR THE REAL WORLD_/);
-  assert.match(html, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
+  assert.doesNotMatch(html, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
   assert.match(html, /ByteDance/);
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
-  assert.match(html, /Damo Academy/);
+  assert.match(html, /DAMO Academy/);
   assert.match(html, /FOUNDATIONS/);
   assert.match(html, /FOUNDATIONS\.INDEX/);
   for (const id of ["hero", "experience", "research", "foundations", "contact"]) {
@@ -57,11 +60,13 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /https:\/\/github\.com\/JaxonHu1024/);
   assert.match(html, /https:\/\/x\.com\/HuEnzo33232/);
   assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jaxon-hu-10977a221/);
+  assert.doesNotMatch(html, /trace-out|>➤</);
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9170807/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9831898/);
   assert.match(html, /PUBLICATION\s*(?:<!-- -->)?\s*01/);
   assert.match(html, /PUBLICATION\s*(?:<!-- -->)?\s*02/);
+  assert.doesNotMatch(html, /\bDOI\s+10\./i);
   assert.doesNotMatch(html, /JAXON\s*\/\s*PUBLICATION/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));
   assert.doesNotMatch(html, /road-network-geolocalization\.png/);
@@ -118,12 +123,19 @@ test("renders all public portfolio copy in English", async () => {
   assert.match(html, /2025\.02–PRESENT/);
   assert.doesNotMatch(html, /2025\.02–NOW/);
   assert.match(html, /<h3>ByteDance<\/h3>/);
-  assert.match(html, /<p>AI Algorithm Engineer<\/p>/);
-  assert.equal(page.match(/<p>AI Algorithm Engineer<\/p>/g)?.length, 2);
+  assert.match(html, /<p>Senior AI Engineer<\/p>/);
+  assert.match(html, /<p>Machine Learning Engineer<\/p>/);
+  assert.doesNotMatch(page, /<p>AI Algorithm Engineer<\/p>/);
+  assert.doesNotMatch(html, /experience-status|>CURRENT</);
   assert.match(html, /<h3>Nanyang Technological University<\/h3>/);
   assert.match(html, /<p>MSc in Computer Control and Automation<\/p>/);
   assert.match(html, /<h3>Southeast University<\/h3>/);
   assert.match(html, /<p>BEng in Electrical Engineering and Automation<\/p>/);
+  assert.match(
+    html,
+    /For project collaborations, technical consulting, or career opportunities, feel free to reach out\./,
+  );
+  assert.doesNotMatch(html, /For research discussion or technical collaboration/);
   assert.doesNotMatch(html, /[\u3400-\u9fff]/);
 });
 
@@ -138,7 +150,7 @@ test("groups both Alibaba organizations under one company heading", async () => 
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(
     html,
-    /<div class="experience-group-heading"><h3 id="alibaba-group-title">Alibaba<\/h3><p>AI Algorithm Engineer<\/p><\/div>/,
+    /<div class="experience-group-heading"><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div>/,
   );
   assert.match(
     html,
@@ -146,22 +158,43 @@ test("groups both Alibaba organizations under one company heading", async () => 
   );
   assert.match(
     html,
-    /<article class="experience-subentry"><div class="experience-subentry-copy"><h4>Damo Academy<\/h4>/,
+    /<article class="experience-subentry"><div class="experience-subentry-copy"><h4>DAMO Academy<\/h4>/,
   );
   assert.ok(
     html.indexOf("International Digital Commerce Group")
-      < html.indexOf("Damo Academy"),
+      < html.indexOf("DAMO Academy"),
   );
+  assert.doesNotMatch(html, />Damo Academy</);
   assert.doesNotMatch(html, /Alibaba International Digital Commerce Group/);
   assert.doesNotMatch(html, /ORGANIZATION GROUP|02 UNITS|UNIT 0[12]/);
   assert.doesNotMatch(html, /PROCESS ACTIVE/);
   assert.doesNotMatch(
     html,
-    /<div class="experience-subentry-copy"><h4>[^<]+<\/h4><p>AI Algorithm Engineer<\/p>/,
+    /<div class="experience-subentry-copy"><h4>[^<]+<\/h4><p>/,
   );
 });
 
-test("orders foundations before research and omits toolchain number labels", async () => {
+test("uses one experience type scale and contrast—not opacity—for historical roles", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const sharedCompanyRule = css.match(
+    /\.experience-copy h3,\s*\.experience-group-heading h3\s*\{[^}]+\}/s,
+  )?.[0] ?? "";
+  const historicalCompanyRule = [
+    ...css.matchAll(/\.experience-group-heading h3\s*\{[^}]+\}/gs),
+  ].map(([rule]) => rule).find((rule) => rule.includes("rgba(233,255,249,.82)")) ?? "";
+  const historicalDateRule = css.match(
+    /\.experience-subentry \.experience-date\s*\{[^}]+\}/s,
+  )?.[0] ?? "";
+
+  assert.match(sharedCompanyRule, /font-size:\s*clamp\(30px,\s*2\.6vw,\s*42px\)/);
+  assert.match(sharedCompanyRule, /line-height:\s*1\.08/);
+  assert.match(historicalCompanyRule, /color:\s*rgba\(233,255,249,\.82\)/);
+  assert.match(historicalDateRule, /color:\s*rgba\(191,253,241,\.72\)/);
+  assert.doesNotMatch(historicalDateRule, /font-size|line-height|letter-spacing/);
+  assert.doesNotMatch(css, /\.experience-group\s*\{[^}]*opacity:/s);
+});
+
+test("orders foundations before research and groups the technical profile clearly", async () => {
   const response = await render();
   const html = await response.text();
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
@@ -173,6 +206,16 @@ test("orders foundations before research and omits toolchain number labels", asy
   );
   assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ FOUNDATION LAYER/);
   assert.match(html, /<b>03<\/b>\s*(?:<!-- -->)?\s*\/\/ RESEARCH LAYER/);
+  for (const group of ["AI SPECIALTIES", "LANGUAGES", "PLATFORM"]) {
+    assert.match(html, new RegExp(`<dt>${group.replace("/", "\\/")}<\\/dt>`));
+  }
+  for (const skill of ["Python", "C++", "SQL", "AI Agents", "AIGC", "LLMs", "VLMs", "Autonomous Driving", "Linux", "Docker"]) {
+    assert.ok(html.includes(`<span>${skill}</span>`), `missing toolchain skill: ${skill}`);
+  }
+  assert.ok(html.indexOf("<dt>AI SPECIALTIES</dt>") < html.indexOf("<dt>LANGUAGES</dt>"));
+  assert.ok(html.indexOf("<dt>LANGUAGES</dt>") < html.indexOf("<dt>PLATFORM</dt>"));
+  assert.doesNotMatch(html, /AI FOCUS|ML FRAMEWORK|PLATFORM \/ DATA|<span>PyTorch<\/span>|<span>MySQL<\/span>/);
+  assert.match(css, /@media \(min-width: 1101px\)\s*\{\s*\.toolchain-list \{ margin-top: 58px; \}/);
   assert.doesNotMatch(html, /class="toolchain-module"[^>]*data-index=/);
   assert.doesNotMatch(css, /content:\s*attr\(data-index\)/);
 });
@@ -187,7 +230,7 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
   assert.match(hero, /JAXON/);
   assert.match(hero, /COMPILING INTELLIGENCE/);
   assert.match(hero, /FOR THE REAL WORLD_/);
-  assert.match(hero, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
+  assert.doesNotMatch(hero, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH|hero-role/);
   assert.match(hero, /hero-processor-field-optimized\.webp/);
   assert.match(hero, /HeroSignalField/);
   assert.doesNotMatch(hero, /[\u4e00-\u9fff]/);
@@ -215,7 +258,8 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
 
   assert.match(css, /\.hero-media \{ right: [^;]+; bottom: 126px; width: min\([^)]+\);/);
   assert.match(css, /\.education-item \{\s*position: relative;\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 96px;/);
-  assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1 \/ span 3;/);
+  assert.match(css, /\.education-node \{\s*position: relative;\s*grid-column: 1;\s*grid-row: 1;\s*align-self: center;/);
+  assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
   assert.match(css, /\.education-item \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 48px;/);
   assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
   assert.match(css, /clip-path: inset\(0 0 100% 0\)/);
@@ -226,13 +270,23 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   assert.match(css, /opacity \.22s ease var\(--menu-close-delay\)/);
   assert.match(css, /opacity \.34s ease var\(--menu-open-delay\)/);
   assert.match(css, /\.site-header\.is-menu-open \.nav-scroll a \{/);
+  assert.match(css, /\.nav-scroll a\.is-active::before \{[^}]*display: block;/s);
   assert.doesNotMatch(css, /transition:\s*max-height|max-height:\s*320px/);
-  assert.match(css, /\.experience-copy h3 \{/);
+  assert.match(css, /\.experience-copy h3,\s*\.experience-group-heading h3 \{/s);
   assert.match(css, /\.paper-copy h3 \{/);
   assert.match(css, /\.paper-copy h3 span \{ display: block; \}/);
   assert.doesNotMatch(css, /\.experience-copy h2|\.paper-copy h2/);
   assert.match(css, /@media \(min-width: 761px\) and \(max-width: 1100px\)/);
   assert.match(css, /@media \(max-width: 900px\)/);
+});
+
+test("scales the desktop hero against both viewport axes", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(css, /font-size: clamp\(104px, min\(15vw, 24dvh\), 246px\)/);
+  assert.match(css, /font-size: clamp\(23px, min\(2\.25vw, 3\.6dvh\), 37px\)/);
+  assert.match(css, /width: min\(56vw, 89\.6dvh, 900px\)/);
+  assert.match(css, /\.hero-cta \{[^}]*width: clamp\(280px, min\(22\.22vw, 35\.56dvh\), 320px\)/s);
 });
 
 test("keeps focusable sections out of hidden scroll containers", async () => {

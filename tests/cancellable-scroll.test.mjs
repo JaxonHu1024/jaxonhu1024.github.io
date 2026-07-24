@@ -83,24 +83,34 @@ for (const inputType of ["wheel", "touchstart", "keydown"]) {
 
 test("an uninterrupted section navigation finishes exactly at its target", () => {
   const harness = createScrollHarness();
+  const settlements = [];
 
-  startCancellableScroll(harness.window, harness.target, "#foundations", { duration: 600 });
+  const cancel = startCancellableScroll(harness.window, harness.target, "#foundations", {
+    duration: 600,
+    onSettled: (result) => settlements.push(result),
+  });
   runNextFrame(harness, 600);
+  cancel();
 
   assert.equal(harness.scrollPositions.at(-1), 1200);
   assert.equal(harness.frames.size, 0);
   assert.equal(harness.listeners.size, 0);
+  assert.deepEqual(settlements, ["finished"]);
 });
 
 test("reduced motion skips the animation and moves immediately", () => {
   const harness = createScrollHarness();
+  const settlements = [];
   harness.window.matchMedia = () => ({ matches: true });
 
-  startCancellableScroll(harness.window, harness.target, "#contact");
+  startCancellableScroll(harness.window, harness.target, "#contact", {
+    onSettled: (result) => settlements.push(result),
+  });
 
   assert.deepEqual(harness.scrollPositions, [1200]);
   assert.equal(harness.frames.size, 0);
   assert.equal(harness.listeners.size, 0);
+  assert.deepEqual(settlements, ["finished"]);
 });
 
 test("section navigation moves the sequential focus origin without forcing another scroll", () => {
@@ -120,4 +130,18 @@ test("a new caller cancels an active section navigation on the same window", () 
   assert.deepEqual(harness.historyEntries, ["#experience", "#research"]);
   assert.equal(harness.cancelledFrames.length, 1);
   assert.equal(harness.frames.size, 1);
+});
+
+test("cancellation settles once even if the returned cancel function is reused", () => {
+  const harness = createScrollHarness();
+  const settlements = [];
+
+  const cancel = startCancellableScroll(harness.window, harness.target, "#research", {
+    onSettled: (result) => settlements.push(result),
+  });
+  cancel();
+  cancel();
+
+  assert.deepEqual(settlements, ["cancelled"]);
+  assert.equal(harness.listeners.size, 0);
 });

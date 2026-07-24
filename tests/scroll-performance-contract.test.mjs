@@ -35,15 +35,13 @@ test("pauses offscreen hero work and removes expensive narrow-viewport scroll ef
   assert.match(css, /\.reveal\s*\{[^}]*animation:\s*none/s);
 });
 
-test("uses compositor-friendly transforms for ambient packet motion", async () => {
+test("keeps remaining ambient motion compositor-friendly and omits the detached contact packet", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const outbound = css.match(/@keyframes outbound-packet\s*\{[^}]*\}[^}]*\}/s)?.[0] ?? "";
   const processor = css.match(/@keyframes processor-breathe\s*\{[^}]*\}[^}]*\}/s)?.[0] ?? "";
 
-  assert.match(outbound, /translate3d/);
-  assert.doesNotMatch(outbound, /\bleft:/);
   assert.match(processor, /opacity:/);
   assert.doesNotMatch(processor, /filter:/);
+  assert.doesNotMatch(css, /trace-out|outbound-packet|--packet-travel/);
 });
 
 test("keeps every header tier frosted and removes the hero guide frame", async () => {
@@ -68,10 +66,16 @@ test("keeps long-section navigation state deterministic", async () => {
     new URL("../app/components/Navigation.tsx", import.meta.url),
     "utf8",
   );
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(navigation, /setActive\(id\);/);
   assert.match(navigation, /const marker = window\.innerHeight \* 0\.3;/);
   assert.match(navigation, /rect\.top <= marker && rect\.bottom > marker/);
   assert.match(navigation, /window\.addEventListener\("resize", scheduleUpdate\)/);
+  assert.match(navigation, /if \(navigationTargetRef\.current\) return;/);
+  assert.match(navigation, /onSettled: \(result\) =>/);
+  assert.match(navigation, /data-active-index=\{activeIndex\}/);
+  assert.match(navigation, /className="nav-active-indicator"/);
+  assert.match(css, /\.nav-active-indicator \{[^}]*translate3d\(var\(--nav-offset\), 0, 0\)/s);
   assert.doesNotMatch(navigation, /intersectionRatio/);
 });
