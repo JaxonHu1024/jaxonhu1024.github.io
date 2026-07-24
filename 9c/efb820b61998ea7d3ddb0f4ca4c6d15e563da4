@@ -1,0 +1,32 @@
+tests/browser-release-gate.test.mjs
+  s_adaf4ed6788b5d::t_b0a94e936fbd63 494,497-498,504-508,510-511,513,530-533,536-540,552,614-635,637-638
+app/globals.css
+  s_adaf4ed6788b5d::t_e3e179c00b237e 537-540
+tests/rendered-html.test.mjs
+  s_adaf4ed6788b5d::t_8d6845708b293b 279-289
+app/page.tsx
+  s_adaf4ed6788b5d::t_bae284d13fb71a 176,191
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "9cefb820b61998ea7d3ddb0f4ca4c6d15e563da4",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_adaf4ed6788b5d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9363-c25a-7da3-8a6a-dd1b4a7bbacb",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
