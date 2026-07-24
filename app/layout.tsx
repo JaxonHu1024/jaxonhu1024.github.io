@@ -13,21 +13,26 @@ export async function generateMetadata(): Promise<Metadata> {
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   const origin = `${protocol}://${host}`;
+  const description = "Portfolio of Jaxon, an AI Algorithm Engineer, featuring selected experience, education, and research publications.";
 
   return {
+    metadataBase: new URL(origin),
     title: "JAXON — Compiling Intelligence for the Real World",
-    description: "Experience, research, and technical foundations from Jaxon.",
+    description,
+    alternates: { canonical: "/" },
     icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+    robots: { index: true, follow: true },
     openGraph: {
       title: "JAXON",
-      description: "Compiling intelligence for the real world.",
+      description,
       type: "website",
+      url: origin,
       images: [{ url: `${origin}/og.png`, width: 1200, height: 630, alt: "JAXON" }],
     },
     twitter: {
       card: "summary_large_image",
       title: "JAXON",
-      description: "Compiling intelligence for the real world.",
+      description,
       images: [`${origin}/og.png`],
     },
   };

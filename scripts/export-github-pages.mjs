@@ -8,7 +8,7 @@ const outputDirectory = resolve(root, "github-pages-dist");
 const siteOrigin = process.env.SITE_ORIGIN ?? "https://jaxonhu1024.github.io";
 const siteUrl = new URL(siteOrigin);
 
-async function render(pathname) {
+async function render(pathname, { allowNotFound = false } = {}) {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("export", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
@@ -40,7 +40,7 @@ async function render(pathname) {
     },
   );
 
-  if (!response.ok) {
+  if (!response.ok && !(allowNotFound && response.status === 404)) {
     throw new Error(`Failed to render ${pathname}: ${response.status}`);
   }
 
@@ -57,7 +57,8 @@ await cp(resolve(root, "public/favicon.svg"), resolve(outputDirectory, "favicon.
 await cp(resolve(root, "public/og.png"), resolve(outputDirectory, "og.png"));
 
 const html = await render("/");
+const notFoundHtml = await render("/404", { allowNotFound: true });
 await writeFile(resolve(outputDirectory, "index.html"), html);
-await writeFile(resolve(outputDirectory, "404.html"), html);
+await writeFile(resolve(outputDirectory, "404.html"), notFoundHtml);
 
 console.log(`Exported GitHub Pages artifact to ${outputDirectory}`);

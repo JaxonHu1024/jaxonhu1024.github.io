@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-async function render() {
+async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
   const { default: worker } = await import(workerUrl.href);
 
   return worker.fetch(
-    new Request("http://localhost/", {
+    new Request(new URL(pathname, "http://localhost/"), {
       headers: { accept: "text/html" },
     }),
     {
@@ -30,8 +30,15 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
 
   const html = await response.text();
   assert.match(html, /<title>JAXON — Compiling Intelligence for the Real World<\/title>/i);
+  assert.match(
+    html,
+    /Portfolio of Jaxon, an AI Algorithm Engineer, featuring selected experience, education, and research publications\./,
+  );
+  assert.match(html, /rel="canonical" href="http:\/\/localhost:3000\/"/);
+  assert.match(html, /property="og:url" content="http:\/\/localhost:3000"/);
   assert.match(html, /COMPILING INTELLIGENCE/);
   assert.match(html, /FOR THE REAL WORLD_/);
+  assert.match(html, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
   assert.match(html, /ByteDance/);
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(html, /Damo Academy/);
@@ -46,7 +53,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /class="foundations-title/);
   assert.doesNotMatch(html, /foundation-spine/);
   assert.match(html, /mailto:jaxonhu01@gmail\.com/);
-  assert.match(html, /CONTACT ENDPOINTS/);
+  assert.match(html, /DIRECT CONTACT/);
   assert.match(html, /https:\/\/github\.com\/JaxonHu1024/);
   assert.match(html, /https:\/\/x\.com\/HuEnzo33232/);
   assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jaxon-hu-10977a221/);
@@ -60,6 +67,31 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /road-network-geolocalization\.png/);
   assert.doesNotMatch(html, /Jaxon Hu|Hu Jiaxing/i);
   assert.doesNotMatch(html, /JAXON\.EXE/);
+});
+
+test("renders a branded not-found route instead of the homepage", async () => {
+  const response = await render("/missing-route");
+  assert.equal(response.status, 404);
+  assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
+
+  const html = await response.text();
+  assert.match(html, /<meta content="noindex" name="robots"\/>/);
+  assert.match(html, /404 \/ SIGNAL LOST/);
+  assert.match(html, /ROUTE NOT FOUND_/);
+  assert.match(html, /The requested coordinate is outside this system\./);
+  assert.match(html, /href="\/"[^>]*><span>RETURN HOME<\/span>/);
+  assert.doesNotMatch(html, /EXPERIENCE\.LOG|PUBLICATION 01/);
+});
+
+test("renders an exportable 404 route with dedicated metadata", async () => {
+  const response = await render("/404");
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  assert.match(html, /<title>404 — Signal Lost \| JAXON<\/title>/);
+  assert.match(html, /<meta name="description" content="The requested route could not be found on JAXON\."\/>/);
+  assert.match(html, /<meta name="robots" content="noindex, nofollow"\/>/);
+  assert.match(html, /ROUTE NOT FOUND_/);
 });
 
 test("research titles expose complete readable names", async () => {
@@ -79,6 +111,7 @@ test("research titles expose complete readable names", async () => {
 test("renders all public portfolio copy in English", async () => {
   const response = await render();
   const html = await response.text();
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(html, /<html lang="en">/);
   assert.match(html, /VIEW EXPERIENCE/);
@@ -86,6 +119,7 @@ test("renders all public portfolio copy in English", async () => {
   assert.doesNotMatch(html, /2025\.02–NOW/);
   assert.match(html, /<h3>ByteDance<\/h3>/);
   assert.match(html, /<p>AI Algorithm Engineer<\/p>/);
+  assert.equal(page.match(/<p>AI Algorithm Engineer<\/p>/g)?.length, 2);
   assert.match(html, /<h3>Nanyang Technological University<\/h3>/);
   assert.match(html, /<p>MSc in Computer Control and Automation<\/p>/);
   assert.match(html, /<h3>Southeast University<\/h3>/);
@@ -104,6 +138,10 @@ test("groups both Alibaba organizations under one company heading", async () => 
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(
     html,
+    /<div class="experience-group-heading"><h3 id="alibaba-group-title">Alibaba<\/h3><p>AI Algorithm Engineer<\/p><\/div>/,
+  );
+  assert.match(
+    html,
     /<article class="experience-subentry"><div class="experience-subentry-copy"><h4>International Digital Commerce Group<\/h4>/,
   );
   assert.match(
@@ -117,6 +155,10 @@ test("groups both Alibaba organizations under one company heading", async () => 
   assert.doesNotMatch(html, /Alibaba International Digital Commerce Group/);
   assert.doesNotMatch(html, /ORGANIZATION GROUP|02 UNITS|UNIT 0[12]/);
   assert.doesNotMatch(html, /PROCESS ACTIVE/);
+  assert.doesNotMatch(
+    html,
+    /<div class="experience-subentry-copy"><h4>[^<]+<\/h4><p>AI Algorithm Engineer<\/p>/,
+  );
 });
 
 test("orders foundations before research and omits toolchain number labels", async () => {
@@ -145,6 +187,7 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
   assert.match(hero, /JAXON/);
   assert.match(hero, /COMPILING INTELLIGENCE/);
   assert.match(hero, /FOR THE REAL WORLD_/);
+  assert.match(hero, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
   assert.match(hero, /hero-processor-field-optimized\.webp/);
   assert.match(hero, /HeroSignalField/);
   assert.doesNotMatch(hero, /[\u4e00-\u9fff]/);
@@ -189,6 +232,7 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   assert.match(css, /\.paper-copy h3 span \{ display: block; \}/);
   assert.doesNotMatch(css, /\.experience-copy h2|\.paper-copy h2/);
   assert.match(css, /@media \(min-width: 761px\) and \(max-width: 1100px\)/);
+  assert.match(css, /@media \(max-width: 900px\)/);
 });
 
 test("keeps focusable sections out of hidden scroll containers", async () => {

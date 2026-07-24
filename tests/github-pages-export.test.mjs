@@ -21,11 +21,18 @@ test("exports a complete static GitHub Pages artifact", async () => {
   }
 
   const html = await readFile(resolve(output, "index.html"), "utf8");
+  const notFoundHtml = await readFile(resolve(output, "404.html"), "utf8");
   assert.match(html, /<title>JAXON — Compiling Intelligence for the Real World<\/title>/i);
   assert.match(html, /Road-Network-Based/);
   assert.match(html, /ResFi:/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));
   assert.doesNotMatch(html, /road-network-geolocalization\.png|codex-clipboard/i);
+  assert.notEqual(notFoundHtml, html);
+  assert.match(notFoundHtml, /<title>404 — Signal Lost \| JAXON<\/title>/);
+  assert.match(notFoundHtml, /<meta name="robots" content="noindex, nofollow"\/>/);
+  assert.match(notFoundHtml, /404 \/ SIGNAL LOST/);
+  assert.match(notFoundHtml, /ROUTE NOT FOUND_/);
+  assert.doesNotMatch(notFoundHtml, /EXPERIENCE\.LOG|PUBLICATION 01/);
 
   const assetPaths = [
     ...html.matchAll(/(?:href|src)="(\/assets\/[^"?]+)(?:\?[^\"]*)?"/g),

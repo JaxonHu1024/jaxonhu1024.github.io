@@ -50,8 +50,40 @@ function useHeroMediaVisibility() {
   }, []);
 }
 
+function useSectionMotionVisibility() {
+  useEffect(() => {
+    const sections = Array.from(document.querySelectorAll<HTMLElement>(".section"));
+    if (sections.length === 0) return;
+
+    const setVisibility = (section: HTMLElement, visible: boolean) => {
+      section.dataset.sectionVisible = visible ? "true" : "false";
+    };
+
+    sections.forEach((section) => {
+      const rect = section.getBoundingClientRect();
+      setVisibility(section, rect.bottom > 0 && rect.top < window.innerHeight);
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setVisibility(entry.target as HTMLElement, entry.isIntersecting);
+        });
+      },
+      { rootMargin: "18% 0px", threshold: 0.01 },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => {
+      observer.disconnect();
+      sections.forEach((section) => delete section.dataset.sectionVisible);
+    };
+  }, []);
+}
+
 export function HeroInteractionController() {
   useHeroExperienceNavigation();
   useHeroMediaVisibility();
+  useSectionMotionVisibility();
   return null;
 }

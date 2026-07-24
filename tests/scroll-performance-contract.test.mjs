@@ -23,13 +23,27 @@ test("pauses offscreen hero work and removes expensive narrow-viewport scroll ef
     "utf8",
   );
   const css = await readFile(new URL("../app/scroll-performance.css", import.meta.url), "utf8");
+  const globals = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(controller, /IntersectionObserver/);
   assert.match(controller, /heroVisible/);
+  assert.match(controller, /sectionVisible/);
   assert.match(css, /animation-play-state:\s*paused/);
   assert.match(css, /\[data-hero-visible="true"\]/);
+  assert.match(globals, /\[data-section-visible="false"\]/);
   assert.match(css, /@media \(max-width: 1100px\)/);
   assert.match(css, /\.reveal\s*\{[^}]*animation:\s*none/s);
+});
+
+test("uses compositor-friendly transforms for ambient packet motion", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const outbound = css.match(/@keyframes outbound-packet\s*\{[^}]*\}[^}]*\}/s)?.[0] ?? "";
+  const processor = css.match(/@keyframes processor-breathe\s*\{[^}]*\}[^}]*\}/s)?.[0] ?? "";
+
+  assert.match(outbound, /translate3d/);
+  assert.doesNotMatch(outbound, /\bleft:/);
+  assert.match(processor, /opacity:/);
+  assert.doesNotMatch(processor, /filter:/);
 });
 
 test("keeps every header tier frosted and removes the hero guide frame", async () => {
@@ -44,7 +58,20 @@ test("keeps every header tier frosted and removes the hero guide frame", async (
   );
   assert.match(
     css,
-    /@media \(max-width: 760px\)\s*\{\s*\.site-header\s*\{[^}]*background:\s*rgba\(3,\s*5,\s*7,\s*\.54\);[^}]*backdrop-filter:\s*blur\(10px\)\s*saturate\(120%\)/s,
+    /@media \(max-width: 900px\)\s*\{\s*\.site-header\s*\{[^}]*background:\s*rgba\(3,\s*5,\s*7,\s*\.54\);[^}]*backdrop-filter:\s*blur\(10px\)\s*saturate\(120%\)/s,
   );
   assert.doesNotMatch(css, /backdrop-filter:\s*none/);
+});
+
+test("keeps long-section navigation state deterministic", async () => {
+  const navigation = await readFile(
+    new URL("../app/components/Navigation.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(navigation, /setActive\(id\);/);
+  assert.match(navigation, /const marker = window\.innerHeight \* 0\.3;/);
+  assert.match(navigation, /rect\.top <= marker && rect\.bottom > marker/);
+  assert.match(navigation, /window\.addEventListener\("resize", scheduleUpdate\)/);
+  assert.doesNotMatch(navigation, /intersectionRatio/);
 });

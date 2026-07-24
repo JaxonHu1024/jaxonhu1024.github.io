@@ -36,6 +36,7 @@ export function Navigation() {
     if (!target) return;
 
     event.preventDefault();
+    setActive(id);
     setMenuOpen(false);
     cancelScrollRef.current();
     cancelScrollRef.current = startCancellableScroll(window, target, `#${id}`);
@@ -46,18 +47,34 @@ export function Navigation() {
       .map((id) => document.getElementById(id))
       .filter((section): section is HTMLElement => Boolean(section));
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-        if (visible?.target.id) setActive(visible.target.id);
-      },
-      { rootMargin: "-18% 0px -58% 0px", threshold: [0, 0.15, 0.35, 0.6] },
-    );
+    let frame = 0;
+    const updateActiveSection = () => {
+      frame = 0;
+      const marker = window.innerHeight * 0.3;
+      let current = sections[0]?.id ?? "hero";
 
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+      for (const section of sections) {
+        const rect = section.getBoundingClientRect();
+        if (rect.top <= marker) current = section.id;
+        if (rect.top <= marker && rect.bottom > marker) break;
+      }
+
+      setActive(current);
+    };
+    const scheduleUpdate = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(updateActiveSection);
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", scheduleUpdate, { passive: true });
+    window.addEventListener("resize", scheduleUpdate);
+
+    return () => {
+      window.removeEventListener("scroll", scheduleUpdate);
+      window.removeEventListener("resize", scheduleUpdate);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
   }, []);
 
   useEffect(() => () => cancelScrollRef.current(), []);

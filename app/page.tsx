@@ -29,7 +29,8 @@ const papers = [
       "Respiration Detection Based on Deep Learning",
     ],
     venue: "IEEE 17th International Conference on Control and Automation",
-    meta: "2022  ·  DOI 10.1109/ICCA54724.2022.9831898",
+    year: "2022",
+    doi: "10.1109/ICCA54724.2022.9831898",
     href: "https://ieeexplore.ieee.org/document/9831898",
     visual: "wave" as const,
   },
@@ -37,7 +38,8 @@ const papers = [
     id: "02",
     title: ["Road-Network-Based", "Fast Geolocalization"],
     venue: "IEEE Transactions on Geoscience and Remote Sensing",
-    meta: "2021  ·  DOI 10.1109/TGRS.2020.3011034",
+    year: "2021",
+    doi: "10.1109/TGRS.2020.3011034",
     href: "https://ieeexplore.ieee.org/document/9170807",
     visual: "road" as const,
   },
@@ -60,6 +62,7 @@ export default function Home() {
             <p className="hero-statement">
               <span>COMPILING INTELLIGENCE</span>
               <span>FOR THE REAL WORLD_</span>
+              <small className="hero-role">AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH</small>
             </p>
             <a className="terminal-button hero-cta" href="#experience">
               <span>VIEW EXPERIENCE</span>
@@ -112,6 +115,7 @@ export default function Home() {
                 <span className="experience-group-branch" aria-hidden="true" />
                 <div className="experience-group-heading">
                   <h3 id="alibaba-group-title">Alibaba</h3>
+                  <p>AI Algorithm Engineer</p>
                 </div>
               </header>
               <div className="experience-subentries">
@@ -119,7 +123,6 @@ export default function Home() {
                   <article className="experience-subentry" key={item.organization}>
                     <div className="experience-subentry-copy">
                       <h4>{item.organization}</h4>
-                      <p>AI Algorithm Engineer</p>
                     </div>
                     <time className="experience-date" dateTime={item.dateTime}>
                       {item.period}
@@ -149,7 +152,7 @@ export default function Home() {
           <div className="foundations-grid reveal">
             <div className="education-column">
               <div className="column-label">
-                <span>EDUCATION.CHRONOLOGY</span>
+                <span>EDUCATION</span>
                 <span className="label-rule" aria-hidden="true" />
                 <span className="square-end" aria-hidden="true" />
               </div>
@@ -175,22 +178,22 @@ export default function Home() {
             </div>
             <div className="toolchain-column">
               <div className="column-label">
-                <span>TOOLCHAIN.INDEX</span>
+                <span>TOOLCHAIN</span>
                 <span className="label-rule" aria-hidden="true" />
                 <span className="square-end" aria-hidden="true" />
               </div>
               <dl className="toolchain-list" aria-label="Technical toolchain">
                 <div className="toolchain-module">
                   <dt>LANGUAGES</dt>
-                  <dd><span>PYTHON</span><span>C++</span><span>SQL</span></dd>
+                  <dd><span>Python</span><span>C++</span><span>SQL</span></dd>
                 </div>
                 <div className="toolchain-module">
                   <dt>FRAMEWORK</dt>
-                  <dd><span>PYTORCH</span></dd>
+                  <dd><span>PyTorch</span></dd>
                 </div>
                 <div className="toolchain-module">
                   <dt>SYSTEMS</dt>
-                  <dd><span>LINUX</span><span>DOCKER</span><span>MYSQL</span></dd>
+                  <dd><span>Linux</span><span>Docker</span><span>MySQL</span></dd>
                 </div>
               </dl>
             </div>
@@ -223,10 +226,13 @@ export default function Home() {
                     ))}
                   </h3>
                   <p className="paper-venue">{paper.venue}</p>
-                  <p className="paper-meta">{paper.meta}</p>
+                  <p className="paper-meta">
+                    <span>{paper.year}</span>
+                    <span>DOI {paper.doi}</span>
+                  </p>
                   <a className="terminal-button paper-link" href={paper.href} target="_blank" rel="noreferrer">
-                    <span>VIEW PAPER ↗</span>
-                    <span className="button-arrow" aria-hidden="true">›</span>
+                    <span>VIEW PAPER</span>
+                    <span className="button-arrow" aria-hidden="true">↗</span>
                   </a>
                 </div>
                 <div className={`paper-visual is-${paper.visual}`}>
@@ -262,16 +268,18 @@ export default function Home() {
             </h2>
 
             <header className="contact-primary reveal">
-              <p className="contact-channel">GET IN TOUCH</p>
+              <p className="contact-channel">OPEN CHANNEL</p>
               <h2 className="contact-heading">
                 SEND A
                 <span>SIGNAL.</span>
               </h2>
-              <p className="contact-note">COLLABORATION · RESEARCH · TECHNICAL EXCHANGE</p>
+              <p className="contact-note">
+                For research discussion or technical collaboration, use any channel below.
+              </p>
             </header>
 
             <nav className="contact-directory reveal" aria-label="Contact channels">
-              <p className="directory-heading">CONTACT ENDPOINTS</p>
+              <p className="directory-heading">DIRECT CONTACT</p>
               <ul className="contact-socials">
                 <li>
                   <a href="mailto:jaxonhu01@gmail.com" aria-label="Email · jaxonhu01@gmail.com">
@@ -308,7 +316,7 @@ export default function Home() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://www.linkedin.com/in/jaxon-hu-10977a221/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base_contact_details%3BKILu4juHSq2jTdt856M16A%3D%3D" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn · Jaxon">
+                  <a href="https://www.linkedin.com/in/jaxon-hu-10977a221/" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn · Jaxon">
                     <span className="endpoint-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" focusable="false">
                         <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.44-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13ZM7.12 20.45H3.55V9h3.57v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z" />
