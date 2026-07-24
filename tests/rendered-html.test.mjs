@@ -106,15 +106,19 @@ test("uses a motion-safe responsive contact directory", async () => {
   );
   assert.match(
     css,
-    /\.contact-marquee-track\s*\{[^}]*font-family:\s*var\(--display\);[^}]*font-weight:\s*500;[^}]*transform:\s*translate3d\(0,\s*0,\s*0\);[^}]*animation:\s*contact-marquee\s+25s\s+linear\s+infinite;/s,
+    /\.contact-marquee-track\s*\{[^}]*font-family:\s*var\(--display\);[^}]*font-weight:\s*600;[^}]*transform:\s*translate3d\(0,\s*0,\s*0\);[^}]*animation:\s*contact-marquee\s+28s\s+linear\s+infinite;/s,
   );
   assert.match(
     css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.contact-marquee-track\s*\{[^}]*animation-duration:\s*22s;/s,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.contact-marquee-track\s*\{[^}]*animation-duration:\s*25s;/s,
   );
   assert.match(
     css,
     /\.contact-marquee-window\s*\{[^}]*mask-image:\s*linear-gradient\(90deg,\s*transparent 0,\s*#000 7%,\s*#000 93%,\s*transparent 100%\);/s,
+  );
+  assert.match(
+    css,
+    /\.contact-marquee-window\s*\{[^}]*contain:\s*layout paint;[^}]*isolation:\s*isolate;[^}]*transform:\s*translateZ\(0\);/s,
   );
   assert.match(
     css,
@@ -127,6 +131,18 @@ test("uses a motion-safe responsive contact directory", async () => {
   assert.match(
     css,
     /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.contact-marquee-track\s*\{[^}]*animation:\s*none\s*!important;[^}]*transform:\s*none\s*!important;/s,
+  );
+});
+
+test("keeps the Pages browser install lean for headless release checks", async () => {
+  const workflow = await readFile(
+    new URL("../.github/workflows/deploy-pages.yml", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    workflow,
+    /npx playwright install --with-deps --only-shell chromium/,
   );
 });
 

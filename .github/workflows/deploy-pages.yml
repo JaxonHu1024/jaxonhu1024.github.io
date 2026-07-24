@@ -32,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Install Chromium for release checks
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install --with-deps --only-shell chromium
 
       - name: Verify and export site
         run: npm run verify
