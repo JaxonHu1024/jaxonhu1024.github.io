@@ -1,0 +1,30 @@
+app/globals.css
+  s_adaf4ed6788b5d::t_c1e61692ac60ff 20-25,386-388,392,493-497,517,528-529,533,547,549-550,772,780,800,809,815-816,821-822,826,833,857,881,1337-1345
+tests/browser-release-gate.test.mjs
+  s_adaf4ed6788b5d::t_39760c254d7eb5 429-636
+tests/rendered-html.test.mjs
+  s_adaf4ed6788b5d::t_11a30493b77299 233,235,239-241,246-255,264,272-288,291,295
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "e6fe101de373cb79ebd73e446ffc438cde5a01ce",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_adaf4ed6788b5d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9363-c25a-7da3-8a6a-dd1b4a7bbacb",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
