@@ -5,6 +5,7 @@ import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";
 import { HeroInteractionController } from "./components/HeroInteractionController";
+import { MobileLoadFeedback } from "./components/MobileLoadFeedback";
 import "./globals.css";
 import "./scroll-performance.css";
 
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body>
         <HeroInteractionController />
+        <MobileLoadFeedback />
         {children}
       </body>
     </html>

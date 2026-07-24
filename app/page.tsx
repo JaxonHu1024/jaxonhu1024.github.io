@@ -63,7 +63,13 @@ export default function Home() {
           <div className="hero-media" aria-hidden="true">
             {/* The static export serves this local WebP directly; its Next image optimizer is not used. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/hero-processor-field-optimized.webp" alt="" width="1448" height="1086" />
+            <img
+              src="/assets/hero-processor-field-optimized.webp"
+              alt=""
+              width="1448"
+              height="1086"
+              fetchPriority="high"
+            />
             <HeroSignalField />
           </div>
         </section>
@@ -97,6 +103,9 @@ export default function Home() {
                     className="experience-brand-logo experience-brand-logo--bytedance"
                     src="/assets/logo-bytedance-color.svg"
                     alt=""
+                    width="16"
+                    height="16"
+                    loading="lazy"
                     aria-hidden="true"
                   />
                 </div>
@@ -116,6 +125,9 @@ export default function Home() {
                     className="experience-brand-logo experience-brand-logo--alibaba"
                     src="/assets/logo-alibaba-color.svg"
                     alt=""
+                    width="16"
+                    height="16"
+                    loading="lazy"
                     aria-hidden="true"
                   />
                 </div>
@@ -160,14 +172,30 @@ export default function Home() {
                   <span className="education-node" aria-hidden="true" />
                   {/* Static export serves the local SVG directly; Next image optimizer is not used. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="education-crest" src="/assets/logo-ntu.svg" alt="" aria-hidden="true" />
+                  <img
+                    className="education-crest"
+                    src="/assets/logo-ntu.svg"
+                    alt=""
+                    width="117"
+                    height="150"
+                    loading="lazy"
+                    aria-hidden="true"
+                  />
                   <h3>Nanyang Technological University</h3>
                   <p>MSc in Computer Control and Automation</p>
                 </article>
                 <article className="education-item has-crest">
                   <span className="education-node" aria-hidden="true" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className="education-crest" src="/assets/logo-seu-color.svg" alt="" aria-hidden="true" />
+                  <img
+                    className="education-crest"
+                    src="/assets/logo-seu-color.svg"
+                    alt=""
+                    width="189"
+                    height="189"
+                    loading="lazy"
+                    aria-hidden="true"
+                  />
                   <h3>Southeast University</h3>
                   <p>BEng in Electrical Engineering and Automation</p>
                 </article>

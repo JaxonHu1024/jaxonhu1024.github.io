@@ -113,6 +113,51 @@ test("research titles expose complete readable names", async () => {
   );
 });
 
+test("renders every organization logo with its measured intrinsic dimensions", async () => {
+  const response = await render();
+  const html = await response.text();
+
+  for (const { src, width, height } of [
+    { src: "logo-bytedance-color.svg", width: 16, height: 16 },
+    { src: "logo-alibaba-color.svg", width: 16, height: 16 },
+    { src: "logo-ntu.svg", width: 117, height: 150 },
+    { src: "logo-seu-color.svg", width: 189, height: 189 },
+  ]) {
+    assert.match(
+      html,
+      new RegExp(
+        `<img(?=[^>]*\\bsrc="/assets/${src.replaceAll(".", "\\.")}")`
+          + `(?=[^>]*\\bwidth="${width}")(?=[^>]*\\bheight="${height}")[^>]*>`,
+      ),
+    );
+  }
+});
+
+test("prioritizes the hero image and defers below-the-fold organization logos", async () => {
+  const response = await render();
+  const html = await response.text();
+
+  assert.match(
+    html,
+    /<img(?=[^>]*\bsrc="\/assets\/hero-processor-field-optimized\.webp")(?=[^>]*\bfetchPriority="high")[^>]*>/,
+  );
+  for (const src of [
+    "logo-bytedance-color.svg",
+    "logo-alibaba-color.svg",
+    "logo-ntu.svg",
+    "logo-seu-color.svg",
+  ]) {
+    assert.match(
+      html,
+      new RegExp(
+        `<img(?=[^>]*\\bsrc="/assets/${src.replaceAll(".", "\\.")}")`
+          + "(?=[^>]*\\bloading=\"lazy\")[^>]*>",
+      ),
+    );
+  }
+  assert.doesNotMatch(html, /<link rel="preload" href="\/assets\/logo-/);
+});
+
 test("renders all public portfolio copy in English", async () => {
   const response = await render();
   const html = await response.text();
@@ -124,12 +169,12 @@ test("renders all public portfolio copy in English", async () => {
   assert.match(html, /<p>Senior AI Engineer<\/p>/);
   assert.match(
     html,
-    /class="experience-brand-logo experience-brand-logo--bytedance" src="\/assets\/logo-bytedance-color\.svg" alt="" aria-hidden="true"/,
+    /class="experience-brand-logo experience-brand-logo--bytedance" src="\/assets\/logo-bytedance-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"/,
   );
   assert.match(html, /<p>Machine Learning Engineer<\/p>/);
   assert.match(
     html,
-    /class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" aria-hidden="true"/,
+    /class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"/,
   );
   assert.doesNotMatch(page, /<p>AI Algorithm Engineer<\/p>/);
   assert.doesNotMatch(html, /experience-status|>CURRENT</);
@@ -161,7 +206,7 @@ test("groups both Alibaba organizations under one company heading", async () => 
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(
     html,
-    /<div class="experience-group-heading"><div class="experience-entry-copy"><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div><img class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" aria-hidden="true"\/><\/div>/,
+    /<div class="experience-group-heading"><div class="experience-entry-copy"><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div><img class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"\/><\/div>/,
   );
   assert.match(
     html,
