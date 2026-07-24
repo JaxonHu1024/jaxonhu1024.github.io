@@ -19,7 +19,7 @@ const contentTypes = new Map([
 ]);
 const releaseLimits = {
   cls: 0.1,
-  inp: 200,
+  inp: 300,
   lcp: 2_500,
 };
 

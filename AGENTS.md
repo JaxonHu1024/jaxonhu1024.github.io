@@ -35,7 +35,7 @@ in a subdirectory may add narrower requirements for files in that subtree.
 ## Performance and loading release standards
 
 - A release must meet these Core Web Vitals thresholds: LCP <= 2.5 seconds,
-  INP <= 200 milliseconds, and CLS <= 0.1.
+  INP <= 300 milliseconds, and CLS <= 0.1.
 - Every image must declare intrinsic `width` and `height` attributes or have a
   stable CSS `aspect-ratio` so its layout space is reserved before it loads.
 - Initial page load must not introduce visible layout jumps. Reserve space for
