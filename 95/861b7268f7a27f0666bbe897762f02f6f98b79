@@ -1,0 +1,26 @@
+AGENTS.md
+  s_dc39db8e0d550d::t_1457b081ec3188 20-46,66,68,72-73,82-83
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "95861b7268f7a27f0666bbe897762f02f6f98b79",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_dc39db8e0d550d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92f9-3f7d-7761-9caa-1d997c1a2b5a",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
