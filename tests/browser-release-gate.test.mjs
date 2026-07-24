@@ -198,16 +198,20 @@ async function runPerformanceSample(sampleNumber) {
     await page.goto(origin, { timeout: 20_000, waitUntil: "load" });
     await page.evaluate(async () => {
       await document.fonts.ready;
-      await Promise.all(Array.from(document.images, (image) => {
-        if (image.complete && image.naturalWidth > 0) {
-          return Promise.resolve();
-        }
+      await Promise.all(
+        Array.from(document.images)
+          .filter((image) => image.loading !== "lazy")
+          .map((image) => {
+            if (image.complete && image.naturalWidth > 0) {
+              return Promise.resolve();
+            }
 
-        return new Promise((resolveImage, rejectImage) => {
-          image.addEventListener("load", resolveImage, { once: true });
-          image.addEventListener("error", rejectImage, { once: true });
-        });
-      }));
+            return new Promise((resolveImage, rejectImage) => {
+              image.addEventListener("load", resolveImage, { once: true });
+              image.addEventListener("error", rejectImage, { once: true });
+            });
+          }),
+      );
     });
     await page.waitForFunction(() => (
       document.querySelector('[data-testid="mobile-load-feedback"]')
@@ -332,9 +336,16 @@ test("mobile users see loading feedback until primary assets finish", { timeout:
     serviceWorkers: "block",
     viewport: { width: 390, height: 844 },
   });
+  const feedbackScriptRequested = deferred();
+  const releaseFeedbackScript = deferred();
   const heroRequested = deferred();
   const releaseHero = deferred();
 
+  await context.route("**/assets/MobileLoadFeedback-*.js", async (route) => {
+    feedbackScriptRequested.resolve();
+    await releaseFeedbackScript.promise;
+    await route.continue();
+  });
   await context.route("**/assets/hero-processor-field-optimized.webp", async (route) => {
     heroRequested.resolve();
     await releaseHero.promise;
@@ -344,18 +355,24 @@ test("mobile users see loading feedback until primary assets finish", { timeout:
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "domcontentloaded" });
+    await within(feedbackScriptRequested.promise, "the loading-feedback script request");
     await within(heroRequested.promise, "the primary image request");
 
     const feedback = page.getByTestId("mobile-load-feedback");
+    assert.equal(await feedback.getAttribute("data-state"), "loading");
+    assert.equal(await feedback.getAttribute("data-visible"), "true");
+    assert.equal(await feedback.getAttribute("aria-hidden"), "false");
+    assert.equal(await feedback.getAttribute("role"), "status");
+    assert.equal(await feedback.getAttribute("aria-live"), "polite");
+    assert.match(await feedback.textContent(), /Loading visual assets/i);
+    await assertFeedbackFitsViewport(page, feedback);
+
+    releaseFeedbackScript.resolve();
     await page.waitForFunction(() => {
       const element = document.querySelector('[data-testid="mobile-load-feedback"]');
       return element?.getAttribute("data-state") === "loading"
         && element?.getAttribute("data-visible") === "true";
     }, null, { timeout: 3_000 });
-    assert.equal(await feedback.getAttribute("role"), "status");
-    assert.equal(await feedback.getAttribute("aria-live"), "polite");
-    assert.match(await feedback.textContent(), /Loading visual assets/i);
-    await assertFeedbackFitsViewport(page, feedback);
 
     releaseHero.resolve();
     await page.waitForFunction(() => (
@@ -368,6 +385,7 @@ test("mobile users see loading feedback until primary assets finish", { timeout:
         ?.getAttribute("data-visible") === "false"
     ), null, { timeout: 3_000 });
   } finally {
+    releaseFeedbackScript.resolve();
     releaseHero.resolve();
     await context.close();
   }

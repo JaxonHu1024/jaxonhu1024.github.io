@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 
 type FeedbackState = "loading" | "complete" | "error";
 
-const REVEAL_DELAY_MS = 180;
 const MINIMUM_LOADING_VISIBILITY_MS = 500;
 const COMPLETE_VISIBILITY_MS = 900;
 
@@ -16,25 +15,15 @@ const feedbackCopy: Record<FeedbackState, string> = {
 
 export function MobileLoadFeedback() {
   const [state, setState] = useState<FeedbackState>("loading");
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     let failed = false;
-    let finished = false;
-    let shownAt: number | null = null;
+    const shownAt = performance.now();
     let minimumVisibilityTimer: number | undefined;
     let hideTimer: number | undefined;
     const imageDisposers: Array<() => void> = [];
-
-    const revealTimer = window.setTimeout(() => {
-      if (cancelled || failed || finished) {
-        return;
-      }
-
-      shownAt = performance.now();
-      setVisible(true);
-    }, REVEAL_DELAY_MS);
 
     const showError = () => {
       if (cancelled || failed) {
@@ -42,7 +31,6 @@ export function MobileLoadFeedback() {
       }
 
       failed = true;
-      window.clearTimeout(revealTimer);
       window.clearTimeout(minimumVisibilityTimer);
       window.clearTimeout(hideTimer);
       setState("error");
@@ -88,12 +76,6 @@ export function MobileLoadFeedback() {
       }
 
       setState("complete");
-
-      if (shownAt === null) {
-        setVisible(false);
-        return;
-      }
-
       setVisible(true);
       hideTimer = window.setTimeout(() => {
         if (!cancelled && !failed) {
@@ -107,14 +89,10 @@ export function MobileLoadFeedback() {
         return;
       }
 
-      finished = true;
-      window.clearTimeout(revealTimer);
-      const remainingVisibility = shownAt === null
-        ? 0
-        : Math.max(
-          0,
-          MINIMUM_LOADING_VISIBILITY_MS - (performance.now() - shownAt),
-        );
+      const remainingVisibility = Math.max(
+        0,
+        MINIMUM_LOADING_VISIBILITY_MS - (performance.now() - shownAt),
+      );
 
       if (remainingVisibility > 0) {
         minimumVisibilityTimer = window.setTimeout(showComplete, remainingVisibility);
@@ -136,7 +114,6 @@ export function MobileLoadFeedback() {
 
     return () => {
       cancelled = true;
-      window.clearTimeout(revealTimer);
       window.clearTimeout(minimumVisibilityTimer);
       window.clearTimeout(hideTimer);
       window.removeEventListener("error", handleResourceError, true);
