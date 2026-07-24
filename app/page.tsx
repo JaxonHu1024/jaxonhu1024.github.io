@@ -4,20 +4,14 @@ import { ResearchVisual } from "./components/ResearchVisual";
 
 const currentExperience = {
   company: "ByteDance",
-  period: "2025.02–PRESENT",
-  dateTime: "2025-02",
 };
 
 const alibabaExperiences = [
   {
     organization: "International Digital Commerce Group",
-    period: "2023.07–2025.01",
-    dateTime: "2023-07/2025-01",
   },
   {
     organization: "DAMO Academy",
-    period: "2022.06–2023.06",
-    dateTime: "2022-06/2023-06",
   },
 ];
 
@@ -97,9 +91,14 @@ export default function Home() {
                     <h3>{currentExperience.company}</h3>
                     <p>Senior AI Engineer</p>
                   </div>
-                  <time className="experience-date" dateTime={currentExperience.dateTime}>
-                    {currentExperience.period}
-                  </time>
+                  {/* Static export serves the user-provided SVG directly. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="experience-brand-logo experience-brand-logo--bytedance"
+                    src="/assets/logo-bytedance-color.svg"
+                    alt=""
+                    aria-hidden="true"
+                  />
                 </div>
               </div>
             </article>
@@ -108,8 +107,17 @@ export default function Home() {
               <header className="experience-group-header">
                 <span className="experience-group-branch" aria-hidden="true" />
                 <div className="experience-group-heading">
-                  <h3 id="alibaba-group-title">Alibaba</h3>
-                  <p>Machine Learning Engineer</p>
+                  <div className="experience-entry-copy">
+                    <h3 id="alibaba-group-title">Alibaba</h3>
+                    <p>Machine Learning Engineer</p>
+                  </div>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="experience-brand-logo experience-brand-logo--alibaba"
+                    src="/assets/logo-alibaba-color.svg"
+                    alt=""
+                    aria-hidden="true"
+                  />
                 </div>
               </header>
               <div className="experience-subentries">
@@ -118,9 +126,6 @@ export default function Home() {
                     <div className="experience-subentry-copy">
                       <h4>{item.organization}</h4>
                     </div>
-                    <time className="experience-date" dateTime={item.dateTime}>
-                      {item.period}
-                    </time>
                   </article>
                 ))}
               </div>
@@ -158,7 +163,6 @@ export default function Home() {
                   <img className="education-crest" src="/assets/logo-ntu.svg" alt="" aria-hidden="true" />
                   <h3>Nanyang Technological University</h3>
                   <p>MSc in Computer Control and Automation</p>
-                  <time dateTime="2020-12/2022-03">2020.12–2022.03</time>
                 </article>
                 <article className="education-item has-crest">
                   <span className="education-node" aria-hidden="true" />
@@ -166,7 +170,6 @@ export default function Home() {
                   <img className="education-crest" src="/assets/logo-seu-color.svg" alt="" aria-hidden="true" />
                   <h3>Southeast University</h3>
                   <p>BEng in Electrical Engineering and Automation</p>
-                  <time dateTime="2016-09/2020-06">2016.09–2020.06</time>
                 </article>
               </div>
             </div>

@@ -120,17 +120,28 @@ test("renders all public portfolio copy in English", async () => {
 
   assert.match(html, /<html lang="en">/);
   assert.match(html, /VIEW EXPERIENCE/);
-  assert.match(html, /2025\.02–PRESENT/);
-  assert.doesNotMatch(html, /2025\.02–NOW/);
   assert.match(html, /<h3>ByteDance<\/h3>/);
   assert.match(html, /<p>Senior AI Engineer<\/p>/);
+  assert.match(
+    html,
+    /class="experience-brand-logo experience-brand-logo--bytedance" src="\/assets\/logo-bytedance-color\.svg" alt="" aria-hidden="true"/,
+  );
   assert.match(html, /<p>Machine Learning Engineer<\/p>/);
+  assert.match(
+    html,
+    /class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" aria-hidden="true"/,
+  );
   assert.doesNotMatch(page, /<p>AI Algorithm Engineer<\/p>/);
   assert.doesNotMatch(html, /experience-status|>CURRENT</);
   assert.match(html, /<h3>Nanyang Technological University<\/h3>/);
   assert.match(html, /<p>MSc in Computer Control and Automation<\/p>/);
   assert.match(html, /<h3>Southeast University<\/h3>/);
   assert.match(html, /<p>BEng in Electrical Engineering and Automation<\/p>/);
+  assert.doesNotMatch(
+    html,
+    /2025\.02–PRESENT|2023\.07–2025\.01|2022\.06–2023\.06|2020\.12–2022\.03|2016\.09–2020\.06/,
+  );
+  assert.doesNotMatch(page, /experience-date|dateTime:\s*"202[235]-|dateTime="(?:2020|2016)-/);
   assert.match(
     html,
     /For project collaborations, technical consulting, or career opportunities, feel free to reach out\./,
@@ -150,7 +161,7 @@ test("groups both Alibaba organizations under one company heading", async () => 
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(
     html,
-    /<div class="experience-group-heading"><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div>/,
+    /<div class="experience-group-heading"><div class="experience-entry-copy"><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div><img class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" aria-hidden="true"\/><\/div>/,
   );
   assert.match(
     html,
@@ -182,16 +193,131 @@ test("uses one experience type scale and contrast—not opacity—for historical
   const historicalCompanyRule = [
     ...css.matchAll(/\.experience-group-heading h3\s*\{[^}]+\}/gs),
   ].map(([rule]) => rule).find((rule) => rule.includes("rgba(233,255,249,.82)")) ?? "";
-  const historicalDateRule = css.match(
-    /\.experience-subentry \.experience-date\s*\{[^}]+\}/s,
-  )?.[0] ?? "";
 
   assert.match(sharedCompanyRule, /font-size:\s*clamp\(30px,\s*2\.6vw,\s*42px\)/);
   assert.match(sharedCompanyRule, /line-height:\s*1\.08/);
   assert.match(historicalCompanyRule, /color:\s*rgba\(233,255,249,\.82\)/);
-  assert.match(historicalDateRule, /color:\s*rgba\(191,253,241,\.72\)/);
-  assert.doesNotMatch(historicalDateRule, /font-size|line-height|letter-spacing/);
+  assert.doesNotMatch(css, /\.experience-date|\.education-item time/);
   assert.doesNotMatch(css, /\.experience-group\s*\{[^}]*opacity:/s);
+});
+
+test("styles company logos with the same responsive treatment as education crests", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const logoRule = css.match(/\.experience-brand-logo\s*\{[^}]+\}/s)?.[0] ?? "";
+
+  assert.match(logoRule, /grid-column:\s*5/);
+  assert.match(logoRule, /grid-row:\s*1/);
+  assert.match(logoRule, /width:\s*var\(--experience-logo-size\)/);
+  assert.match(logoRule, /height:\s*var\(--experience-logo-size\)/);
+  assert.match(logoRule, /opacity:\s*\.5/);
+  assert.match(logoRule, /filter:\s*saturate\(\.85\)\s*drop-shadow/);
+  assert.match(css, /\.experience-brand-logo--alibaba\s*\{\s*transform:\s*scale\(1\.12\);\s*\}/);
+  assert.match(
+    css,
+    /\.experience-log\s*\{[^}]*--experience-logo-size:\s*96px;[^}]*--experience-logo-gap:\s*clamp\(18px,\s*1\.8vw,\s*28px\);/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-log\s*\{[^}]*--experience-logo-size:\s*48px;[^}]*--experience-logo-gap:\s*8px;/,
+  );
+  assert.match(
+    css,
+    /@media \(min-width:\s*1101px\)[\s\S]*?\.experience-row,\s*\.experience-group-header\s*\{[^}]*minmax\(0,\s*1fr\)\s*var\(--experience-logo-gap\)\s*var\(--experience-logo-size\);[^}]*\}[\s\S]*?\.experience-brand-logo\s*\{\s*grid-column:\s*6;\s*\}/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*900px\)[\s\S]*?\.experience-copy p\s*\{[^}]*font-size:\s*13px;[^}]*letter-spacing:\s*\.01em;[^}]*\}[\s\S]*?\.experience-group-heading p\s*\{[^}]*font-size:\s*13px;[^}]*letter-spacing:\s*\.01em;/,
+  );
+});
+
+test("aligns each experience marker, company title, and logo on one title row", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const experienceGrid = css.match(/\.experience-row\s*\{[^}]+\}/s)?.[0] ?? "";
+  const timelineCell = css.match(/\.timeline-cell\s*\{[^}]+\}/s)?.[0] ?? "";
+  const groupBranch = css.match(/\.experience-group-branch\s*\{[^}]+\}/s)?.[0] ?? "";
+  const entryCopy = css.match(/\.experience-entry-copy\s*\{[^}]+\}/s)?.[0] ?? "";
+
+  assert.match(experienceGrid, /grid-template-rows:\s*auto/);
+  assert.match(experienceGrid, /align-content:\s*center/);
+  assert.match(experienceGrid, /min-height:\s*160px/);
+  assert.match(
+    css,
+    /\.experience-copy,\s*\.experience-entry-heading,\s*\.experience-group-heading\s*\{\s*display:\s*contents;\s*\}/s,
+  );
+  assert.match(entryCopy, /grid-column:\s*3/);
+  assert.match(entryCopy, /grid-row:\s*1/);
+  assert.match(entryCopy, /align-self:\s*center/);
+  assert.match(timelineCell, /grid-column:\s*1/);
+  assert.match(timelineCell, /grid-row:\s*1/);
+  assert.match(groupBranch, /grid-column:\s*1 \/ 3/);
+  assert.match(groupBranch, /grid-row:\s*1/);
+  assert.match(
+    css,
+    /\.experience-copy p,\s*\.experience-group-heading p\s*\{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100% \+ var\(--experience-role-gap\)\);/s,
+  );
+  assert.match(css, /\.experience-group-header\s*\{[^}]*min-height:\s*160px;/s);
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-row,\s*\.experience-row\.is-current\s*\{\s*min-height:\s*128px;[^}]*\}[\s\S]*?\.experience-group-header\s*\{\s*min-height:\s*128px;/s,
+  );
+  assert.doesNotMatch(css, /\.timeline-cell\s*\{[^}]*grid-row:\s*1 \/ 3;/s);
+});
+
+test("uses one symmetric page-boundary rhythm at each responsive scale", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(
+    css,
+    /:root\s*\{[^}]*--section-block-space:\s*clamp\(104px,\s*7vw,\s*112px\);[^}]*--section-content-gap:\s*clamp\(48px,\s*4vw,\s*64px\);[^}]*--section-footer-gap:\s*clamp\(44px,\s*4vw,\s*64px\);/s,
+  );
+  assert.match(css, /\.hero-copy\s*\{[^}]*bottom:\s*var\(--section-block-space\);/s);
+  assert.match(css, /\.experience\s*\{[^}]*min-height:\s*auto;[^}]*padding:\s*var\(--section-block-space\)\s+4\.7vw;/s);
+  assert.match(css, /\.foundations\s*\{[^}]*min-height:\s*auto;[^}]*padding:\s*var\(--section-block-space\)\s+4\.7vw;/s);
+  assert.match(css, /\.research\s*\{[^}]*min-height:\s*auto;[^}]*padding:\s*var\(--section-block-space\)\s+2\.8vw;/s);
+  assert.match(css, /\.contact\s*\{[^}]*padding:\s*var\(--section-block-space\)\s+4\.7vw;/s);
+  assert.match(css, /\.section-footer\s*\{[^}]*margin:\s*var\(--section-footer-gap\)\s+auto\s+0;/s);
+  assert.match(
+    css,
+    /@media \(max-width:\s*900px\)\s*\{\s*:root\s*\{[^}]*--section-block-space:\s*88px;[^}]*--section-content-gap:\s*44px;[^}]*--section-footer-gap:\s*44px;/s,
+  );
+  assert.match(
+    css,
+    /@supports \(animation-timeline:\s*view\(\)\)[\s\S]*?\.section-kicker\.reveal,\s*\.section-footer\.reveal\s*\{[^}]*animation:\s*none;[^}]*transform:\s*none;/s,
+  );
+  assert.doesNotMatch(css, /\.experience > \.section-footer[\s\S]*?margin-top:\s*auto/);
+});
+
+test("keeps the experience scan cursor inside the timeline guide", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const timelineScanStart = css.indexOf("@keyframes timeline-scan");
+  const timelineScanEnd = css.indexOf("@keyframes active-node-pulse", timelineScanStart);
+  const timelineScan = css.slice(timelineScanStart, timelineScanEnd);
+
+  assert.match(
+    css,
+    /\.experience-log\s*\{[^}]*--experience-guide-start:\s*36px;[^}]*--experience-guide-end:\s*22px;[^}]*--experience-scan-height:\s*42px;/s,
+  );
+  assert.match(
+    css,
+    /\.experience-log::before\s*\{[^}]*top:\s*var\(--experience-guide-start\);[^}]*bottom:\s*var\(--experience-guide-end\);/s,
+  );
+  assert.match(
+    css,
+    /\.experience-log::after\s*\{[^}]*top:\s*var\(--experience-guide-start\);[^}]*height:\s*var\(--experience-scan-height\);/s,
+  );
+  assert.match(
+    timelineScan,
+    /0%\s*\{\s*top:\s*var\(--experience-guide-start\);/,
+  );
+  assert.match(
+    timelineScan,
+    /100%\s*\{\s*top:\s*calc\(100% - var\(--experience-guide-end\) - var\(--experience-scan-height\)\);/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*900px\)[\s\S]*?\.experience-log\s*\{[^}]*--experience-guide-start:\s*42px;[^}]*--experience-guide-end:\s*45px;/,
+  );
+  assert.doesNotMatch(css, /translateY\(calc\(100% \+ \d+px\)\)/);
 });
 
 test("orders foundations before research and groups the technical profile clearly", async () => {
@@ -215,7 +341,7 @@ test("orders foundations before research and groups the technical profile clearl
   assert.ok(html.indexOf("<dt>AI SPECIALTIES</dt>") < html.indexOf("<dt>LANGUAGES</dt>"));
   assert.ok(html.indexOf("<dt>LANGUAGES</dt>") < html.indexOf("<dt>PLATFORM</dt>"));
   assert.doesNotMatch(html, /AI FOCUS|ML FRAMEWORK|PLATFORM \/ DATA|<span>PyTorch<\/span>|<span>MySQL<\/span>/);
-  assert.match(css, /@media \(min-width: 1101px\)\s*\{\s*\.toolchain-list \{ margin-top: 58px; \}/);
+  assert.match(css, /@media \(min-width: 1101px\)[\s\S]*?\.toolchain-list \{ margin-top: 58px; \}/);
   assert.doesNotMatch(html, /class="toolchain-module"[^>]*data-index=/);
   assert.doesNotMatch(css, /content:\s*attr\(data-index\)/);
 });
