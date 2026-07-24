@@ -1,0 +1,50 @@
+.openai/hosting.json
+  s_e891fa0fc21f26::t_27309fb2d5c414 1-3
+app/404/page.tsx
+  s_e891fa0fc21f26::t_cf5f5f456b7946 1-11
+app/components/HeroInteractionController.tsx
+  s_e891fa0fc21f26::t_c5bda77c9c72ca 53-83,87
+app/components/Navigation.tsx
+  s_e891fa0fc21f26::t_6b776c6cdab111 39,50-77
+app/globals.css
+  s_e891fa0fc21f26::t_54aa7fd0485791 152,271-280,284-286,300,316-323,549,558-564,605,632-639,673-682,696-703,760,813-850,857,946,948-950,1039,1055,1062-1063,1078,1080-1087,1139-1140,1155,1158,1259-1266,1268,1271-1278,1281,1303-1307,1358,1418,1423
+app/layout.tsx
+  s_e891fa0fc21f26::t_0a5cae7f8a528b 16,19,21-22,24,27,29,35
+app/not-found.tsx
+  s_e891fa0fc21f26::t_efb754dbef7669 1-20
+app/page.tsx
+  s_e891fa0fc21f26::t_967da61f3cfdd3 32-33,41-42,65,118,155,181,188,192,196,229-232,234-235,271,276-278,282,319
+app/scroll-performance.css
+  s_e891fa0fc21f26::t_b8d7433bf33d04 36
+scripts/export-github-pages.mjs
+  s_e891fa0fc21f26::t_b9b7c884a4359a 11,43,60,62
+tests/github-pages-export.test.mjs
+  s_e891fa0fc21f26::t_35003c2f6813ae 24,30-35
+tests/rendered-html.test.mjs
+  s_e891fa0fc21f26::t_a01e547dfe93d0 5,11,33-38,41,56,72-96,114,122,139-142,158-161,190,235
+tests/scroll-performance-contract.test.mjs
+  s_e891fa0fc21f26::t_5941b461b359d2 26,30,33,38-48,61,65-77
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "262489a9f4a3dd18893636445663a3b0293e34b3",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_e891fa0fc21f26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f9b-2180-7322-b790-124aa91d9800",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
