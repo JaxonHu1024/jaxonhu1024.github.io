@@ -1,0 +1,30 @@
+.github/workflows/deploy-pages.yml
+  s_f417f62629e627::t_f01b763f1d631d 35
+app/globals.css
+  s_f417f62629e627::t_52d6bb62151ddc 1001,1005-1007,1019,1026,1464
+tests/rendered-html.test.mjs
+  s_f417f62629e627::t_4cb0a8493d6365 109,113,119-122,137-148
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "90b3a4c186614143c3603a6e0b941c76c7e6cda4",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_f417f62629e627": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f93e4-1c2d-7853-a1b1-502d00788edc",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
