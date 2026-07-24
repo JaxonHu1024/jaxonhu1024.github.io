@@ -205,14 +205,16 @@ test("renders every organization logo with its measured intrinsic dimensions", a
   }
 });
 
-test("prioritizes the hero image and defers below-the-fold organization logos", async () => {
+test("renders the hero terminal statically and defers below-the-fold organization logos", async () => {
   const response = await render();
   const html = await response.text();
 
-  assert.match(
-    html,
-    /<img(?=[^>]*\bsrc="\/assets\/hero-processor-field-optimized\.webp")(?=[^>]*\bfetchPriority="high")[^>]*>/,
-  );
+  // The hero terminal is pure DOM/text, so the LCP element falls back to the
+  // large .hero-name heading; there is no prioritized hero raster to preload.
+  assert.match(html, /class="hero-terminal"/);
+  assert.match(html, /jaxon build --real-world/);
+  assert.doesNotMatch(html, /fetchPriority="high"/);
+  assert.doesNotMatch(html, /hero-processor-field-optimized\.webp/);
   for (const src of [
     "logo-bytedance-color.svg",
     "logo-alibaba-color.svg",
@@ -512,20 +514,22 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
   assert.match(hero, /COMPILING INTELLIGENCE/);
   assert.match(hero, /FOR THE REAL WORLD_/);
   assert.doesNotMatch(hero, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH|hero-role/);
-  assert.match(hero, /hero-processor-field-optimized\.webp/);
-  assert.match(hero, /HeroSignalField/);
+  assert.match(hero, /HeroTerminal/);
+  assert.doesNotMatch(hero, /hero-processor-field-optimized\.webp/);
+  assert.doesNotMatch(hero, /HeroSignalField/);
   assert.doesNotMatch(hero, /[\u4e00-\u9fff]/);
   assert.doesNotMatch(hero, /Road|ResFi|Respiration/i);
   assert.doesNotMatch(page, /[\u3400-\u9fff]/);
 });
 
 test("implements ambient motion as accessible code-native layers", async () => {
-  const heroMotion = await readFile(new URL("../app/components/HeroSignalField.tsx", import.meta.url), "utf8");
+  const heroMotion = await readFile(new URL("../app/components/HeroTerminal.tsx", import.meta.url), "utf8");
   const researchMotion = await readFile(new URL("../app/components/ResearchVisual.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(heroMotion, /prefers-reduced-motion: reduce/);
   assert.match(heroMotion, /IntersectionObserver/);
+  assert.match(heroMotion, /visibilitychange/);
   assert.match(heroMotion, /data-motion-layer="hero-flow"/);
   assert.match(researchMotion, /prefers-reduced-motion: reduce/);
   assert.match(researchMotion, /data-motion-layer={`research-\$\{variant\}`}/);
@@ -534,10 +538,30 @@ test("implements ambient motion as accessible code-native layers", async () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
+test("keeps formal documentation and source assets visible to version control", async () => {
+  const gitignore = await readFile(new URL("../.gitignore", import.meta.url), "utf8");
+  const ignoredEntries = new Set(
+    gitignore
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#")),
+  );
+
+  assert.equal(ignoredEntries.has(".superpowers/"), true);
+  assert.equal(ignoredEntries.has("docs/"), false);
+  assert.equal(ignoredEntries.has("output/"), false);
+});
+
 test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(css, /\.hero-media \{ right: [^;]+; bottom: 126px; width: min\([^)]+\);/);
+  // Mobile terminal is inset on both sides (no horizontal overflow), height-
+  // bounded so it stays within the statement→CTA gap, and stacked below copy.
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.hero-media \{[^}]*--hero-terminal-height: clamp\([^)]+\);[^}]*right: 20px;[^}]*left: 20px;/s,
+  );
+  assert.match(css, /\.hero-media \{[^}]*pointer-events: none;/s);
   assert.match(css, /\.education-item \{\s*position: relative;\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 96px;/);
   assert.match(css, /\.education-node \{\s*position: relative;\s*grid-column: 1;\s*grid-row: 1;\s*align-self: center;/);
   assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);

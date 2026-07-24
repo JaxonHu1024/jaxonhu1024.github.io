@@ -83,7 +83,7 @@ npm run export:github-pages
 
 ```
 app/                 页面源码、React 组件与样式
-├─ components/        Navigation、HeroSignalField、ResearchVisual
+├─ components/        Navigation、HeroTerminal、ResearchVisual
 ├─ lib/               可打断滚动的辅助函数
 ├─ layout.tsx         根布局 + 动态元数据
 ├─ page.tsx           单页作品集内容

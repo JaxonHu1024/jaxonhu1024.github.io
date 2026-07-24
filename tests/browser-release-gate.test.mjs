@@ -338,17 +338,19 @@ test("mobile users see loading feedback until primary assets finish", { timeout:
   });
   const feedbackScriptRequested = deferred();
   const releaseFeedbackScript = deferred();
-  const heroRequested = deferred();
-  const releaseHero = deferred();
+  const fontRequested = deferred();
+  const releaseFont = deferred();
 
   await context.route("**/assets/MobileLoadFeedback-*.js", async (route) => {
     feedbackScriptRequested.resolve();
     await releaseFeedbackScript.promise;
     await route.continue();
   });
-  await context.route("**/assets/hero-processor-field-optimized.webp", async (route) => {
-    heroRequested.resolve();
-    await releaseHero.promise;
+  // The hero is now pure DOM/text, so font readiness is the primary gate that
+  // keeps loading feedback visible. Hold the mono webfonts until we release.
+  await context.route("**/assets/*.woff2", async (route) => {
+    fontRequested.resolve();
+    await releaseFont.promise;
     await route.continue();
   });
   const page = await context.newPage();
@@ -356,7 +358,7 @@ test("mobile users see loading feedback until primary assets finish", { timeout:
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "domcontentloaded" });
     await within(feedbackScriptRequested.promise, "the loading-feedback script request");
-    await within(heroRequested.promise, "the primary image request");
+    await within(fontRequested.promise, "the primary webfont request");
 
     const feedback = page.getByTestId("mobile-load-feedback");
     assert.equal(await feedback.getAttribute("data-state"), "loading");
@@ -374,7 +376,7 @@ test("mobile users see loading feedback until primary assets finish", { timeout:
         && element?.getAttribute("data-visible") === "true";
     }, null, { timeout: 3_000 });
 
-    releaseHero.resolve();
+    releaseFont.resolve();
     await page.waitForFunction(() => (
       document.querySelector('[data-testid="mobile-load-feedback"]')
         ?.getAttribute("data-state") === "complete"
@@ -386,7 +388,7 @@ test("mobile users see loading feedback until primary assets finish", { timeout:
     ), null, { timeout: 3_000 });
   } finally {
     releaseFeedbackScript.resolve();
-    releaseHero.resolve();
+    releaseFont.resolve();
     await context.close();
   }
 });
@@ -398,14 +400,29 @@ test("asset failures expose an accessible persistent error state", { timeout: 15
   });
 
   try {
+    // No eager hero raster exists anymore, so exercise the error path the way
+    // it now surfaces in production: a deferred asset that fails after the
+    // initial fonts.ready gate still trips the capture-phase image error guard.
     await context.route(
-      "**/assets/hero-processor-field-optimized.webp",
+      "**/assets/logo-ntu.svg",
       (route) => route.abort("failed"),
     );
     const page = await context.newPage();
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
 
     const feedback = page.getByTestId("mobile-load-feedback");
+    await page.waitForFunction(() => (
+      document.querySelector('[data-testid="mobile-load-feedback"]')
+        ?.getAttribute("data-state") === "complete"
+    ), null, { timeout: 5_000 });
+
+    await page.evaluate(() => {
+      const broken = document.createElement("img");
+      broken.src = "/assets/logo-ntu.svg";
+      broken.alt = "";
+      document.body.appendChild(broken);
+    });
+
     await page.waitForFunction(() => (
       document.querySelector('[data-testid="mobile-load-feedback"]')
         ?.getAttribute("data-state") === "error"
@@ -421,6 +438,164 @@ test("asset failures expose an accessible persistent error state", { timeout: 15
     assert.ok(retryBox);
     assert.ok(retryBox.width >= 44, `retry width was ${retryBox.width}px`);
     assert.ok(retryBox.height >= 44, `retry height was ${retryBox.height}px`);
+  } finally {
+    await context.close();
+  }
+});
+
+test("hero motion pauses offscreen and resumes from a clean boot", { timeout: 20_000 }, async () => {
+  const context = await browser.newContext({
+    serviceWorkers: "block",
+    viewport: { width: 1280, height: 800 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "running"
+      && document.querySelector(".hero-media")?.getAttribute("data-hero-visible") === "true"
+    ), null, { timeout: 3_000 });
+
+    await page.locator("#contact").scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-media")?.getAttribute("data-hero-visible") === "false"
+    ), null, { timeout: 3_000 });
+    await page.waitForTimeout(100);
+
+    const pausedBefore = await page.evaluate(() => {
+      const terminal = document.querySelector(".hero-terminal");
+      const percent = document.querySelector(".hero-terminal-percent");
+      const caret = document.querySelector(".hero-terminal-caret");
+      const ellipsis = document.querySelector(".hero-terminal-ellipsis");
+      const progress = document.querySelector(".hero-terminal-progress-fill");
+      const animations = terminal.getAnimations({ subtree: true });
+
+      return {
+        animationDetails: animations.map((animation) => ({
+          animationName: animation.animationName ?? null,
+          playState: animation.playState,
+          targetClass: animation.effect?.target?.className ?? null,
+          transitionProperty: animation.transitionProperty ?? null,
+          type: animation.constructor.name,
+        })),
+        caretPlayState: getComputedStyle(caret).animationPlayState,
+        ellipsisPlayState: getComputedStyle(ellipsis).animationPlayState,
+        percent: percent.textContent,
+        phase: terminal.dataset.phase,
+        progressTransitionDuration: getComputedStyle(progress).transitionDuration,
+      };
+    });
+    await page.waitForTimeout(1_000);
+    const pausedAfter = await page.evaluate(() => ({
+      percent: document.querySelector(".hero-terminal-percent").textContent,
+      phase: document.querySelector(".hero-terminal").dataset.phase,
+    }));
+
+    assert.equal(pausedBefore.caretPlayState, "paused");
+    assert.equal(pausedBefore.ellipsisPlayState, "paused");
+    assert.equal(pausedBefore.progressTransitionDuration, "0s");
+    assert.equal(
+      pausedBefore.animationDetails.some(({ playState }) => playState === "running"),
+      false,
+      `offscreen animations were ${JSON.stringify(pausedBefore.animationDetails)}`,
+    );
+    assert.deepEqual(pausedAfter, {
+      percent: pausedBefore.percent,
+      phase: pausedBefore.phase,
+    });
+
+    await page.locator("#hero").scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-media")?.getAttribute("data-hero-visible") === "true"
+      && document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "booting"
+    ), null, { timeout: 3_000 });
+  } finally {
+    await context.close();
+  }
+});
+
+test("terminal loop clears old logs before each staggered compile reveal", { timeout: 25_000 }, async () => {
+  const context = await browser.newContext({
+    serviceWorkers: "block",
+    viewport: { width: 1280, height: 800 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "idle"
+    ), null, { timeout: 18_000 });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "booting"
+    ), null, { timeout: 3_000 });
+    await page.waitForTimeout(50);
+
+    const boot = await page.locator(".hero-terminal-line").evaluateAll((lines) => (
+      lines.map((line) => Number.parseFloat(getComputedStyle(line).opacity))
+    ));
+    assert.ok(
+      boot.every((opacity) => opacity <= 0.05),
+      `booting retained old log opacities: ${boot.join(", ")}`,
+    );
+
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "compiling"
+    ), null, { timeout: 2_000 });
+    await page.waitForTimeout(100);
+    const compiling = await page.locator(".hero-terminal-line").evaluateAll((lines) => (
+      lines.map((line) => Number.parseFloat(getComputedStyle(line).opacity))
+    ));
+
+    assert.ok(compiling[0] > 0, `first compile log did not begin revealing: ${compiling}`);
+    assert.ok(
+      compiling.slice(1).every((opacity) => opacity <= 0.05),
+      `later logs appeared before their stagger: ${compiling.join(", ")}`,
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("reduced-motion mobile terminal exposes every completed log", { timeout: 10_000 }, async () => {
+  const context = await browser.newContext({
+    reducedMotion: "reduce",
+    serviceWorkers: "block",
+    viewport: { width: 390, height: 844 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "reduced"
+    ), null, { timeout: 3_000 });
+
+    const terminal = await page.locator(".hero-terminal").evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      displays: Array.from(element.querySelectorAll(".hero-terminal-line"))
+        .map((line) => getComputedStyle(line).display),
+      runningAnimations: element.getAnimations({ subtree: true })
+        .filter((animation) => animation.playState === "running")
+        .map((animation) => ({
+          targetClass: animation.effect?.target?.className ?? null,
+          transitionProperty: animation.transitionProperty ?? null,
+          type: animation.constructor.name,
+        })),
+      scrollHeight: element.scrollHeight,
+    }));
+
+    assert.deepEqual(terminal.displays, Array(6).fill("flex"));
+    assert.deepEqual(
+      terminal.runningAnimations,
+      [],
+      `reduced terminal retained motion: ${JSON.stringify(terminal.runningAnimations)}`,
+    );
+    assert.ok(
+      terminal.scrollHeight <= terminal.clientHeight + 1,
+      `reduced terminal content was clipped: ${terminal.scrollHeight}px > ${terminal.clientHeight}px`,
+    );
   } finally {
     await context.close();
   }

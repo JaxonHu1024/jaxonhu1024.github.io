@@ -1,5 +1,5 @@
 import { Navigation } from "./components/Navigation";
-import { HeroSignalField } from "./components/HeroSignalField";
+import { HeroTerminal } from "./components/HeroTerminal";
 import { ResearchVisual } from "./components/ResearchVisual";
 
 const currentExperience = {
@@ -63,16 +63,7 @@ export default function Home() {
             </a>
           </div>
           <div className="hero-media" aria-hidden="true">
-            {/* The static export serves this local WebP directly; its Next image optimizer is not used. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/assets/hero-processor-field-optimized.webp"
-              alt=""
-              width="1448"
-              height="1086"
-              fetchPriority="high"
-            />
-            <HeroSignalField />
+            <HeroTerminal />
           </div>
         </section>
 

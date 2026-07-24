@@ -26,30 +26,6 @@ function useHeroExperienceNavigation() {
   }, []);
 }
 
-function useHeroMediaVisibility() {
-  useEffect(() => {
-    const heroMedia = document.querySelector<HTMLElement>(".hero-media");
-    if (!heroMedia) return;
-
-    const setVisibility = (visible: boolean) => {
-      heroMedia.dataset.heroVisible = visible ? "true" : "false";
-    };
-    const rect = heroMedia.getBoundingClientRect();
-    setVisibility(rect.bottom > 0 && rect.top < window.innerHeight);
-
-    const observer = new IntersectionObserver(
-      ([entry]) => setVisibility(Boolean(entry?.isIntersecting)),
-      { threshold: 0.05 },
-    );
-    observer.observe(heroMedia);
-
-    return () => {
-      observer.disconnect();
-      delete heroMedia.dataset.heroVisible;
-    };
-  }, []);
-}
-
 function useSectionMotionVisibility() {
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll<HTMLElement>(".section"));
@@ -83,7 +59,6 @@ function useSectionMotionVisibility() {
 
 export function HeroInteractionController() {
   useHeroExperienceNavigation();
-  useHeroMediaVisibility();
   useSectionMotionVisibility();
   return null;
 }

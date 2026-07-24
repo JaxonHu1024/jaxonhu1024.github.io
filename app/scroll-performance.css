@@ -7,11 +7,18 @@
   display: none;
 }
 
-.hero-media img {
+/* The terminal owns this visibility flag. Offscreen/background states pause
+   CSS animations and collapse in-flight transitions while its JS timers/rAF
+   are cleared, so no second observer or hidden compositor work remains. */
+.hero-media[data-hero-visible="false"] .hero-terminal[data-motion="running"],
+.hero-media[data-hero-visible="false"] .hero-terminal[data-motion="running"] * {
   animation-play-state: paused;
+  transition-delay: 0s;
+  transition-duration: 0s;
 }
 
-.hero-media[data-hero-visible="true"] img {
+.hero-media[data-hero-visible="true"] .hero-terminal[data-motion="running"],
+.hero-media[data-hero-visible="true"] .hero-terminal[data-motion="running"] * {
   animation-play-state: running;
 }
 

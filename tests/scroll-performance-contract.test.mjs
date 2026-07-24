@@ -22,13 +22,26 @@ test("pauses offscreen hero work and removes expensive narrow-viewport scroll ef
     new URL("../app/components/HeroInteractionController.tsx", import.meta.url),
     "utf8",
   );
+  const terminal = await readFile(
+    new URL("../app/components/HeroTerminal.tsx", import.meta.url),
+    "utf8",
+  );
   const css = await readFile(new URL("../app/scroll-performance.css", import.meta.url), "utf8");
   const globals = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.match(controller, /IntersectionObserver/);
-  assert.match(controller, /heroVisible/);
+  assert.match(terminal, /closest<HTMLElement>\("\.hero-media"\)/);
+  assert.match(terminal, /heroMedia\.dataset\.heroVisible/);
+  assert.match(terminal, /IntersectionObserver/);
+  assert.doesNotMatch(controller, /useHeroMediaVisibility|heroVisible/);
   assert.match(controller, /sectionVisible/);
-  assert.match(css, /animation-play-state:\s*paused/);
+  assert.match(
+    css,
+    /\[data-hero-visible="false"\][\s\S]*?animation-play-state:\s*paused/s,
+  );
+  assert.match(
+    css,
+    /\[data-hero-visible="false"\][\s\S]*?transition-duration:\s*0s/s,
+  );
   assert.match(css, /\[data-hero-visible="true"\]/);
   assert.match(globals, /\[data-section-visible="false"\]/);
   assert.match(css, /@media \(max-width: 1100px\)/);
@@ -37,11 +50,60 @@ test("pauses offscreen hero work and removes expensive narrow-viewport scroll ef
 
 test("keeps remaining ambient motion compositor-friendly and omits the detached contact packet", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const processor = css.match(/@keyframes processor-breathe\s*\{[^}]*\}[^}]*\}/s)?.[0] ?? "";
+  const progressFill = css.match(/\.hero-terminal-progress-fill \{[^}]*\}/s)?.[0] ?? "";
+  const readyAnimation = css.match(
+    /@keyframes hero-terminal-ready\s*\{[\s\S]*?\n\}/,
+  )?.[0] ?? "";
 
-  assert.match(processor, /opacity:/);
-  assert.doesNotMatch(processor, /filter:/);
+  // The terminal progress bar animates via transform (scaleX), never layout.
+  assert.match(progressFill, /transform: scaleX\(var\(--progress/);
+  assert.doesNotMatch(css, /\.hero-terminal-progress-fill \{[^}]*\bwidth:\s*\d/s);
+  assert.match(readyAnimation, /box-shadow:/);
+  assert.doesNotMatch(readyAnimation, /filter:/);
   assert.doesNotMatch(css, /trace-out|outbound-packet|--packet-travel/);
+});
+
+test("resets terminal logs before applying reveal stagger", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const lineRule = css.match(/\.hero-terminal\[data-motion="running"\] \.hero-terminal-line \{[^}]*\}/s)?.[0] ?? "";
+
+  assert.match(lineRule, /transition-delay:\s*0s/);
+  assert.match(
+    css,
+    /\[data-phase="booting"\] \.hero-terminal-line\s*\{[^}]*transition-duration:\s*0s/s,
+  );
+  assert.match(
+    css,
+    /\[data-phase="compiling"\] \.hero-terminal-line\.is-compile[\s\S]*?transition-delay:\s*calc\(var\(--reveal-order,\s*0\) \* \.9s\)/s,
+  );
+  assert.match(
+    css,
+    /\[data-phase="linking"\] \.hero-terminal-line\.is-link[\s\S]*?transition-delay:\s*calc\(var\(--reveal-order,\s*0\) \* \.9s\)/s,
+  );
+  assert.match(css, /\[data-phase="idle"\]\s*\{\s*opacity:\s*0;\s*\}/);
+});
+
+test("reserves a stable responsive terminal slot", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const mediaRule = css.match(/\.hero-media \{[^}]*\}/s)?.[0] ?? "";
+  const terminalRule = css.match(/\.hero-terminal \{[^}]*\}/s)?.[0] ?? "";
+
+  assert.match(mediaRule, /--hero-terminal-height:\s*clamp\(/);
+  assert.match(mediaRule, /height:\s*var\(--hero-terminal-height\)/);
+  assert.match(mediaRule, /min-height:\s*var\(--hero-terminal-height\)/);
+  assert.match(mediaRule, /max-height:\s*var\(--hero-terminal-height\)/);
+  assert.match(mediaRule, /overflow:\s*clip/);
+  assert.match(terminalRule, /height:\s*100%/);
+});
+
+test("fully disables terminal motion for reduced-motion users", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const reducedRule = css.match(
+    /\.hero-terminal\[data-motion="reduced"\],[\s\S]*?\{[^}]*\}/s,
+  )?.[0] ?? "";
+
+  assert.match(reducedRule, /animation:\s*none\s*!important/);
+  assert.match(reducedRule, /transition:\s*none\s*!important/);
 });
 
 test("keeps every header tier frosted and removes the hero guide frame", async () => {

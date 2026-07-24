@@ -46,3 +46,8 @@ next-env.d.ts
 # agents
 .trae/
 .codex/
+.superpowers/
+
+# other
+output/
+docs/

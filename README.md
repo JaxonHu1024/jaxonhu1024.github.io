@@ -86,7 +86,7 @@ Every push to `main` runs [`.github/workflows/deploy-pages.yml`](./.github/workf
 
 ```
 app/                 Page source, React components, and styling
-├─ components/        Navigation, HeroSignalField, ResearchVisual
+├─ components/        Navigation, HeroTerminal, ResearchVisual
 ├─ lib/               Cancellable-scroll helper
 ├─ layout.tsx         Root layout + dynamic metadata
 ├─ page.tsx           Single-page portfolio content
