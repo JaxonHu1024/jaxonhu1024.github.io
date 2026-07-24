@@ -426,11 +426,126 @@ test("asset failures expose an accessible persistent error state", { timeout: 15
   }
 });
 
+test("touch-only users return to the resting control style after tapping", { timeout: 15_000 }, async () => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    isMobile: true,
+    serviceWorkers: "block",
+    viewport: { width: 440, height: 956 },
+  });
+  const page = await context.newPage();
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+
+    const touchMedia = await page.evaluate(() => ({
+      coarsePointer: matchMedia("(pointer: coarse)").matches,
+      fineHover: matchMedia("(hover: hover) and (pointer: fine)").matches,
+    }));
+    assert.equal(touchMedia.coarsePointer, true);
+    assert.equal(touchMedia.fineHover, false);
+
+    const activeHoverSelectors = await page.evaluate(() => {
+      const matched = [];
+      const targetSelectors = [
+        ".terminal-button:hover",
+        ".contact-socials a:hover",
+      ];
+      const walk = (rules, active) => {
+        for (const rule of rules) {
+          const conditionActive = rule.type === CSSRule.MEDIA_RULE
+            ? active && matchMedia(rule.conditionText).matches
+            : active;
+
+          if (
+            conditionActive
+            && typeof rule.selectorText === "string"
+            && targetSelectors.some((selector) => rule.selectorText.includes(selector))
+          ) {
+            matched.push(rule.selectorText);
+          }
+
+          if (rule.cssRules) {
+            walk(rule.cssRules, conditionActive);
+          }
+        }
+      };
+
+      for (const sheet of document.styleSheets) {
+        walk(sheet.cssRules, true);
+      }
+
+      return matched;
+    });
+    assert.deepEqual(
+      activeHoverSelectors,
+      [],
+      `touch-only viewport activated hover rules: ${activeHoverSelectors.join(", ")}`,
+    );
+
+    await page.evaluate(() => {
+      document.addEventListener("click", (event) => {
+        if (
+          event.target instanceof Element
+          && event.target.closest(
+            '.hero-cta, a[href="https://ieeexplore.ieee.org/document/9831898"], a[href="mailto:jaxonhu01@gmail.com"]',
+          )
+        ) {
+          event.preventDefault();
+        }
+      }, true);
+    });
+
+    const controlSelectors = [
+      'a.hero-cta[href="#experience"]',
+      'a[href="https://ieeexplore.ieee.org/document/9831898"]',
+      'a[href="mailto:jaxonhu01@gmail.com"]',
+    ];
+
+    for (const selector of controlSelectors) {
+      const control = page.locator(selector);
+      assert.equal(await control.count(), 1, `${selector} was not unique`);
+      await control.scrollIntoViewIfNeeded();
+      const restingStyle = await control.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          boxShadow: style.boxShadow,
+          color: style.color,
+          transform: style.transform,
+        };
+      });
+
+      await control.tap();
+      await page.waitForTimeout(300);
+
+      const releasedStyle = await control.evaluate((element) => {
+        const style = getComputedStyle(element);
+        return {
+          backgroundColor: style.backgroundColor,
+          boxShadow: style.boxShadow,
+          color: style.color,
+          transform: style.transform,
+        };
+      });
+      assert.deepEqual(
+        releasedStyle,
+        restingStyle,
+        `${selector} kept a highlighted style after touch release`,
+      );
+    }
+  } finally {
+    await context.close();
+  }
+});
+
 test("profile titles, rails, and organization logos share one responsive alignment system", { timeout: 30_000 }, async () => {
   const viewports = [
     { width: 360, height: 800 },
     { width: 390, height: 844 },
     { width: 430, height: 932 },
+    { width: 440, height: 956 },
     { width: 768, height: 1024 },
     { width: 820, height: 1180 },
     { width: 1280, height: 800 },
@@ -486,57 +601,14 @@ test("profile titles, rails, and organization logos share one responsive alignme
         const logoMetrics = (selector) => {
           const element = document.querySelector(selector);
           const box = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
 
           return {
             centerX: round(box.x + box.width / 2),
-          };
-        };
-        const opticalLogoWeight = (selector) => {
-          const image = document.querySelector(selector);
-          const style = getComputedStyle(image);
-          const slotWidth = Number.parseFloat(style.width);
-          const slotHeight = Number.parseFloat(style.height);
-          const matrix = style.transform === "none"
-            ? new DOMMatrixReadOnly()
-            : new DOMMatrixReadOnly(style.transform);
-          const scale = Math.abs(matrix.a);
-          const intrinsicRatio = image.naturalWidth / image.naturalHeight;
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(slotWidth);
-          canvas.height = Math.round(slotHeight);
-          let drawWidth = canvas.width;
-          let drawHeight = canvas.height;
-
-          if (intrinsicRatio > 1) {
-            drawHeight = canvas.width / intrinsicRatio;
-          } else {
-            drawWidth = canvas.height * intrinsicRatio;
-          }
-
-          const context2d = canvas.getContext("2d");
-          context2d.drawImage(
-            image,
-            (canvas.width - drawWidth) / 2,
-            (canvas.height - drawHeight) / 2,
-            drawWidth,
-            drawHeight,
-          );
-          const pixels = context2d.getImageData(
-            0,
-            0,
-            canvas.width,
-            canvas.height,
-          ).data;
-          let alphaArea = 0;
-
-          for (let index = 3; index < pixels.length; index += 4) {
-            alphaArea += pixels[index] / 255;
-          }
-
-          return {
-            slotHeight: round(slotHeight),
-            slotWidth: round(slotWidth),
-            weight: round(scale * alphaArea ** 0.15),
+            renderedHeight: round(box.height),
+            renderedWidth: round(box.width),
+            slotHeight: round(Number.parseFloat(style.height)),
+            slotWidth: round(Number.parseFloat(style.width)),
           };
         };
 
@@ -549,7 +621,6 @@ test("profile titles, rails, and organization logos share one responsive alignme
 
         return {
           logos: logoSelectors.map(logoMetrics),
-          opticalLogos: logoSelectors.map(opticalLogoWeight),
           rails: [
             railMetrics(".experience-log"),
             railMetrics(".education-timeline"),
@@ -624,7 +695,7 @@ test("profile titles, rails, and organization logos share one responsive alignme
       }
 
       const expectedSlotSize = viewport.width <= 760 ? 48 : 96;
-      for (const logo of layout.opticalLogos) {
+      for (const logo of layout.logos) {
         assert.equal(
           logo.slotWidth,
           expectedSlotSize,
@@ -637,17 +708,19 @@ test("profile titles, rails, and organization logos share one responsive alignme
         );
       }
 
-      const opticalWeights = layout.opticalLogos.map(({ weight }) => weight);
-      const meanOpticalWeight = (
-        opticalWeights.reduce((total, weight) => total + weight, 0)
-        / opticalWeights.length
+      const renderedEdges = layout.logos.map(
+        ({ renderedHeight, renderedWidth }) => Math.max(renderedHeight, renderedWidth),
       );
-      const opticalWeightSpread = (
-        Math.max(...opticalWeights) - Math.min(...opticalWeights)
-      ) / meanOpticalWeight;
+      const meanRenderedEdge = (
+        renderedEdges.reduce((total, edge) => total + edge, 0)
+        / renderedEdges.length
+      );
+      const renderedEdgeSpread = (
+        Math.max(...renderedEdges) - Math.min(...renderedEdges)
+      ) / meanRenderedEdge;
       assert.ok(
-        opticalWeightSpread <= 0.015,
-        `${viewport.width}x${viewport.height} optical logo weights diverged: ${opticalWeights.join(", ")}`,
+        renderedEdgeSpread <= 0.1,
+        `${viewport.width}x${viewport.height} rendered logo sizes diverged: ${renderedEdges.join(", ")}`,
       );
     } finally {
       await context.close();

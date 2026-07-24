@@ -349,10 +349,10 @@ test("styles company logos with the same responsive treatment as education crest
   );
   assert.match(sharedLogoRule, /transform-origin:\s*center/);
   for (const [selector, scale] of [
-    ["experience-brand-logo--bytedance", "1\\.02"],
-    ["experience-brand-logo--alibaba", "1\\.18"],
-    ["education-crest--ntu", "\\.92"],
-    ["education-crest--seu", "\\.9"],
+    ["experience-brand-logo--bytedance", "1"],
+    ["experience-brand-logo--alibaba", "1\\.02"],
+    ["education-crest--ntu", "1\\.1"],
+    ["education-crest--seu", "1\\.05"],
   ]) {
     assert.match(
       css,
