@@ -491,32 +491,28 @@ test("profile titles, rails, and organization logos share one responsive alignme
             centerX: round(box.x + box.width / 2),
           };
         };
-        const visibleLogoSize = (selector) => {
+        const opticalLogoWeight = (selector) => {
           const image = document.querySelector(selector);
           const style = getComputedStyle(image);
-          const boxWidth = Number.parseFloat(style.width);
-          const boxHeight = Number.parseFloat(style.height);
+          const slotWidth = Number.parseFloat(style.width);
+          const slotHeight = Number.parseFloat(style.height);
           const matrix = style.transform === "none"
             ? new DOMMatrixReadOnly()
             : new DOMMatrixReadOnly(style.transform);
           const scale = Math.abs(matrix.a);
           const intrinsicRatio = image.naturalWidth / image.naturalHeight;
-          const boxRatio = boxWidth / boxHeight;
-          let drawWidth = boxWidth;
-          let drawHeight = boxHeight;
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(slotWidth);
+          canvas.height = Math.round(slotHeight);
+          let drawWidth = canvas.width;
+          let drawHeight = canvas.height;
 
-          if (intrinsicRatio > boxRatio) {
-            drawHeight = boxWidth / intrinsicRatio;
+          if (intrinsicRatio > 1) {
+            drawHeight = canvas.width / intrinsicRatio;
           } else {
-            drawWidth = boxHeight * intrinsicRatio;
+            drawWidth = canvas.height * intrinsicRatio;
           }
 
-          drawWidth *= scale;
-          drawHeight *= scale;
-
-          const canvas = document.createElement("canvas");
-          canvas.width = 256;
-          canvas.height = 256;
           const context2d = canvas.getContext("2d");
           context2d.drawImage(
             image,
@@ -531,25 +527,17 @@ test("profile titles, rails, and organization logos share one responsive alignme
             canvas.width,
             canvas.height,
           ).data;
-          let minX = canvas.width;
-          let minY = canvas.height;
-          let maxX = -1;
-          let maxY = -1;
+          let alphaArea = 0;
 
-          for (let y = 0; y < canvas.height; y += 1) {
-            for (let x = 0; x < canvas.width; x += 1) {
-              if (pixels[(y * canvas.width + x) * 4 + 3] <= 4) {
-                continue;
-              }
-
-              minX = Math.min(minX, x);
-              minY = Math.min(minY, y);
-              maxX = Math.max(maxX, x);
-              maxY = Math.max(maxY, y);
-            }
+          for (let index = 3; index < pixels.length; index += 4) {
+            alphaArea += pixels[index] / 255;
           }
 
-          return round(Math.max(maxX - minX + 1, maxY - minY + 1));
+          return {
+            slotHeight: round(slotHeight),
+            slotWidth: round(slotWidth),
+            weight: round(scale * alphaArea ** 0.15),
+          };
         };
 
         const logoSelectors = [
@@ -561,7 +549,7 @@ test("profile titles, rails, and organization logos share one responsive alignme
 
         return {
           logos: logoSelectors.map(logoMetrics),
-          opticalLogoSizes: logoSelectors.map(visibleLogoSize),
+          opticalLogos: logoSelectors.map(opticalLogoWeight),
           rails: [
             railMetrics(".experience-log"),
             railMetrics(".education-timeline"),
@@ -623,10 +611,31 @@ test("profile titles, rails, and organization logos share one responsive alignme
         );
       }
 
-      const opticalSizes = layout.opticalLogoSizes;
+      const expectedSlotSize = viewport.width <= 760 ? 48 : 96;
+      for (const logo of layout.opticalLogos) {
+        assert.equal(
+          logo.slotWidth,
+          expectedSlotSize,
+          `${viewport.width}x${viewport.height} logo slot width=${logo.slotWidth}px`,
+        );
+        assert.equal(
+          logo.slotHeight,
+          expectedSlotSize,
+          `${viewport.width}x${viewport.height} logo slot height=${logo.slotHeight}px`,
+        );
+      }
+
+      const opticalWeights = layout.opticalLogos.map(({ weight }) => weight);
+      const meanOpticalWeight = (
+        opticalWeights.reduce((total, weight) => total + weight, 0)
+        / opticalWeights.length
+      );
+      const opticalWeightSpread = (
+        Math.max(...opticalWeights) - Math.min(...opticalWeights)
+      ) / meanOpticalWeight;
       assert.ok(
-        Math.max(...opticalSizes) - Math.min(...opticalSizes) <= 1.5,
-        `${viewport.width}x${viewport.height} optical logo sizes diverged: ${opticalSizes.join(", ")}`,
+        opticalWeightSpread <= 0.015,
+        `${viewport.width}x${viewport.height} optical logo weights diverged: ${opticalWeights.join(", ")}`,
       );
     } finally {
       await context.close();

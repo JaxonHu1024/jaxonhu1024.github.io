@@ -173,7 +173,7 @@ export default function Home() {
                   {/* Static export serves the local SVG directly; Next image optimizer is not used. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    className="education-crest"
+                    className="education-crest education-crest--ntu"
                     src="/assets/logo-ntu.svg"
                     alt=""
                     width="117"
@@ -188,7 +188,7 @@ export default function Home() {
                   <span className="education-node" aria-hidden="true" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    className="education-crest"
+                    className="education-crest education-crest--seu"
                     src="/assets/logo-seu-color.svg"
                     alt=""
                     width="189"
