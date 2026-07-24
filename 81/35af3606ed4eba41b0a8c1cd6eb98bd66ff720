@@ -1,0 +1,50 @@
+app/components/Navigation.tsx
+  s_e891fa0fc21f26::t_b3dc59e2d41621 15-16,21-23,28-45,62-65,68-80,86,102,104-111,146-147,153-158,171
+app/globals.css
+  s_e891fa0fc21f26::t_c6a0d377346367 106-116,133-150,158-159,240-244,268,285,292,306,313-317,489-490,492,494,496,503-504,529,536-537,542,552,557,570,577-578,580-581,589,593-595,601,603-613,671,735-747,753,766-767,777-780,795,818-819,821-829,1077,1142-1143,1248-1258,1311-1313,1337-1338,1340,1342-1345,1353,1406
+app/layout.tsx
+  s_26345dc25011bd::t_9d680d1ad27b1d 16-17,21,27,31,35
+app/lib/cancellable-scroll.ts
+  s_e891fa0fc21f26::t_88a04b3431bfbf 18,29,42,47,57-63,65,67,71,82
+app/page.tsx
+  s_e891fa0fc21f26::t_983f2786faf2e9 18,97-98,112,181-182,185-186,189-190,223,265
+tests/cancellable-scroll.test.mjs
+  s_e891fa0fc21f26::t_1802d5fdbb9e50 86,88-91,93,98,103,106-108,113,134-147
+tests/github-pages-export.test.mjs
+  s_e891fa0fc21f26::t_d7eb993702f46a 25
+tests/rendered-html.test.mjs
+  s_e891fa0fc21f26::t_fee416d25a9406 32,35,37-39,44,47,63,69,126-129,134-138,153,161,165,167,173,177-197,209-218,233,261-262,273,275,283-291
+tests/scroll-performance-contract.test.mjs
+  s_e891fa0fc21f26::t_cc9c021284781f 38,44,69,75-79
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8135af3606ed4eba41b0a8c1cd6eb98bd66ff720",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_26345dc25011bd": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f922c-2132-7063-bdad-caaeaf05d809",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_e891fa0fc21f26": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f8f9b-2180-7322-b790-124aa91d9800",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
