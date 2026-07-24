@@ -1,0 +1,28 @@
+app/components/MobileLoadFeedback.tsx
+  s_dc39db8e0d550d::t_15983439144d46 18,23,92-95
+tests/browser-release-gate.test.mjs
+  s_dc39db8e0d550d::t_93fb9ec1c5db32 201-214,339-340,344-348,358,362-370,388
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "da44c4eb40a6377a2b4a3c66204b5d1a20610fde",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_dc39db8e0d550d": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92f9-3f7d-7761-9caa-1d997c1a2b5a",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
