@@ -1,0 +1,26 @@
+app/page.tsx
+  s_f417f62629e627::t_23e13b6b8a8837 40-41,287-303,316,327,338,349
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "526abb9c2f7b5bf80eae9872e9756358a73b60ed",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_f417f62629e627": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f93e4-1c2d-7853-a1b1-502d00788edc",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
