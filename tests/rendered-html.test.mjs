@@ -538,7 +538,7 @@ test("implements ambient motion as accessible code-native layers", async () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("keeps formal documentation and source assets visible to version control", async () => {
+test("keeps local planning docs and generated source assets out of version control", async () => {
   const gitignore = await readFile(new URL("../.gitignore", import.meta.url), "utf8");
   const ignoredEntries = new Set(
     gitignore
@@ -548,8 +548,8 @@ test("keeps formal documentation and source assets visible to version control", 
   );
 
   assert.equal(ignoredEntries.has(".superpowers/"), true);
-  assert.equal(ignoredEntries.has("docs/"), false);
-  assert.equal(ignoredEntries.has("output/"), false);
+  assert.equal(ignoredEntries.has("docs/"), true);
+  assert.equal(ignoredEntries.has("output/"), true);
 });
 
 test("keeps mobile visual anchors and menu motion layout-safe", async () => {
