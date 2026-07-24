@@ -1,0 +1,36 @@
+app/components/HeroTerminal.tsx
+  s_a138c073105640::t_14acb823491420 3,5-16,18-27,30-37,40,42-43,45-64,66-78,81-95,98-132,135-143,145-152,154,156-158,160-163,165,168-178,181-188,191-192,196,201-202,205,207,213-214,216-220,223-274
+app/globals.css
+  s_a138c073105640::t_513db7385ae49f 315,319,321-325,335-341,344-346,348-359,362-498,501-504,507-563,1360-1372,1426-1431,1446-1453,1458,1614-1649,1874-1882
+app/scroll-performance.css
+  s_a138c073105640::t_074508b31a48af 10-14,16-17,20-21
+tests/browser-release-gate.test.mjs
+  s_a138c073105640::t_32d396240eec8f 341-342,349-353,361,379,391,403-405,407,414-425,446-603
+tests/rendered-html.test.mjs
+  s_a138c073105640::t_24997c38a64036 208,212-217,517-519,526,532,541-554,558-564
+tests/scroll-performance-contract.test.mjs
+  s_a138c073105640::t_9ee5e8a54fd607 25-28,32-35,37-44,53-56,58-62,66-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ce54b47000797ecd6a445e913e34936245e75bb3",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_a138c073105640": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f951c-7a1d-7bd2-a09d-fa9f25ffd6b9",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
