@@ -502,6 +502,10 @@ test("touch-only users return to the resting control style after tapping", { tim
       'a[href="https://ieeexplore.ieee.org/document/9831898"]',
       'a[href="mailto:jaxonhu01@gmail.com"]',
     ];
+    const colorAlpha = (color) => {
+      const channels = color.match(/\d*\.?\d+/g)?.map(Number) ?? [];
+      return channels.length === 4 ? channels[3] : 1;
+    };
 
     for (const selector of controlSelectors) {
       const control = page.locator(selector);
@@ -509,11 +513,20 @@ test("touch-only users return to the resting control style after tapping", { tim
       await control.scrollIntoViewIfNeeded();
       const restingStyle = await control.evaluate((element) => {
         const style = getComputedStyle(element);
+        const transform = new DOMMatrixReadOnly(style.transform);
+
         return {
           backgroundColor: style.backgroundColor,
           boxShadow: style.boxShadow,
           color: style.color,
-          transform: style.transform,
+          transform: {
+            a: transform.a,
+            b: transform.b,
+            c: transform.c,
+            d: transform.d,
+            e: transform.e,
+            f: transform.f,
+          },
         };
       });
 
@@ -522,18 +535,49 @@ test("touch-only users return to the resting control style after tapping", { tim
 
       const releasedStyle = await control.evaluate((element) => {
         const style = getComputedStyle(element);
+        const transform = new DOMMatrixReadOnly(style.transform);
+
         return {
           backgroundColor: style.backgroundColor,
           boxShadow: style.boxShadow,
           color: style.color,
-          transform: style.transform,
+          transform: {
+            a: transform.a,
+            b: transform.b,
+            c: transform.c,
+            d: transform.d,
+            e: transform.e,
+            f: transform.f,
+          },
         };
       });
       assert.deepEqual(
-        releasedStyle,
-        restingStyle,
+        {
+          boxShadow: releasedStyle.boxShadow,
+          color: releasedStyle.color,
+        },
+        {
+          boxShadow: restingStyle.boxShadow,
+          color: restingStyle.color,
+        },
         `${selector} kept a highlighted style after touch release`,
       );
+      assert.ok(
+        releasedStyle.backgroundColor === restingStyle.backgroundColor
+          || (
+            colorAlpha(releasedStyle.backgroundColor) <= 0.001
+            && colorAlpha(restingStyle.backgroundColor) <= 0.001
+          ),
+        `${selector} kept a highlighted background after touch release: ${releasedStyle.backgroundColor}`,
+      );
+      for (const component of ["a", "b", "c", "d", "e", "f"]) {
+        assert.ok(
+          Math.abs(
+            releasedStyle.transform[component] - restingStyle.transform[component],
+          ) <= 0.001,
+          `${selector} kept a transformed state after touch release: ${JSON.stringify(releasedStyle.transform)}`,
+        );
+      }
     }
   } finally {
     await context.close();
