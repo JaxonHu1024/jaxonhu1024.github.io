@@ -56,10 +56,21 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /class="foundations-title/);
   assert.doesNotMatch(html, /foundation-spine/);
   assert.match(html, /mailto:jaxonhu01@gmail\.com/);
-  assert.match(html, /DIRECT CONTACT/);
+  assert.match(html, /class="contact-marquee reveal"/);
+  assert.match(html, /class="contact-marquee-window"/);
+  assert.match(html, /class="contact-marquee-track" aria-hidden="true"/);
+  assert.match(
+    html,
+    /For project collaborations, technical consulting, or career opportunities, feel free to reach out\./,
+  );
+  assert.doesNotMatch(html, /OPEN CHANNEL|SEND A|DIRECT CONTACT/);
   assert.match(html, /https:\/\/github\.com\/JaxonHu1024/);
   assert.match(html, /https:\/\/x\.com\/HuEnzo33232/);
   assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jaxon-hu-10977a221/);
+  assert.equal(
+    (html.match(/class="endpoint-arrow" aria-hidden="true">→<\/span>/g) ?? []).length,
+    4,
+  );
   assert.doesNotMatch(html, /trace-out|>➤</);
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9170807/);
@@ -72,6 +83,51 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /road-network-geolocalization\.png/);
   assert.doesNotMatch(html, /Jaxon Hu|Hu Jiaxing/i);
   assert.doesNotMatch(html, /JAXON\.EXE/);
+});
+
+test("uses a motion-safe responsive contact directory", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(
+    css,
+    /\.contact-socials\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*1100px\)[\s\S]*?\.contact-socials\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.contact-socials\s*\{\s*grid-template-columns:\s*1fr;/s,
+  );
+  assert.match(
+    css,
+    /\.contact-directory\s*\{[^}]*margin-top:\s*0;[^}]*border-top:\s*0;/s,
+  );
+  assert.match(
+    css,
+    /\.contact-marquee-track\s*\{[^}]*font-family:\s*var\(--display\);[^}]*font-weight:\s*500;[^}]*transform:\s*translate3d\(0,\s*0,\s*0\);[^}]*animation:\s*contact-marquee\s+25s\s+linear\s+infinite;/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.contact-marquee-track\s*\{[^}]*animation-duration:\s*22s;/s,
+  );
+  assert.match(
+    css,
+    /\.contact-marquee-window\s*\{[^}]*mask-image:\s*linear-gradient\(90deg,\s*transparent 0,\s*#000 7%,\s*#000 93%,\s*transparent 100%\);/s,
+  );
+  assert.match(
+    css,
+    /\.contact-socials a:hover \.endpoint-arrow\s*\{\s*transform:\s*translateX\(3px\);/s,
+  );
+  assert.match(
+    css,
+    /@keyframes contact-marquee\s*\{[\s\S]*?translate3d\(0,\s*0,\s*0\);[\s\S]*?translate3d\(-50%,\s*0,\s*0\);[\s\S]*?\}/,
+  );
+  assert.match(
+    css,
+    /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.contact-marquee-track\s*\{[^}]*animation:\s*none\s*!important;[^}]*transform:\s*none\s*!important;/s,
+  );
 });
 
 test("renders a branded not-found route instead of the homepage", async () => {
@@ -301,6 +357,10 @@ test("styles company logos with the same responsive treatment as education crest
   );
   assert.match(
     css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-brand-logo,\s*\.education-crest\s*\{[^}]*transform:\s*translateX\(calc\(50%\s*-\s*var\(--profile-axis\)\s*-\s*4px\)\)\s*scale\(var\(--organization-logo-scale\)\);/s,
+  );
+  assert.match(
+    css,
     /@media \(min-width:\s*1101px\)[\s\S]*?\.experience-row,\s*\.experience-group-header\s*\{[^}]*minmax\(0,\s*1fr\)\s*var\(--experience-logo-gap\)\s*var\(--experience-logo-size\);[^}]*\}[\s\S]*?\.experience-brand-logo\s*\{\s*grid-column:\s*6;\s*\}/,
   );
   assert.match(
@@ -467,6 +527,14 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
   assert.match(css, /\.education-item \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 48px;/);
   assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-subentry h4\s*\{[^}]*letter-spacing:\s*0;[^}]*word-spacing:\s*-.06em;/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.education-item p\s*\{[^}]*letter-spacing:\s*0;[^}]*word-spacing:\s*-.06em;/s,
+  );
   assert.match(css, /clip-path: inset\(0 0 100% 0\)/);
   assert.match(css, /max-height: calc\(100dvh - 82px\)/);
   assert.match(css, /visibility 0s linear \.54s/);

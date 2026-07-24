@@ -37,6 +37,8 @@ const papers = [
   },
 ];
 
+const contactMessage = "For project collaborations, technical consulting, or career opportunities, feel free to reach out.";
+
 export default function Home() {
   return (
     <>
@@ -275,10 +277,6 @@ export default function Home() {
           aria-labelledby="contact-title"
           tabIndex={-1}
         >
-          <div className="contact-trace trace-in" aria-hidden="true">
-            <i /><i /><i /><i />
-          </div>
-
           <div className="contact-inner">
             <h2 className="section-kicker reveal" id="contact-title">
               <span>CONTACT.CHANNEL</span>
@@ -286,19 +284,25 @@ export default function Home() {
               <span className="square-end" aria-hidden="true" />
             </h2>
 
-            <header className="contact-primary reveal">
-              <p className="contact-channel">OPEN CHANNEL</p>
-              <h2 className="contact-heading">
-                SEND A
-                <span>SIGNAL.</span>
-              </h2>
-              <p className="contact-note">
-                For project collaborations, technical consulting, or career opportunities, feel free to reach out.
-              </p>
-            </header>
+            <div className="contact-marquee reveal">
+              <p className="contact-marquee-summary">{contactMessage}</p>
+              <div className="contact-marquee-window">
+                <div className="contact-marquee-track" aria-hidden="true">
+                  {[0, 1].map((group) => (
+                    <span className="contact-marquee-group" key={group}>
+                      {[0, 1, 2].map((repeat) => (
+                        <span className="contact-marquee-item" key={repeat}>
+                          <span>{contactMessage}</span>
+                          <span className="contact-marquee-separator">{"//"}</span>
+                        </span>
+                      ))}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             <nav className="contact-directory reveal" aria-label="Contact channels">
-              <p className="directory-heading">DIRECT CONTACT</p>
               <ul className="contact-socials">
                 <li>
                   <a href="mailto:jaxonhu01@gmail.com" aria-label="Email · jaxonhu01@gmail.com">
@@ -309,7 +313,7 @@ export default function Home() {
                       </svg>
                     </span>
                     <span className="endpoint-copy"><b>EMAIL</b><small>jaxonhu01@gmail.com</small></span>
-                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                    <span className="endpoint-arrow" aria-hidden="true">→</span>
                   </a>
                 </li>
                 <li>
@@ -320,7 +324,7 @@ export default function Home() {
                       </svg>
                     </span>
                     <span className="endpoint-copy"><b>GITHUB</b><small>JaxonHu1024</small></span>
-                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                    <span className="endpoint-arrow" aria-hidden="true">→</span>
                   </a>
                 </li>
                 <li>
@@ -331,7 +335,7 @@ export default function Home() {
                       </svg>
                     </span>
                     <span className="endpoint-copy"><b>X / TWITTER</b><small>@HuEnzo33232</small></span>
-                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                    <span className="endpoint-arrow" aria-hidden="true">→</span>
                   </a>
                 </li>
                 <li>
@@ -342,7 +346,7 @@ export default function Home() {
                       </svg>
                     </span>
                     <span className="endpoint-copy"><b>LINKEDIN</b><small>Jaxon</small></span>
-                    <span className="endpoint-arrow" aria-hidden="true">↗</span>
+                    <span className="endpoint-arrow" aria-hidden="true">→</span>
                   </a>
                 </li>
               </ul>

@@ -609,6 +609,18 @@ test("profile titles, rails, and organization logos share one responsive alignme
           Math.max(...logoCenters) - Math.min(...logoCenters) <= 0.75,
           `${viewport.width}x${viewport.height} logo centers diverged: ${logoCenters.join(", ")}`,
         );
+        const mirroredRails = [
+          layout.rails[0],
+          layout.rails[0],
+          layout.rails[1],
+          layout.rails[1],
+        ];
+        logoCenters.forEach((centerX, index) => {
+          assert.ok(
+            Math.abs(centerX + mirroredRails[index].absoluteX - (viewport.width - 4)) <= 0.75,
+            `${viewport.width}x${viewport.height} logo ${index + 1} is not 4px left of its mirrored guide position: rail=${mirroredRails[index].absoluteX}px logo=${centerX}px`,
+          );
+        });
       }
 
       const expectedSlotSize = viewport.width <= 760 ? 48 : 96;
