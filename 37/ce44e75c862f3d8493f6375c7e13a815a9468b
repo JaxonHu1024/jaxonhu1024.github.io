@@ -1,0 +1,34 @@
+app/globals.css
+  s_4c0cef0037c6f3::t_8e9ddde3b88354 20-22,285,347-348,383-389,392,405,415-416,426,429,439-450,457-462,495-503,507-518,521-527,531-532,541-552,560-571,575-580,626,676-677,683,738-739,751,823-834,933,1122,1124-1127,1153-1160,1171,1195,1202-1203,1210-1215,1342,1352,1358-1362,1365-1366,1385,1387,1389-1392,1411,1422-1423,1468
+app/page.tsx
+  s_4c0cef0037c6f3::t_7215ef89c074cc 94-101,110-120
+public/assets/logo-alibaba-color.svg
+  s_4c0cef0037c6f3::t_a2b7e171a22250 1
+public/assets/logo-bytedance-color.svg
+  s_4c0cef0037c6f3::t_30f2818a992cc8 1
+tests/rendered-html.test.mjs
+  s_4c0cef0037c6f3::t_adf6a949d885f8 125-128,130-133,140-144,164,200,204-322,344
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "37ce44e75c862f3d8493f6375c7e13a815a9468b",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_4c0cef0037c6f3": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f92bd-724f-7d23-86f6-0b2b1820d0da",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
