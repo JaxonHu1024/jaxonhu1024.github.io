@@ -426,6 +426,214 @@ test("asset failures expose an accessible persistent error state", { timeout: 15
   }
 });
 
+test("profile titles, rails, and organization logos share one responsive alignment system", { timeout: 30_000 }, async () => {
+  const viewports = [
+    { width: 360, height: 800 },
+    { width: 390, height: 844 },
+    { width: 430, height: 932 },
+    { width: 768, height: 1024 },
+    { width: 820, height: 1180 },
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+  ];
+
+  for (const viewport of viewports) {
+    const context = await browser.newContext({
+      serviceWorkers: "block",
+      viewport,
+    });
+
+    try {
+      const page = await context.newPage();
+      await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+      await page.evaluate(() => document.fonts.ready);
+      await page.locator("#foundations").scrollIntoViewIfNeeded();
+      await page.waitForFunction(() => (
+        Array.from(document.querySelectorAll(
+          ".experience-brand-logo, .education-crest",
+        )).every((image) => image.complete && image.naturalWidth > 0)
+      ), null, { timeout: 3_000 });
+
+      const layout = await page.evaluate(() => {
+        const round = (value) => Math.round(value * 100) / 100;
+        const titleMetrics = (selector) => {
+          const element = document.querySelector(selector);
+          const box = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+
+          return {
+            fontFamily: style.fontFamily,
+            fontSize: style.fontSize,
+            fontWeight: style.fontWeight,
+            letterSpacing: style.letterSpacing,
+            lineHeight: style.lineHeight,
+            x: round(box.x),
+          };
+        };
+        const railMetrics = (selector) => {
+          const element = document.querySelector(selector);
+          const box = element.getBoundingClientRect();
+          const relativeX = Number.parseFloat(
+            getComputedStyle(element, "::before").left,
+          );
+
+          return {
+            absoluteX: round(box.x + relativeX),
+            relativeX: round(relativeX),
+          };
+        };
+        const logoMetrics = (selector) => {
+          const element = document.querySelector(selector);
+          const box = element.getBoundingClientRect();
+
+          return {
+            centerX: round(box.x + box.width / 2),
+          };
+        };
+        const visibleLogoSize = (selector) => {
+          const image = document.querySelector(selector);
+          const style = getComputedStyle(image);
+          const boxWidth = Number.parseFloat(style.width);
+          const boxHeight = Number.parseFloat(style.height);
+          const matrix = style.transform === "none"
+            ? new DOMMatrixReadOnly()
+            : new DOMMatrixReadOnly(style.transform);
+          const scale = Math.abs(matrix.a);
+          const intrinsicRatio = image.naturalWidth / image.naturalHeight;
+          const boxRatio = boxWidth / boxHeight;
+          let drawWidth = boxWidth;
+          let drawHeight = boxHeight;
+
+          if (intrinsicRatio > boxRatio) {
+            drawHeight = boxWidth / intrinsicRatio;
+          } else {
+            drawWidth = boxHeight * intrinsicRatio;
+          }
+
+          drawWidth *= scale;
+          drawHeight *= scale;
+
+          const canvas = document.createElement("canvas");
+          canvas.width = 256;
+          canvas.height = 256;
+          const context2d = canvas.getContext("2d");
+          context2d.drawImage(
+            image,
+            (canvas.width - drawWidth) / 2,
+            (canvas.height - drawHeight) / 2,
+            drawWidth,
+            drawHeight,
+          );
+          const pixels = context2d.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+          ).data;
+          let minX = canvas.width;
+          let minY = canvas.height;
+          let maxX = -1;
+          let maxY = -1;
+
+          for (let y = 0; y < canvas.height; y += 1) {
+            for (let x = 0; x < canvas.width; x += 1) {
+              if (pixels[(y * canvas.width + x) * 4 + 3] <= 4) {
+                continue;
+              }
+
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+
+          return round(Math.max(maxX - minX + 1, maxY - minY + 1));
+        };
+
+        const logoSelectors = [
+          ".experience-brand-logo--bytedance",
+          ".experience-brand-logo--alibaba",
+          'img[src="/assets/logo-ntu.svg"]',
+          'img[src="/assets/logo-seu-color.svg"]',
+        ];
+
+        return {
+          logos: logoSelectors.map(logoMetrics),
+          opticalLogoSizes: logoSelectors.map(visibleLogoSize),
+          rails: [
+            railMetrics(".experience-log"),
+            railMetrics(".education-timeline"),
+            railMetrics(".toolchain-list"),
+          ],
+          titles: [
+            titleMetrics(".experience-entry-copy h3"),
+            titleMetrics(".experience-group-heading h3"),
+            titleMetrics(".education-item:nth-child(1) h3"),
+            titleMetrics(".education-item:nth-child(2) h3"),
+          ],
+        };
+      });
+
+      const [referenceTitle, ...otherTitles] = layout.titles;
+      for (const title of otherTitles) {
+        assert.deepEqual(
+          {
+            fontFamily: title.fontFamily,
+            fontSize: title.fontSize,
+            fontWeight: title.fontWeight,
+            letterSpacing: title.letterSpacing,
+            lineHeight: title.lineHeight,
+          },
+          {
+            fontFamily: referenceTitle.fontFamily,
+            fontSize: referenceTitle.fontSize,
+            fontWeight: referenceTitle.fontWeight,
+            letterSpacing: referenceTitle.letterSpacing,
+            lineHeight: referenceTitle.lineHeight,
+          },
+          `${viewport.width}x${viewport.height} title typography diverged`,
+        );
+        assert.ok(
+          Math.abs(title.x - referenceTitle.x) <= 0.75,
+          `${viewport.width}x${viewport.height} title x=${title.x}px did not align with ${referenceTitle.x}px`,
+        );
+      }
+
+      const railOffsets = layout.rails.map(({ relativeX }) => relativeX);
+      assert.ok(
+        Math.max(...railOffsets) - Math.min(...railOffsets) <= 0.75,
+        `${viewport.width}x${viewport.height} rail offsets diverged: ${railOffsets.join(", ")}`,
+      );
+
+      if (viewport.width <= 1100) {
+        const railPositions = layout.rails.map(({ absoluteX }) => absoluteX);
+        assert.ok(
+          Math.max(...railPositions) - Math.min(...railPositions) <= 0.75,
+          `${viewport.width}x${viewport.height} stacked rail positions diverged: ${railPositions.join(", ")}`,
+        );
+      }
+
+      if (viewport.width <= 760) {
+        const logoCenters = layout.logos.map(({ centerX }) => centerX);
+        assert.ok(
+          Math.max(...logoCenters) - Math.min(...logoCenters) <= 0.75,
+          `${viewport.width}x${viewport.height} logo centers diverged: ${logoCenters.join(", ")}`,
+        );
+      }
+
+      const opticalSizes = layout.opticalLogoSizes;
+      assert.ok(
+        Math.max(...opticalSizes) - Math.min(...opticalSizes) <= 1.5,
+        `${viewport.width}x${viewport.height} optical logo sizes diverged: ${opticalSizes.join(", ")}`,
+      );
+    } finally {
+      await context.close();
+    }
+  }
+});
+
 test("release build meets mobile Core Web Vitals thresholds with executable INP", { timeout: 60_000 }, async () => {
   for (let sampleNumber = 1; sampleNumber <= 3; sampleNumber += 1) {
     const metrics = await runPerformanceSample(sampleNumber);

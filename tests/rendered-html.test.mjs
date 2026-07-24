@@ -230,17 +230,29 @@ test("groups both Alibaba organizations under one company heading", async () => 
   );
 });
 
-test("uses one experience type scale and contrast—not opacity—for historical roles", async () => {
+test("uses one profile title scale and contrast—not opacity—for historical roles", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const rootRule = css.match(/:root\s*\{[^}]+\}/s)?.[0] ?? "";
   const sharedCompanyRule = css.match(
     /\.experience-copy h3,\s*\.experience-group-heading h3\s*\{[^}]+\}/s,
+  )?.[0] ?? "";
+  const educationTitleRule = css.match(
+    /\.education-item h3\s*\{[^}]+\}/s,
   )?.[0] ?? "";
   const historicalCompanyRule = [
     ...css.matchAll(/\.experience-group-heading h3\s*\{[^}]+\}/gs),
   ].map(([rule]) => rule).find((rule) => rule.includes("rgba(233,255,249,.82)")) ?? "";
 
-  assert.match(sharedCompanyRule, /font-size:\s*clamp\(30px,\s*2\.6vw,\s*42px\)/);
-  assert.match(sharedCompanyRule, /line-height:\s*1\.08/);
+  assert.match(rootRule, /--profile-title-size:\s*clamp\(30px,\s*2\.6vw,\s*42px\)/);
+  assert.match(rootRule, /--profile-title-line-height:\s*1\.08/);
+  assert.match(rootRule, /--profile-title-letter-spacing:\s*\.025em/);
+  for (const titleRule of [sharedCompanyRule, educationTitleRule]) {
+    assert.match(titleRule, /font-family:\s*var\(--display\)/);
+    assert.match(titleRule, /font-size:\s*var\(--profile-title-size\)/);
+    assert.match(titleRule, /font-weight:\s*600/);
+    assert.match(titleRule, /line-height:\s*var\(--profile-title-line-height\)/);
+    assert.match(titleRule, /letter-spacing:\s*var\(--profile-title-letter-spacing\)/);
+  }
   assert.match(historicalCompanyRule, /color:\s*rgba\(233,255,249,\.82\)/);
   assert.doesNotMatch(css, /\.experience-date|\.education-item time/);
   assert.doesNotMatch(css, /\.experience-group\s*\{[^}]*opacity:/s);
@@ -248,6 +260,8 @@ test("uses one experience type scale and contrast—not opacity—for historical
 
 test("styles company logos with the same responsive treatment as education crests", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const sharedLogoRule =
+    css.match(/\.experience-brand-logo,\s*\.education-crest\s*\{[^}]+\}/s)?.[0] ?? "";
   const logoRule = css.match(/\.experience-brand-logo\s*\{[^}]+\}/s)?.[0] ?? "";
 
   assert.match(logoRule, /grid-column:\s*5/);
@@ -256,14 +270,28 @@ test("styles company logos with the same responsive treatment as education crest
   assert.match(logoRule, /height:\s*var\(--experience-logo-size\)/);
   assert.match(logoRule, /opacity:\s*\.5/);
   assert.match(logoRule, /filter:\s*saturate\(\.85\)\s*drop-shadow/);
-  assert.match(css, /\.experience-brand-logo--alibaba\s*\{\s*transform:\s*scale\(1\.12\);\s*\}/);
+  assert.match(sharedLogoRule, /--organization-logo-scale:\s*1/);
+  assert.match(
+    sharedLogoRule,
+    /transform:\s*scale\(var\(--organization-logo-scale\)\)/,
+  );
+  assert.match(sharedLogoRule, /transform-origin:\s*center/);
   assert.match(
     css,
-    /\.experience-log\s*\{[^}]*--experience-logo-size:\s*96px;[^}]*--experience-logo-gap:\s*clamp\(18px,\s*1\.8vw,\s*28px\);/s,
+    /\.experience-brand-logo--bytedance\s*\{\s*--organization-logo-scale:\s*1\.09;\s*\}/,
+  );
+  assert.doesNotMatch(css, /\.experience-brand-logo--alibaba\s*\{[^}]*transform:/s);
+  assert.match(
+    css,
+    /:root\s*\{[^}]*--profile-logo-size:\s*96px;/s,
   );
   assert.match(
     css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-log\s*\{[^}]*--experience-logo-size:\s*48px;[^}]*--experience-logo-gap:\s*8px;/,
+    /\.experience-log\s*\{[^}]*--experience-logo-size:\s*var\(--profile-logo-size\);[^}]*--experience-logo-gap:\s*clamp\(18px,\s*1\.8vw,\s*28px\);/s,
+  );
+  assert.match(
+    css,
+    /@media \(max-width:\s*760px\)[\s\S]*?:root\s*\{[^}]*--profile-logo-size:\s*48px;[^}]*\}[\s\S]*?\.experience-log\s*\{[^}]*--experience-logo-gap:\s*8px;/,
   );
   assert.match(
     css,
