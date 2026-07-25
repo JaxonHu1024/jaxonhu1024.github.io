@@ -1,13 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
-import "@fontsource-variable/oxanium/wght.css";
-import "@fontsource/ibm-plex-mono/400.css";
-import "@fontsource/ibm-plex-mono/500.css";
-import "@fontsource/ibm-plex-mono/600.css";
 import { HeroInteractionController } from "./components/HeroInteractionController";
 import { MobileLoadFeedback } from "./components/MobileLoadFeedback";
+import "./fonts.css";
 import "./globals.css";
 import "./scroll-performance.css";
+
+export const viewport: Viewport = {
+  colorScheme: "dark",
+  initialScale: 1,
+  themeColor: "#030507",
+  viewportFit: "cover",
+  width: "device-width",
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -43,6 +48,15 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        {/* Vinext 0.0.50 emits its own default viewport but does not serialize
+            viewportFit from the metadata export. Keep this final override until
+            the shim supports viewport-fit, then remove it with its contract test. */}
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
+      </head>
       <body>
         <HeroInteractionController />
         <MobileLoadFeedback />

@@ -79,6 +79,9 @@ export default function Home() {
             <span className="square-end" aria-hidden="true" />
           </h2>
           <div className="experience-log reveal">
+            <span className="experience-scan-track" aria-hidden="true">
+              <span className="experience-scan-cursor" />
+            </span>
             <article className="experience-row is-current">
               <div className="timeline-cell" aria-hidden="true">
                 <span className="timeline-node" />

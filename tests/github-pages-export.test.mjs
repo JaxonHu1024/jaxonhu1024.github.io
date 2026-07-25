@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import test from "node:test";
 
@@ -50,4 +50,21 @@ test("exports a complete static GitHub Pages artifact", async () => {
   for (const internalFile of [".vite/manifest.json", "_headers", ".openai/hosting.json"]) {
     assert.equal(await exists(resolve(output, internalFile)), false, `${internalFile} should not be published`);
   }
+});
+
+test("publishes only the required Latin WOFF2 font budget", async () => {
+  const assets = resolve(output, "assets");
+  const fontFiles = (await readdir(assets))
+    .filter((file) => /\.woff2?$/.test(file))
+    .sort();
+  const fontBytes = (
+    await Promise.all(fontFiles.map(async (file) => (await stat(resolve(assets, file))).size))
+  ).reduce((total, size) => total + size, 0);
+
+  assert.equal(fontFiles.length, 4, `unexpected font files: ${fontFiles.join(", ")}`);
+  assert.equal(fontFiles.every((file) => file.endsWith(".woff2")), true);
+  assert.equal(fontFiles.some((file) => /cyrillic|vietnamese|latin-ext/.test(file)), false);
+  assert.equal(fontFiles.filter((file) => file.startsWith("ibm-plex-mono-latin-")).length, 3);
+  assert.equal(fontFiles.filter((file) => file.startsWith("oxanium-latin-")).length, 1);
+  assert.ok(fontBytes <= 65_000, `font assets totalled ${fontBytes} bytes`);
 });

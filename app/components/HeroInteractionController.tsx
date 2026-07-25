@@ -57,8 +57,26 @@ function useSectionMotionVisibility() {
   }, []);
 }
 
+function usePageMotionActivity() {
+  useEffect(() => {
+    const root = document.documentElement;
+    const syncActivity = () => {
+      root.dataset.pageActive = document.hidden ? "false" : "true";
+    };
+
+    syncActivity();
+    document.addEventListener("visibilitychange", syncActivity);
+
+    return () => {
+      document.removeEventListener("visibilitychange", syncActivity);
+      delete root.dataset.pageActive;
+    };
+  }, []);
+}
+
 export function HeroInteractionController() {
   useHeroExperienceNavigation();
   useSectionMotionVisibility();
+  usePageMotionActivity();
   return null;
 }

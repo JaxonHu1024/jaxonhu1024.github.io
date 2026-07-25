@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
+
+const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -37,6 +41,19 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /property="og:title" content="Jaxon \| AI Engineer"/);
   assert.match(html, /name="twitter:title" content="Jaxon \| AI Engineer"/);
   assert.match(html, /property="og:image:alt" content="Jaxon \| AI Engineer"/);
+  assert.match(html, /<meta name="theme-color" content="#030507"\/>/);
+  assert.match(
+    html,
+    /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"\/>/,
+  );
+  assert.deepEqual(
+    html.match(/<meta name="viewport" content="[^"]+"\/>/g),
+    [
+      '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
+      '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>',
+    ],
+    "Vinext's default viewport must be followed by the documented viewport-fit compatibility override",
+  );
   assert.match(html, /rel="canonical" href="http:\/\/localhost:3000\/"/);
   assert.match(html, /property="og:url" content="http:\/\/localhost:3000"/);
   assert.match(html, /COMPILING INTELLIGENCE/);
@@ -460,16 +477,19 @@ test("keeps the experience scan cursor inside the timeline guide", async () => {
   );
   assert.match(
     css,
-    /\.experience-log::after\s*\{[^}]*top:\s*var\(--experience-guide-start\);[^}]*height:\s*var\(--experience-scan-height\);/s,
+    /\.experience-scan-track\s*\{[^}]*top:\s*var\(--experience-guide-start\);[^}]*bottom:\s*var\(--experience-guide-end\);[^}]*overflow:\s*hidden;/s,
   );
   assert.match(
-    timelineScan,
-    /0%\s*\{\s*top:\s*var\(--experience-guide-start\);/,
+    css,
+    /\.experience-scan-cursor\s*\{[^}]*height:\s*calc\(100% \+ var\(--experience-scan-height\)\);[^}]*animation:\s*timeline-scan\s+6\.4s\s+linear\s+infinite;[^}]*will-change:\s*transform;/s,
   );
+  assert.match(css, /\.experience-scan-cursor::before\s*\{[^}]*height:\s*var\(--experience-scan-height\);/s);
+  assert.match(timelineScan, /0%\s*\{[^}]*transform:\s*translate3d\(0,\s*0,\s*0\);/s);
   assert.match(
     timelineScan,
-    /100%\s*\{\s*top:\s*calc\(100% - var\(--experience-guide-end\) - var\(--experience-scan-height\)\);/,
+    /100%\s*\{[^}]*transform:\s*translate3d\(\s*0,\s*calc\(\s*100%\s*-\s*var\(--experience-scan-height\)\s*-\s*var\(--experience-scan-height\)\s*\),\s*0\s*\);/s,
   );
+  assert.doesNotMatch(timelineScan, /\b(?:top|left|width|height|margin):/);
   assert.match(
     css,
     /@media \(max-width:\s*900px\)[\s\S]*?\.experience-log\s*\{[^}]*--experience-guide-start:\s*42px;[^}]*--experience-guide-end:\s*45px;/,
@@ -538,7 +558,7 @@ test("implements ambient motion as accessible code-native layers", async () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("keeps local planning docs and generated source assets out of version control", async () => {
+test("tracks public design docs while keeping local agent artifacts ignored", async () => {
   const gitignore = await readFile(new URL("../.gitignore", import.meta.url), "utf8");
   const ignoredEntries = new Set(
     gitignore
@@ -548,18 +568,59 @@ test("keeps local planning docs and generated source assets out of version contr
   );
 
   assert.equal(ignoredEntries.has(".superpowers/"), true);
-  assert.equal(ignoredEntries.has("docs/"), true);
+  assert.equal(ignoredEntries.has("docs/"), false);
   assert.equal(ignoredEntries.has("output/"), true);
+
+  const trackedDocsResult = spawnSync("git", ["ls-files", "-z", "--", "docs"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+  });
+  assert.equal(
+    trackedDocsResult.status,
+    0,
+    trackedDocsResult.stderr || "git ls-files failed",
+  );
+
+  const trackedDocs = new Set(
+    trackedDocsResult.stdout
+      .split("\0")
+      .filter(Boolean),
+  );
+  for (const path of [
+    "docs/superpowers/specs/2026-07-24-hero-terminal-design.md",
+    "docs/superpowers/specs/2026-07-25-site-wide-optimization-design.md",
+    "docs/网站优化指南.md",
+  ]) {
+    assert.equal(trackedDocs.has(path), true, `${path} is not tracked by Git`);
+  }
+});
+
+test("keeps internal collaboration URLs out of public documentation", async () => {
+  for (const path of [
+    "../docs/superpowers/specs/2026-07-24-hero-terminal-design.md",
+    "../docs/superpowers/specs/2026-07-25-site-wide-optimization-design.md",
+    "../docs/网站优化指南.md",
+  ]) {
+    const contents = await readFile(new URL(path, import.meta.url), "utf8");
+    assert.doesNotMatch(
+      contents,
+      /https?:\/\/(?:bytedance\.larkoffice\.com|bytedance\.feishu\.cn)\b/i,
+      `${path} exposes an internal collaboration URL`,
+    );
+  }
 });
 
 test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const baseNavigationRule = css.match(
+    /(?:^|\n)\.nav-scroll\s*\{[^}]*\}/s,
+  )?.[0] ?? "";
 
   // Mobile terminal is inset on both sides (no horizontal overflow), height-
   // bounded so it stays within the statement→CTA gap, and stacked below copy.
   assert.match(
     css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.hero-media \{[^}]*--hero-terminal-height: clamp\([^)]+\);[^}]*right: 20px;[^}]*left: 20px;/s,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.hero-media \{[^}]*--hero-terminal-height: clamp\([^)]+\);[^}]*right: max\(20px, env\(safe-area-inset-right\)\);[^}]*left: max\(20px, env\(safe-area-inset-left\)\);/s,
   );
   assert.match(css, /\.hero-media \{[^}]*pointer-events: none;/s);
   assert.match(css, /\.education-item \{\s*position: relative;\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 96px;/);
@@ -577,13 +638,39 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   );
   assert.match(css, /clip-path: inset\(0 0 100% 0\)/);
   assert.match(css, /max-height: calc\(100dvh - 82px\)/);
-  assert.match(css, /visibility 0s linear \.54s/);
+  assert.match(
+    css,
+    /\.system-mark-trigger\s*\{[^}]*transition:\s*background var\(--duration-fast\) var\(--ease-out\);/s,
+  );
+  assert.match(
+    css,
+    /clip-path var\(--duration-normal\) var\(--ease-out\) var\(--duration-instant\)/,
+  );
+  assert.match(
+    css,
+    /visibility 0s linear calc\(var\(--duration-normal\) \+ var\(--duration-instant\)\)/,
+  );
   assert.match(css, /--menu-open-delay: 0ms;/);
-  assert.match(css, /--menu-close-delay: 150ms;/);
-  assert.match(css, /opacity \.22s ease var\(--menu-close-delay\)/);
-  assert.match(css, /opacity \.34s ease var\(--menu-open-delay\)/);
+  assert.match(css, /--menu-close-delay: var\(--duration-instant\);/);
+  assert.match(
+    css,
+    /opacity var\(--duration-fast\) var\(--ease-out\) var\(--menu-close-delay\)/,
+  );
+  assert.match(
+    css,
+    /opacity var\(--duration-normal\) var\(--ease-out\) var\(--menu-open-delay\)/,
+  );
+  assert.match(
+    css,
+    /transform var\(--duration-normal\) var\(--ease-spring\) var\(--menu-open-delay\)/,
+  );
   assert.match(css, /\.site-header\.is-menu-open \.nav-scroll a \{/);
   assert.match(css, /\.nav-scroll a\.is-active::before \{[^}]*display: block;/s);
+  assert.match(
+    css,
+    /\.site-header\.is-menu-open \.nav-scroll\s*\{[^}]*will-change:\s*clip-path,\s*opacity,\s*transform;/s,
+  );
+  assert.doesNotMatch(baseNavigationRule, /will-change:/);
   assert.doesNotMatch(css, /transition:\s*max-height|max-height:\s*320px/);
   assert.match(css, /\.experience-copy h3,\s*\.experience-group-heading h3 \{/s);
   assert.match(css, /\.paper-copy h3 \{/);
@@ -591,6 +678,53 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   assert.doesNotMatch(css, /\.experience-copy h2|\.paper-copy h2/);
   assert.match(css, /@media \(min-width: 761px\) and \(max-width: 1100px\)/);
   assert.match(css, /@media \(max-width: 900px\)/);
+});
+
+test("defines semantic visual tokens and safe-area-aware dark theming", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const rootRule = css.match(/:root\s*\{[^}]+\}/s)?.[0] ?? "";
+  const htmlRule = css.match(/html\s*\{[^}]+\}/s)?.[0] ?? "";
+  const sectionRule = css.match(/\.section\s*\{[^}]+\}/s)?.[0] ?? "";
+  const feedbackRule = css.match(/\.mobile-load-feedback\s*\{[^}]+\}/s)?.[0] ?? "";
+
+  for (const token of [
+    "--color-background",
+    "--color-surface",
+    "--color-foreground",
+    "--color-muted",
+    "--color-line",
+    "--color-line-subtle",
+    "--color-accent",
+    "--ease-out",
+    "--ease-emphasized",
+    "--ease-spring",
+    "--duration-instant",
+    "--duration-fast",
+    "--duration-normal",
+    "--duration-reveal",
+    "--z-feedback",
+    "--z-header",
+    "--z-skip-link",
+  ]) {
+    assert.match(rootRule, new RegExp(`${token}:`), `missing semantic token ${token}`);
+  }
+  assert.match(htmlRule, /color-scheme:\s*dark/);
+  assert.match(htmlRule, /background:\s*var\(--color-background\)/);
+  assert.match(sectionRule, /scroll-margin-top:\s*calc\(var\(--nav-height\) \+ 2rem \+ env\(safe-area-inset-top\)\)/);
+  assert.match(
+    css,
+    /\.site-header\s*\{[^}]*top:\s*max\(14px,\s*env\(safe-area-inset-top\)\);[^}]*right:\s*max\(14px,\s*env\(safe-area-inset-right\)\);[^}]*left:\s*max\(14px,\s*env\(safe-area-inset-left\)\);/s,
+  );
+  assert.match(
+    css,
+    /\.skip-link\s*\{[^}]*top:\s*max\(8px,\s*env\(safe-area-inset-top\)\);[^}]*left:\s*max\(8px,\s*env\(safe-area-inset-left\)\);/s,
+  );
+  assert.match(
+    feedbackRule,
+    /top:\s*calc\(\s*var\(--nav-height\)\s*\+\s*max\(1rem,\s*env\(safe-area-inset-top\)\)\s*\+\s*\.5rem\s*\)/s,
+  );
+  assert.match(feedbackRule, /right:\s*max\(\.75rem,\s*env\(safe-area-inset-right\)\)/);
+  assert.match(feedbackRule, /left:\s*max\(\.75rem,\s*env\(safe-area-inset-left\)\)/);
 });
 
 test("scales the desktop hero against both viewport axes", async () => {

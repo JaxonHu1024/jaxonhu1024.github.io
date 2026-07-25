@@ -48,9 +48,35 @@ test("pauses offscreen hero work and removes expensive narrow-viewport scroll ef
   assert.match(css, /\.reveal\s*\{[^}]*animation:\s*none/s);
 });
 
+test("pauses ambient CSS loops when the page is backgrounded", async () => {
+  const controller = await readFile(
+    new URL("../app/components/HeroInteractionController.tsx", import.meta.url),
+    "utf8",
+  );
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(controller, /root\.dataset\.pageActive = document\.hidden \? "false" : "true"/);
+  assert.match(controller, /document\.addEventListener\("visibilitychange", syncActivity\)/);
+  assert.match(controller, /document\.removeEventListener\("visibilitychange", syncActivity\)/);
+  for (const selector of [
+    'html[data-page-active="false"] .experience-scan-cursor',
+    'html[data-page-active="false"] .experience .timeline-node::before',
+    'html[data-page-active="false"] .contact-marquee-track',
+  ]) {
+    assert.ok(css.includes(selector), `missing background pause selector: ${selector}`);
+  }
+  assert.match(
+    css,
+    /html\[data-page-active="false"\] \.contact-marquee-track\s*\{\s*animation-play-state:\s*paused;/s,
+  );
+});
+
 test("keeps remaining ambient motion compositor-friendly and omits the detached contact packet", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const progressFill = css.match(/\.hero-terminal-progress-fill \{[^}]*\}/s)?.[0] ?? "";
+  const timelineScan = css.match(
+    /@keyframes timeline-scan\s*\{[\s\S]*?\n\}/,
+  )?.[0] ?? "";
   const readyAnimation = css.match(
     /@keyframes hero-terminal-ready\s*\{[\s\S]*?\n\}/,
   )?.[0] ?? "";
@@ -60,6 +86,8 @@ test("keeps remaining ambient motion compositor-friendly and omits the detached 
   assert.doesNotMatch(css, /\.hero-terminal-progress-fill \{[^}]*\bwidth:\s*\d/s);
   assert.match(readyAnimation, /box-shadow:/);
   assert.doesNotMatch(readyAnimation, /filter:/);
+  assert.match(timelineScan, /translate3d/);
+  assert.doesNotMatch(timelineScan, /\b(?:top|left|width|height|margin):/);
   assert.doesNotMatch(css, /trace-out|outbound-packet|--packet-travel/);
 });
 

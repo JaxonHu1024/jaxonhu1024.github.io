@@ -166,8 +166,19 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
       }
     };
 
+    const syncMotionState = () => {
+      const state = reducedMotion
+        ? "reduced"
+        : visible && !document.hidden
+          ? "running"
+          : "paused";
+      canvas.dataset.motion = state;
+      return state;
+    };
+
     const scheduleRender = () => {
       window.cancelAnimationFrame(frame);
+      if (syncMotionState() === "paused") return;
       frame = window.requestAnimationFrame(render);
     };
     const observer = new ResizeObserver(scheduleRender);
@@ -175,22 +186,27 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (visible) scheduleRender();
-      else window.cancelAnimationFrame(frame);
+      else {
+        window.cancelAnimationFrame(frame);
+        syncMotionState();
+      }
     }, { threshold: 0.05 });
     visibilityObserver.observe(canvas);
 
     const handleMotionPreference = (event: MediaQueryListEvent) => {
       reducedMotion = event.matches;
-      canvas.dataset.motion = reducedMotion ? "reduced" : "running";
       scheduleRender();
     };
 
     const handleVisibility = () => {
       if (!document.hidden && visible) scheduleRender();
-      else window.cancelAnimationFrame(frame);
+      else {
+        window.cancelAnimationFrame(frame);
+        syncMotionState();
+      }
     };
 
-    canvas.dataset.motion = reducedMotion ? "reduced" : "running";
+    syncMotionState();
     motionQuery.addEventListener("change", handleMotionPreference);
     document.addEventListener("visibilitychange", handleVisibility);
     scheduleRender();
