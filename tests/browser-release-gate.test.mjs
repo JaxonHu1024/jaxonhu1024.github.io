@@ -1323,7 +1323,29 @@ test("touch-only users return to the resting control style after tapping", { tim
       });
 
       await control.tap();
-      await page.waitForTimeout(300);
+      await page.waitForFunction(
+        (targetSelector) => {
+          const element = document.querySelector(targetSelector);
+          return element instanceof Element && !element.matches(":active");
+        },
+        selector,
+        { polling: "raf", timeout: 1_000 },
+      );
+      await control.evaluate(async (element) => {
+        const nextFrame = () => new Promise((resolveFrame) => {
+          requestAnimationFrame(resolveFrame);
+        });
+
+        // A fixed delay can sample the outgoing :active transition mid-frame
+        // on a busy CI runner. Once :active has actually cleared, wait for the
+        // browser's release transition and allow the settled style to paint.
+        await nextFrame();
+        await Promise.allSettled(
+          element.getAnimations({ subtree: true })
+            .map((animation) => animation.finished),
+        );
+        await nextFrame();
+      });
 
       const releasedStyle = await control.evaluate((element) => {
         const style = getComputedStyle(element);
