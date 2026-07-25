@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
-
-const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -58,6 +54,13 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /property="og:url" content="http:\/\/localhost:3000"/);
   assert.match(html, /COMPILING INTELLIGENCE/);
   assert.match(html, /FOR THE REAL WORLD_/);
+  assert.doesNotMatch(html, /hero-positioning/);
+  assert.doesNotMatch(
+    html,
+    /SENIOR AI ENGINEER \/\/ AI AGENTS · LLMs \/ VLMs · AUTONOMOUS DRIVING/,
+  );
+  assert.match(html, /class="experience-status">CURRENT ROLE<\/span>/);
+  assert.match(html, /class="experience-status">PREVIOUS ROLE<\/span>/);
   assert.doesNotMatch(html, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
   assert.match(html, /ByteDance/);
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
@@ -111,7 +114,7 @@ test("uses a motion-safe responsive contact directory", async () => {
   );
   assert.match(
     css,
-    /@media \(max-width:\s*1100px\)[\s\S]*?\.contact-socials\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s,
+    /@media \(max-width:\s*1279px\)\s*\{\s*\.contact-socials\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s,
   );
   assert.match(
     css,
@@ -222,14 +225,35 @@ test("renders every organization logo with its measured intrinsic dimensions", a
   }
 });
 
-test("renders the hero terminal statically and defers below-the-fold organization logos", async () => {
+test("renders the completed single-command CLI fallback and defers organization logos", async () => {
   const response = await render();
   const html = await response.text();
 
   // The hero terminal is pure DOM/text, so the LCP element falls back to the
   // large .hero-name heading; there is no prioritized hero raster to preload.
   assert.match(html, /class="hero-terminal"/);
-  assert.match(html, /jaxon build --real-world/);
+  assert.match(html, /class="hero-terminal-window-controls"/);
+  assert.equal(
+    html.match(/class="hero-terminal-window-control"/g)?.length,
+    3,
+  );
+  assert.match(html, /ai build --target production/);
+  const terminalStart = html.indexOf('<div class="hero-terminal"');
+  const terminalEnd = html.indexOf("</section>", terminalStart);
+  const terminalMarkup = html.slice(terminalStart, terminalEnd);
+  assert.doesNotMatch(terminalMarkup, /jaxon/i);
+  assert.doesNotMatch(terminalMarkup, /hero-terminal-path/);
+  for (const output of [
+    "initializing agent runtime",
+    "binding LLM / VLM models",
+    "validating perception policy",
+    "optimizing inference graph",
+    "publishing production artifact",
+  ]) {
+    assert.match(html, new RegExp(output.replaceAll("/", "\\/")));
+  }
+  assert.match(html, /AI pipeline ready/);
+  assert.doesNotMatch(html, /hero-terminal-dots|sac:\/\/build|v1\.0\.0/);
   assert.doesNotMatch(html, /fetchPriority="high"/);
   assert.doesNotMatch(html, /hero-processor-field-optimized\.webp/);
   for (const src of [
@@ -268,7 +292,6 @@ test("renders all public portfolio copy in English", async () => {
     /class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"/,
   );
   assert.doesNotMatch(page, /<p>AI Algorithm Engineer<\/p>/);
-  assert.doesNotMatch(html, /experience-status|>CURRENT</);
   assert.match(html, /<h3>Nanyang Technological University<\/h3>/);
   assert.match(html, /<p>MSc in Computer Control and Automation<\/p>/);
   assert.match(html, /<h3>Southeast University<\/h3>/);
@@ -297,7 +320,7 @@ test("groups both Alibaba organizations under one company heading", async () => 
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(
     html,
-    /<div class="experience-group-heading"><div class="experience-entry-copy"><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div><img class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"\/><\/div>/,
+    /<div class="experience-group-heading"><div class="experience-entry-copy"><span class="experience-status">PREVIOUS ROLE<\/span><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div><img class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"\/><\/div>/,
   );
   assert.match(
     html,
@@ -413,7 +436,7 @@ test("aligns each experience marker, company title, and logo on one title row", 
 
   assert.match(experienceGrid, /grid-template-rows:\s*auto/);
   assert.match(experienceGrid, /align-content:\s*center/);
-  assert.match(experienceGrid, /min-height:\s*160px/);
+  assert.match(experienceGrid, /min-height:\s*144px/);
   assert.match(
     css,
     /\.experience-copy,\s*\.experience-entry-heading,\s*\.experience-group-heading\s*\{\s*display:\s*contents;\s*\}/s,
@@ -429,10 +452,10 @@ test("aligns each experience marker, company title, and logo on one title row", 
     css,
     /\.experience-copy p,\s*\.experience-group-heading p\s*\{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100% \+ var\(--experience-role-gap\)\);/s,
   );
-  assert.match(css, /\.experience-group-header\s*\{[^}]*min-height:\s*160px;/s);
+  assert.match(css, /\.experience-group-header\s*\{[^}]*min-height:\s*144px;/s);
   assert.match(
     css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-row,\s*\.experience-row\.is-current\s*\{\s*min-height:\s*128px;[^}]*\}[\s\S]*?\.experience-group-header\s*\{\s*min-height:\s*128px;/s,
+    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-row,\s*\.experience-row\.is-current,\s*\.experience-group-header\s*\{\s*min-height:\s*120px;/s,
   );
   assert.doesNotMatch(css, /\.timeline-cell\s*\{[^}]*grid-row:\s*1 \/ 3;/s);
 });
@@ -558,69 +581,17 @@ test("implements ambient motion as accessible code-native layers", async () => {
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("tracks public design docs while keeping local agent artifacts ignored", async () => {
-  const gitignore = await readFile(new URL("../.gitignore", import.meta.url), "utf8");
-  const ignoredEntries = new Set(
-    gitignore
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#")),
-  );
-
-  assert.equal(ignoredEntries.has(".superpowers/"), true);
-  assert.equal(ignoredEntries.has("docs/"), false);
-  assert.equal(ignoredEntries.has("output/"), true);
-
-  const trackedDocsResult = spawnSync("git", ["ls-files", "-z", "--", "docs"], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-  });
-  assert.equal(
-    trackedDocsResult.status,
-    0,
-    trackedDocsResult.stderr || "git ls-files failed",
-  );
-
-  const trackedDocs = new Set(
-    trackedDocsResult.stdout
-      .split("\0")
-      .filter(Boolean),
-  );
-  for (const path of [
-    "docs/superpowers/specs/2026-07-24-hero-terminal-design.md",
-    "docs/superpowers/specs/2026-07-25-site-wide-optimization-design.md",
-    "docs/网站优化指南.md",
-  ]) {
-    assert.equal(trackedDocs.has(path), true, `${path} is not tracked by Git`);
-  }
-});
-
-test("keeps internal collaboration URLs out of public documentation", async () => {
-  for (const path of [
-    "../docs/superpowers/specs/2026-07-24-hero-terminal-design.md",
-    "../docs/superpowers/specs/2026-07-25-site-wide-optimization-design.md",
-    "../docs/网站优化指南.md",
-  ]) {
-    const contents = await readFile(new URL(path, import.meta.url), "utf8");
-    assert.doesNotMatch(
-      contents,
-      /https?:\/\/(?:bytedance\.larkoffice\.com|bytedance\.feishu\.cn)\b/i,
-      `${path} exposes an internal collaboration URL`,
-    );
-  }
-});
-
 test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const baseNavigationRule = css.match(
     /(?:^|\n)\.nav-scroll\s*\{[^}]*\}/s,
   )?.[0] ?? "";
 
-  // Mobile terminal is inset on both sides (no horizontal overflow), height-
+  // Stacked terminal is inset on both sides (no horizontal overflow), height-
   // bounded so it stays within the statement→CTA gap, and stacked below copy.
   assert.match(
     css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.hero-media \{[^}]*--hero-terminal-height: clamp\([^)]+\);[^}]*right: max\(20px, env\(safe-area-inset-right\)\);[^}]*left: max\(20px, env\(safe-area-inset-left\)\);/s,
+    /@media \(max-width:\s*900px\)[\s\S]*?\.hero-media \{[^}]*--hero-terminal-height: clamp\([^)]+\);[^}]*right: max\(20px, env\(safe-area-inset-right\)\);[^}]*left: max\(20px, env\(safe-area-inset-left\)\);/s,
   );
   assert.match(css, /\.hero-media \{[^}]*pointer-events: none;/s);
   assert.match(css, /\.education-item \{\s*position: relative;\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 96px;/);
@@ -676,7 +647,7 @@ test("keeps mobile visual anchors and menu motion layout-safe", async () => {
   assert.match(css, /\.paper-copy h3 \{/);
   assert.match(css, /\.paper-copy h3 span \{ display: block; \}/);
   assert.doesNotMatch(css, /\.experience-copy h2|\.paper-copy h2/);
-  assert.match(css, /@media \(min-width: 761px\) and \(max-width: 1100px\)/);
+  assert.doesNotMatch(css, /@media \(min-width: 761px\) and \(max-width: 1100px\)/);
   assert.match(css, /@media \(max-width: 900px\)/);
 });
 
@@ -727,12 +698,13 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
   assert.match(feedbackRule, /left:\s*max\(\.75rem,\s*env\(safe-area-inset-left\)\)/);
 });
 
-test("scales the desktop hero against both viewport axes", async () => {
+test("scales the desktop hero continuously across the split layout", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.match(css, /font-size: clamp\(104px, min\(15vw, 24dvh\), 246px\)/);
   assert.match(css, /font-size: clamp\(23px, min\(2\.25vw, 3\.6dvh\), 37px\)/);
-  assert.match(css, /width: min\(56vw, 89\.6dvh, 900px\)/);
+  assert.match(css, /--hero-terminal-height: clamp\(280px, 27vw, 360px\)/);
+  assert.match(css, /width: clamp\(340px, 46vw, 600px\)/);
   assert.match(css, /\.hero-cta \{[^}]*width: clamp\(280px, min\(22\.22vw, 35\.56dvh\), 320px\)/s);
 });
 

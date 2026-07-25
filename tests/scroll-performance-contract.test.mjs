@@ -91,24 +91,30 @@ test("keeps remaining ambient motion compositor-friendly and omits the detached 
   assert.doesNotMatch(css, /trace-out|outbound-packet|--packet-travel/);
 });
 
-test("resets terminal logs before applying reveal stagger", async () => {
+test("drives one stable CLI sequence without per-frame progress work", async () => {
+  const terminal = await readFile(
+    new URL("../app/components/HeroTerminal.tsx", import.meta.url),
+    "utf8",
+  );
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const lineRule = css.match(/\.hero-terminal\[data-motion="running"\] \.hero-terminal-line \{[^}]*\}/s)?.[0] ?? "";
+  const progressFill = css.match(/\.hero-terminal-progress-fill \{[^}]*\}/s)?.[0] ?? "";
 
-  assert.match(lineRule, /transition-delay:\s*0s/);
+  assert.match(terminal, /visibleStepCount/);
+  assert.doesNotMatch(terminal, /requestAnimationFrame|cancelAnimationFrame|percentRef/);
+  assert.match(lineRule, /visibility:\s*hidden/);
   assert.match(
     css,
-    /\[data-phase="booting"\] \.hero-terminal-line\s*\{[^}]*transition-duration:\s*0s/s,
+    /\.hero-terminal-line\.is-visible\s*\{[^}]*visibility:\s*visible/s,
   );
   assert.match(
-    css,
-    /\[data-phase="compiling"\] \.hero-terminal-line\.is-compile[\s\S]*?transition-delay:\s*calc\(var\(--reveal-order,\s*0\) \* \.9s\)/s,
+    progressFill,
+    /linear-gradient\([^}]*var\(--color-accent\)[^}]*color-mix\([^}]*58%[^}]*var\(--color-accent-signal\)[^}]*\)/s,
   );
-  assert.match(
+  assert.doesNotMatch(
     css,
-    /\[data-phase="linking"\] \.hero-terminal-line\.is-link[\s\S]*?transition-delay:\s*calc\(var\(--reveal-order,\s*0\) \* \.9s\)/s,
+    /\.hero-terminal-line[^,{]*:nth-child\([^)]+\)[^{]*\{[^}]*display:\s*none/s,
   );
-  assert.match(css, /\[data-phase="idle"\]\s*\{\s*opacity:\s*0;\s*\}/);
 });
 
 test("reserves a stable responsive terminal slot", async () => {
@@ -142,12 +148,13 @@ test("keeps every header tier frosted and removes the hero guide frame", async (
   assert.match(globals, /\.site-header\s*\{[^}]*backdrop-filter:\s*blur\(16px\)/s);
   assert.match(
     css,
-    /@media \(max-width: 1100px\)\s*\{\s*\.site-header\s*\{[^}]*background:\s*rgba\(3,\s*5,\s*7,\s*\.68\);[^}]*backdrop-filter:\s*blur\(6px\)\s*saturate\(112%\)/s,
+    /@media \(max-width: 1100px\)\s*\{\s*:root\s*\{\s*--surface-header:\s*rgba\(3,\s*5,\s*7,\s*\.68\);\s*\}\s*\.site-header\s*\{[^}]*backdrop-filter:\s*blur\(6px\)\s*saturate\(112%\)/s,
   );
   assert.match(
     css,
-    /@media \(max-width: 900px\)\s*\{\s*\.site-header\s*\{[^}]*background:\s*rgba\(3,\s*5,\s*7,\s*\.54\);[^}]*backdrop-filter:\s*blur\(10px\)\s*saturate\(120%\)/s,
+    /@media \(max-width: 900px\)\s*\{\s*:root\s*\{\s*--surface-header:\s*rgba\(3,\s*5,\s*7,\s*\.54\);\s*\}\s*\.site-header\s*\{[^}]*backdrop-filter:\s*blur\(10px\)\s*saturate\(120%\)/s,
   );
+  assert.doesNotMatch(css, /\.site-header\s*\{[^}]*background:\s*rgba\(/s);
   assert.doesNotMatch(css, /backdrop-filter:\s*none/);
 });
 
@@ -168,4 +175,38 @@ test("keeps long-section navigation state deterministic", async () => {
   assert.match(navigation, /className="nav-active-indicator"/);
   assert.match(css, /\.nav-active-indicator \{[^}]*translate3d\(var\(--nav-offset\), 0, 0\)/s);
   assert.doesNotMatch(navigation, /intersectionRatio/);
+});
+
+test("routes shared interface colors through semantic tokens", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  for (const token of [
+    "--color-foreground-secondary",
+    "--color-foreground-muted",
+    "--color-foreground-weak",
+    "--color-line-strong",
+    "--color-line-medium",
+    "--color-accent-signal",
+    "--color-status-active",
+    "--surface-header",
+    "--surface-panel",
+    "--surface-feedback",
+    "--shadow-panel",
+    "--shadow-feedback",
+  ]) {
+    assert.ok(css.includes(token), `missing semantic token ${token}`);
+  }
+
+  for (const [selector, token] of [
+    [".site-header", "--surface-header"],
+    [".terminal-button", "--color-accent"],
+    [".hero-terminal", "--surface-panel"],
+    [".section-footer-index", "--color-foreground-weak"],
+    [".contact-socials a", "--color-foreground"],
+    [".mobile-load-feedback", "--surface-feedback"],
+  ]) {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const block = css.match(new RegExp(`${escaped}\\s*\\{[^}]*\\}`, "s"))?.[0] ?? "";
+    assert.match(block, new RegExp(`var\\(${token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`));
+  }
 });

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 
 type FeedbackState = "loading" | "complete" | "error";
 
-const MINIMUM_LOADING_VISIBILITY_MS = 500;
-const COMPLETE_VISIBILITY_MS = 900;
+const LOADING_REVEAL_DELAY_MS = 300;
+const COMPLETE_VISIBILITY_MS = 600;
 
 const feedbackCopy: Record<FeedbackState, string> = {
   loading: "Loading visual assets…",
@@ -15,15 +15,29 @@ const feedbackCopy: Record<FeedbackState, string> = {
 
 export function MobileLoadFeedback() {
   const [state, setState] = useState<FeedbackState>("loading");
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     let failed = false;
-    const shownAt = performance.now();
-    let minimumVisibilityTimer: number | undefined;
+    let loadingWasShown = false;
     let hideTimer: number | undefined;
     const imageDisposers: Array<() => void> = [];
+
+    const revealLoading = () => {
+      if (cancelled || failed) {
+        return;
+      }
+
+      loadingWasShown = true;
+      setState("loading");
+      setVisible(true);
+    };
+
+    const revealTimer = window.setTimeout(
+      revealLoading,
+      LOADING_REVEAL_DELAY_MS,
+    );
 
     const showError = () => {
       if (cancelled || failed) {
@@ -31,7 +45,7 @@ export function MobileLoadFeedback() {
       }
 
       failed = true;
-      window.clearTimeout(minimumVisibilityTimer);
+      window.clearTimeout(revealTimer);
       window.clearTimeout(hideTimer);
       setState("error");
       setVisible(true);
@@ -75,6 +89,13 @@ export function MobileLoadFeedback() {
         return;
       }
 
+      window.clearTimeout(revealTimer);
+
+      if (!loadingWasShown) {
+        setVisible(false);
+        return;
+      }
+
       setState("complete");
       setVisible(true);
       hideTimer = window.setTimeout(() => {
@@ -82,23 +103,6 @@ export function MobileLoadFeedback() {
           setVisible(false);
         }
       }, COMPLETE_VISIBILITY_MS);
-    };
-
-    const finishSuccessfully = () => {
-      if (cancelled || failed) {
-        return;
-      }
-
-      const remainingVisibility = Math.max(
-        0,
-        MINIMUM_LOADING_VISIBILITY_MS - (performance.now() - shownAt),
-      );
-
-      if (remainingVisibility > 0) {
-        minimumVisibilityTimer = window.setTimeout(showComplete, remainingVisibility);
-      } else {
-        showComplete();
-      }
     };
 
     window.addEventListener("error", handleResourceError, true);
@@ -109,12 +113,12 @@ export function MobileLoadFeedback() {
       .map(waitForImage);
 
     void Promise.all([fontReadiness, ...imageReadiness])
-      .then(finishSuccessfully)
+      .then(showComplete)
       .catch(showError);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(minimumVisibilityTimer);
+      window.clearTimeout(revealTimer);
       window.clearTimeout(hideTimer);
       window.removeEventListener("error", handleResourceError, true);
       imageDisposers.forEach((dispose) => dispose());

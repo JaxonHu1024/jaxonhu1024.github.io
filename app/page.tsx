@@ -53,10 +53,12 @@ export default function Home() {
             JAXON
           </h1>
           <div className="hero-copy">
-            <p className="hero-statement">
-              <span>COMPILING INTELLIGENCE</span>
-              <span>FOR THE REAL WORLD_</span>
-            </p>
+            <div className="hero-message">
+              <p className="hero-statement">
+                <span>COMPILING INTELLIGENCE</span>
+                <span>FOR THE REAL WORLD_</span>
+              </p>
+            </div>
             <a className="terminal-button hero-cta" href="#experience">
               <span>VIEW EXPERIENCE</span>
               <span className="button-arrow" aria-hidden="true">›</span>
@@ -90,6 +92,7 @@ export default function Home() {
               <div className="experience-copy">
                 <div className="experience-entry-heading">
                   <div className="experience-entry-copy">
+                    <span className="experience-status">CURRENT ROLE</span>
                     <h3>{currentExperience.company}</h3>
                     <p>Senior AI Engineer</p>
                   </div>
@@ -113,6 +116,7 @@ export default function Home() {
                 <span className="experience-group-branch" aria-hidden="true" />
                 <div className="experience-group-heading">
                   <div className="experience-entry-copy">
+                    <span className="experience-status">PREVIOUS ROLE</span>
                     <h3 id="alibaba-group-title">Alibaba</h3>
                     <p>Machine Learning Engineer</p>
                   </div>
