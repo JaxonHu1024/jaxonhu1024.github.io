@@ -1,0 +1,26 @@
+docs/superpowers/specs/2026-07-25-targeted-site-polish-design.md
+  s_4629d953b5ab1e::t_92c63eca39f616 1-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "01f7800d4fb4a903e2be0f317c1d0769a1928cdc",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "sessions": {
+    "s_4629d953b5ab1e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f982c-251f-7853-b71c-1bbe144fcab4",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
