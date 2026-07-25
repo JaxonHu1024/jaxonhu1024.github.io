@@ -1,0 +1,14 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "83a9ecb0b8c4083a33998b07f9c77cbf804770ed",
+  "prompts": {},
+  "humans": {
+    "h_7cbc1c0f7d1159": {
+      "author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
