@@ -1,0 +1,21 @@
+tests/browser-release-gate.test.mjs
+  s_6b1536f2a7d121::t_ea2f8a9c3d0f6e 1326-1348
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c9e938665c43d5b41de12896f4927f499fc62c57",
+  "prompts": {},
+  "sessions": {
+    "s_6b1536f2a7d121": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9a27-cb8c-79c1-84ac-9d776919e195",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
