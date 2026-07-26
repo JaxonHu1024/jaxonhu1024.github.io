@@ -1,0 +1,35 @@
+app/components/HeroTerminal.tsx
+  s_a03e9138cbb361::t_14cdacd1994ed1 12-17,64-123,137,152,171,179-183,203,243,404,409-429,433,436,439
+app/globals.css
+  s_a03e9138cbb361::t_fdb54ca374ebbd 675,690-691,697-700,704-705,708,711,714,717,720-726,731,734-735,750,754,1725-1727
+package.json
+  s_a03e9138cbb361::t_d955297c4f22f1 13
+tests/browser-release-gate.test.mjs
+  s_a03e9138cbb361::t_c7698276cf44fe 9-10,225,386,496,543,598,716,807,873,940,1081,1132,1217,1403,1526,1666
+tests/browser-release-harness.mjs
+  s_a03e9138cbb361::t_4301e5297ef313 1-9
+tests/ci-contract.test.mjs
+  s_a03e9138cbb361::t_bc9b50fa1f0ccb 1-25
+tests/rendered-html.test.mjs
+  s_a03e9138cbb361::t_f4d5b9fd4c8b4f 62,185,187-201,283,360-362,365-366,369-375,407-419
+tests/scroll-performance-contract.test.mjs
+  s_a03e9138cbb361::t_f739eb2e054c09 20,22-24,41-53,87-94
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "559feb2c95b8482ae7f5e974710b5f704f526b61",
+  "prompts": {},
+  "sessions": {
+    "s_a03e9138cbb361": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9ce1-8664-7881-a29b-7c8724a57dcb",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
