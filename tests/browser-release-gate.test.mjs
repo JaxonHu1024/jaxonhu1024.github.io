@@ -710,9 +710,9 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       }
       assert.equal(state.terminal?.phase, "ready");
       assert.equal(state.terminal?.visible, true);
-      assert.match(state.terminal?.text ?? "", /ai build --target production/);
+      assert.match(state.terminal?.text ?? "", /agentctl compile --prod/);
       assert.doesNotMatch(state.terminal?.text ?? "", /jaxon/i);
-      assert.match(state.terminal?.text ?? "", /AI pipeline ready/);
+      assert.match(state.terminal?.text ?? "", /BUILD READY/);
 
       await page.locator('a[href="#research"]').click();
       await page.waitForFunction(() => location.hash === "#research");
@@ -968,19 +968,19 @@ test("terminal loop runs one CLI command, holds ready, and resets cleanly", { ti
     const typing = await page.locator(".hero-terminal").evaluate((terminal) => ({
       command: terminal.querySelector(".hero-terminal-command-text")?.textContent,
       percent: terminal.querySelector(".hero-terminal-percent")?.textContent,
-      pathPresent: Boolean(terminal.querySelector(".hero-terminal-path")),
+      topologyPresent: Boolean(terminal.querySelector(".hero-topology-map")),
       readyVisible: terminal.querySelector(".hero-terminal-ready")
         ?.classList.contains("is-visible") ?? false,
       visibleSteps: terminal.querySelectorAll(".hero-terminal-line.is-visible").length,
       windowControls: terminal.querySelectorAll(".hero-terminal-window-control").length,
     }));
     assert.deepEqual(typing, {
-      command: "ai build --target production",
+      command: "agentctl compile --prod",
       percent: "0",
-      pathPresent: false,
+      topologyPresent: true,
       readyVisible: false,
       visibleSteps: 0,
-      windowControls: 3,
+      windowControls: 0,
     });
 
     await page.waitForFunction(() => (
@@ -1054,7 +1054,7 @@ test("terminal loop runs one CLI command, holds ready, and resets cleanly", { ti
       };
     });
     assert.equal(ready.visibleSteps, 5);
-    assert.equal(ready.readyText, "✓ AI pipeline ready");
+    assert.equal(ready.readyText, "◆ BUILD READY");
     assert.equal(ready.readyVisible, true);
     assert.match(ready.backgroundImage, /linear-gradient/i);
 
@@ -1094,8 +1094,9 @@ test("reduced-motion mobile terminal exposes every completed log", { timeout: 10
 
     const terminal = await page.locator(".hero-terminal").evaluate((element) => ({
       clientHeight: element.clientHeight,
-      displays: Array.from(element.querySelectorAll(".hero-terminal-line"))
+      mobileDisplays: Array.from(element.querySelectorAll(".hero-terminal-mobile-line"))
         .map((line) => getComputedStyle(line).display),
+      mobileVisible: element.querySelectorAll(".hero-terminal-mobile-line.is-visible").length,
       percent: element.querySelector(".hero-terminal-percent")?.textContent,
       readyText: element.querySelector(".hero-terminal-ready")?.textContent?.trim() ?? "",
       readyVisible: element.querySelector(".hero-terminal-ready")
@@ -1110,10 +1111,11 @@ test("reduced-motion mobile terminal exposes every completed log", { timeout: 10
       scrollHeight: element.scrollHeight,
     }));
 
-    assert.equal(terminal.displays.length, 5);
-    assert.equal(terminal.displays.every((display) => display !== "none"), true);
+    assert.equal(terminal.mobileDisplays.length, 3);
+    assert.equal(terminal.mobileDisplays.every((display) => display !== "none"), true);
+    assert.equal(terminal.mobileVisible, 3);
     assert.equal(terminal.percent, "100");
-    assert.equal(terminal.readyText, "✓ AI pipeline ready");
+    assert.equal(terminal.readyText, "◆ BUILD READY");
     assert.equal(terminal.readyVisible, true);
     assert.deepEqual(
       terminal.runningAnimations,

@@ -232,27 +232,35 @@ test("renders the completed single-command CLI fallback and defers organization 
   // The hero terminal is pure DOM/text, so the LCP element falls back to the
   // large .hero-name heading; there is no prioritized hero raster to preload.
   assert.match(html, /class="hero-terminal"/);
-  assert.match(html, /class="hero-terminal-window-controls"/);
-  assert.equal(
-    html.match(/class="hero-terminal-window-control"/g)?.length,
-    3,
-  );
-  assert.match(html, /ai build --target production/);
+  assert.match(html, /class="hero-terminal-identity"/);
+  assert.match(html, /class="hero-terminal-environment"/);
+  assert.doesNotMatch(html, /hero-terminal-window-control/);
+  assert.match(html, /agentctl compile --prod/);
   const terminalStart = html.indexOf('<div class="hero-terminal"');
   const terminalEnd = html.indexOf("</section>", terminalStart);
   const terminalMarkup = html.slice(terminalStart, terminalEnd);
   assert.doesNotMatch(terminalMarkup, /jaxon/i);
-  assert.doesNotMatch(terminalMarkup, /hero-terminal-path/);
-  for (const output of [
-    "initializing agent runtime",
-    "binding LLM / VLM models",
-    "validating perception policy",
-    "optimizing inference graph",
-    "publishing production artifact",
+  assert.match(terminalMarkup, /class="hero-topology-map"/);
+  assert.match(terminalMarkup, /class="hero-signal-lane is-active"/);
+  assert.equal(
+    terminalMarkup.match(/class="hero-activation-cell/g)?.length,
+    24,
+  );
+  assert.match(terminalMarkup, /class="hero-activation-cell tone-[123] is-active"/);
+  for (const [label, status] of [
+    ["runtime", "online"],
+    ["models", "bound"],
+    ["policy", "verified"],
+    ["graph", "optimized"],
+    ["artifact", "shipped"],
   ]) {
-    assert.match(html, new RegExp(output.replaceAll("/", "\\/")));
+    assert.match(html, new RegExp(`>${label}<`));
+    assert.match(html, new RegExp(`>${status}<`));
   }
-  assert.match(html, /AI pipeline ready/);
+  for (const signalLabel of ["LANG", "VISION", "CONTEXT", "LATENT FIELD", "OUT"]) {
+    assert.match(terminalMarkup, new RegExp(`>\\s*${signalLabel}\\s*<`));
+  }
+  assert.match(html, /BUILD READY/);
   assert.doesNotMatch(html, /hero-terminal-dots|sac:\/\/build|v1\.0\.0/);
   assert.doesNotMatch(html, /fetchPriority="high"/);
   assert.doesNotMatch(html, /hero-processor-field-optimized\.webp/);

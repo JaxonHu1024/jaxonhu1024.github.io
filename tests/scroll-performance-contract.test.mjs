@@ -109,8 +109,10 @@ test("drives one stable CLI sequence without per-frame progress work", async () 
   );
   assert.match(
     progressFill,
-    /linear-gradient\([^}]*var\(--color-accent\)[^}]*color-mix\([^}]*58%[^}]*var\(--color-accent-signal\)[^}]*\)/s,
+    /linear-gradient\([^}]*var\(--color-accent\)[^}]*color-mix\([^}]*74%[^}]*var\(--color-foreground\)[^}]*\)/s,
   );
+  assert.doesNotMatch(progressFill, /var\(--color-accent-signal\)/);
+  assert.match(css, /\.hero-topology-signal\.is-current\s*\{[^}]*animation:\s*hero-topology-signal/s);
   assert.doesNotMatch(
     css,
     /\.hero-terminal-line[^,{]*:nth-child\([^)]+\)[^{]*\{[^}]*display:\s*none/s,

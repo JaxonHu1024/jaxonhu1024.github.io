@@ -12,21 +12,59 @@ type TerminalPhase = "typing" | "running" | "ready" | "resetting";
 
 type CliStep = {
   readonly progress: number;
-  readonly text: string;
+  readonly label: string;
+  readonly status: string;
 };
 
 const CLI_STEPS: readonly CliStep[] = [
-  { progress: 0.11, text: "initializing agent runtime" },
-  { progress: 0.3, text: "binding LLM / VLM models" },
-  { progress: 0.57, text: "validating perception policy" },
-  { progress: 0.82, text: "optimizing inference graph" },
-  { progress: 1, text: "publishing production artifact" },
+  { progress: 0.11, label: "runtime", status: "online" },
+  { progress: 0.3, label: "models", status: "bound" },
+  { progress: 0.57, label: "policy", status: "verified" },
+  { progress: 0.82, label: "graph", status: "optimized" },
+  { progress: 1, label: "artifact", status: "shipped" },
 ];
+
+const MOBILE_STEPS = [
+  { label: "boot", status: "online", threshold: 1 },
+  { label: "verify", status: "verified", threshold: 3 },
+  { label: "ship", status: "ready", threshold: 5 },
+] as const;
+
+const SIGNAL_LANES = [
+  {
+    id: "language",
+    label: "LANG",
+    d: "M52 46C94 46 111 118 178 126",
+    labelY: 49,
+    step: 1,
+  },
+  {
+    id: "vision",
+    label: "VISION",
+    d: "M52 94C98 94 116 58 178 62",
+    labelY: 97,
+    step: 2,
+  },
+  {
+    id: "context",
+    label: "CONTEXT",
+    d: "M52 142C104 142 122 88 178 94",
+    labelY: 145,
+    step: 3,
+  },
+] as const;
+
+const ACTIVATION_MATRIX = [
+  [3, 4, 2, 5, 4, 3],
+  [2, 3, 5, 3, 2, 4],
+  [4, 2, 3, 4, 5, 2],
+  [3, 5, 4, 2, 3, 5],
+] as const;
 
 const COMMAND_DURATION_MS = 700;
 const STEP_DURATION_MS = 900;
 const RUN_DURATION_MS = STEP_DURATION_MS * CLI_STEPS.length;
-const READY_HOLD_MS = 2_800;
+const READY_HOLD_MS = 4_000;
 const RESET_DURATION_MS = 500;
 const STATIC_PHASE: TerminalPhase = "ready";
 const STATIC_VISIBLE_STEP_COUNT = CLI_STEPS.length;
@@ -176,6 +214,7 @@ export function HeroTerminal() {
     : CLI_STEPS[visibleStepCount - 1]?.progress ?? 0;
   const progressPercent = Math.round(progress * 100);
   const readyVisible = phase === "ready";
+  const completedStageCount = phase === "ready" ? CLI_STEPS.length : visibleStepCount;
 
   return (
     <div
@@ -194,36 +233,138 @@ export function HeroTerminal() {
       }
     >
       <div className="hero-terminal-bar">
-        <span className="hero-terminal-window-controls" aria-hidden="true">
-          <i className="hero-terminal-window-control" />
-          <i className="hero-terminal-window-control" />
-          <i className="hero-terminal-window-control" />
+        <span className="hero-terminal-identity">
+          <span className="hero-terminal-index">SYS/07</span>
+          <span>NEURAL PIPELINE</span>
+        </span>
+        <span className="hero-terminal-environment">
+          <i aria-hidden="true" />
+          PRODUCTION · ONLINE
         </span>
       </div>
-      <div className="hero-terminal-body">
-        <p className="hero-terminal-command">
-          <span className="hero-terminal-prompt">›_</span>
-          <span className="hero-terminal-command-text">ai build --target production</span>
-          <span className="hero-terminal-caret" aria-hidden="true" />
-        </p>
-        <ol className="hero-terminal-log">
-          {CLI_STEPS.map((step, index) => (
-            <li
-              key={step.text}
-              className={`hero-terminal-line${index < visibleStepCount ? " is-visible" : ""}`}
-            >
-              <span className="hero-terminal-step">
-                [{index + 1}/{CLI_STEPS.length}]
-              </span>
-              <span className="hero-terminal-text">{step.text}</span>
-            </li>
-          ))}
-        </ol>
-        <p className={`hero-terminal-ready${readyVisible ? " is-visible" : ""}`}>
-          <span aria-hidden="true">✓</span> AI pipeline ready
-        </p>
+      <div className="hero-terminal-stage">
+        <div className="hero-terminal-body">
+          <p className="hero-terminal-command">
+            <span className="hero-terminal-prompt">›_</span>
+            <span className="hero-terminal-command-text">agentctl compile --prod</span>
+            <span className="hero-terminal-caret" aria-hidden="true" />
+          </p>
+          <ol className="hero-terminal-log">
+            {CLI_STEPS.map((step, index) => (
+              <li
+                key={step.label}
+                className={`hero-terminal-line${index < visibleStepCount ? " is-visible" : ""}`}
+              >
+                <span className="hero-terminal-step">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="hero-terminal-text">{step.label}</span>
+                <span className="hero-terminal-status">{step.status}</span>
+              </li>
+            ))}
+          </ol>
+          <ol className="hero-terminal-mobile-log">
+            {MOBILE_STEPS.map((step, index) => (
+              <li
+                key={step.label}
+                className={`hero-terminal-mobile-line${step.threshold <= completedStageCount ? " is-visible" : ""}`}
+              >
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <span>{step.label}</span>
+                <span>{step.status}</span>
+              </li>
+            ))}
+          </ol>
+          <p className={`hero-terminal-ready${readyVisible ? " is-visible" : ""}`}>
+            <span aria-hidden="true">◆</span> BUILD READY
+          </p>
+        </div>
+        <div className="hero-topology">
+          <div className="hero-topology-caption">
+            <span>SIGNAL FIELD</span>
+            <span>{String(completedStageCount).padStart(2, "0")} / 05</span>
+          </div>
+          <svg
+            className="hero-topology-map"
+            viewBox="0 0 420 188"
+            role="presentation"
+            aria-hidden="true"
+          >
+            <g className="hero-topology-guides">
+              <path d="M8 12H50M8 12V38M412 176H370M412 176V150" />
+            </g>
+            <g className="hero-signal-lanes">
+              {SIGNAL_LANES.map((lane) => {
+                const active = lane.step <= completedStageCount;
+                const current = phase === "running" && lane.step === visibleStepCount;
+
+                return (
+                  <g
+                    key={lane.id}
+                    className={`hero-signal-lane${active ? " is-active" : ""}`}
+                  >
+                    <text className="hero-signal-label" x="4" y={lane.labelY}>
+                      {lane.label}
+                    </text>
+                    <path
+                      className="hero-signal-route"
+                      d={lane.d}
+                    />
+                    <path
+                      className={`hero-topology-signal${current ? " is-current" : ""}`}
+                      d={lane.d}
+                      pathLength="1"
+                    />
+                  </g>
+                );
+              })}
+            </g>
+            <g className={`hero-activation-core${completedStageCount >= 2 ? " is-active" : ""}`}>
+              <path
+                className="hero-activation-frame"
+                d="M178 42H190V34H300V42H312V146H300V154H190V146H178Z"
+              />
+              <text className="hero-activation-title" x="245" y="26">
+                LATENT FIELD
+              </text>
+              <g className="hero-activation-matrix">
+                {ACTIVATION_MATRIX.flatMap((row, rowIndex) => (
+                  row.map((threshold, columnIndex) => {
+                    const active = threshold <= completedStageCount;
+                    const current = phase === "running" && threshold === visibleStepCount;
+                    const tone = (rowIndex + columnIndex) % 3;
+
+                    return (
+                      <rect
+                        key={`${rowIndex}-${columnIndex}`}
+                        className={`hero-activation-cell tone-${tone + 1}${active ? " is-active" : ""}${current ? " is-current" : ""}`}
+                        x={194 + columnIndex * 18}
+                        y={54 + rowIndex * 22}
+                        width="11"
+                        height="11"
+                      />
+                    );
+                  })
+                ))}
+              </g>
+            </g>
+            <g className={`hero-signal-output${completedStageCount >= 5 ? " is-active" : ""}`}>
+              <path className="hero-signal-output-route" d="M312 94C342 94 355 94 385 94" />
+              <path
+                className={`hero-topology-signal${phase === "running" && visibleStepCount === 5 ? " is-current" : ""}`}
+                d="M312 94C342 94 355 94 385 94"
+                pathLength="1"
+              />
+              <path className="hero-signal-output-node" d="M398 82 410 94 398 106 386 94Z" />
+              <text className="hero-signal-output-label" x="398" y="121">OUT</text>
+            </g>
+          </svg>
+        </div>
       </div>
       <div className="hero-terminal-progress-row">
+        <span className="hero-terminal-progress-copy">
+          {readyVisible ? "FIELD STABLE" : "ROUTING SIGNALS"}
+        </span>
         <div className="hero-terminal-progress" aria-hidden="true">
           <span className="hero-terminal-progress-fill" />
         </div>
