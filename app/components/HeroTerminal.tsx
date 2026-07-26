@@ -14,20 +14,21 @@ type CliStep = {
   readonly progress: number;
   readonly label: string;
   readonly status: string;
+  readonly tone: "primary" | "signal" | "status";
 };
 
 const CLI_STEPS: readonly CliStep[] = [
-  { progress: 0.11, label: "runtime", status: "online" },
-  { progress: 0.3, label: "models", status: "bound" },
-  { progress: 0.57, label: "policy", status: "verified" },
-  { progress: 0.82, label: "graph", status: "optimized" },
-  { progress: 1, label: "artifact", status: "shipped" },
+  { progress: 0.11, label: "runtime", status: "online", tone: "primary" },
+  { progress: 0.3, label: "models", status: "bound", tone: "signal" },
+  { progress: 0.57, label: "policy", status: "verified", tone: "status" },
+  { progress: 0.82, label: "graph", status: "optimized", tone: "signal" },
+  { progress: 1, label: "artifact", status: "shipped", tone: "primary" },
 ];
 
 const MOBILE_STEPS = [
-  { label: "boot", status: "online", threshold: 1 },
-  { label: "verify", status: "verified", threshold: 3 },
-  { label: "ship", status: "ready", threshold: 5 },
+  { label: "boot", status: "online", threshold: 1, tone: "primary" },
+  { label: "verify", status: "verified", threshold: 3, tone: "status" },
+  { label: "ship", status: "ready", threshold: 5, tone: "signal" },
 ] as const;
 
 const SIGNAL_LANES = [
@@ -61,11 +62,11 @@ const ACTIVATION_MATRIX = [
   [3, 5, 4, 2, 3, 5],
 ] as const;
 
-const COMMAND_DURATION_MS = 700;
-const STEP_DURATION_MS = 900;
+const COMMAND_DURATION_MS = 750;
+const STEP_DURATION_MS = 960;
 const RUN_DURATION_MS = STEP_DURATION_MS * CLI_STEPS.length;
-const READY_HOLD_MS = 4_000;
-const RESET_DURATION_MS = 500;
+const READY_HOLD_MS = 2_200;
+const RESET_DURATION_MS = 700;
 const STATIC_PHASE: TerminalPhase = "ready";
 const STATIC_VISIBLE_STEP_COUNT = CLI_STEPS.length;
 
@@ -209,12 +210,17 @@ export function HeroTerminal() {
     };
   }, []);
 
-  const progress = phase === "ready"
+  const progress = phase === "ready" || phase === "resetting"
     ? 1
     : CLI_STEPS[visibleStepCount - 1]?.progress ?? 0;
   const progressPercent = Math.round(progress * 100);
   const readyVisible = phase === "ready";
   const completedStageCount = phase === "ready" ? CLI_STEPS.length : visibleStepCount;
+  const progressLabel = phase === "ready"
+    ? "FIELD STABLE"
+    : phase === "resetting"
+      ? "RECYCLING FIELD"
+      : "ROUTING SIGNALS";
 
   return (
     <div
@@ -228,7 +234,10 @@ export function HeroTerminal() {
       style={
         {
           "--progress": progress,
+          "--command-duration": `${COMMAND_DURATION_MS}ms`,
           "--progress-run-duration": `${RUN_DURATION_MS}ms`,
+          "--reset-duration": `${RESET_DURATION_MS}ms`,
+          "--step-duration": `${STEP_DURATION_MS}ms`,
         } as React.CSSProperties
       }
     >
@@ -253,7 +262,7 @@ export function HeroTerminal() {
             {CLI_STEPS.map((step, index) => (
               <li
                 key={step.label}
-                className={`hero-terminal-line${index < visibleStepCount ? " is-visible" : ""}`}
+                className={`hero-terminal-line tone-${step.tone}${index < visibleStepCount ? " is-visible" : ""}${phase === "running" && index === visibleStepCount - 1 ? " is-current" : ""}`}
               >
                 <span className="hero-terminal-step">
                   {String(index + 1).padStart(2, "0")}
@@ -267,7 +276,7 @@ export function HeroTerminal() {
             {MOBILE_STEPS.map((step, index) => (
               <li
                 key={step.label}
-                className={`hero-terminal-mobile-line${step.threshold <= completedStageCount ? " is-visible" : ""}`}
+                className={`hero-terminal-mobile-line tone-${step.tone}${step.threshold <= completedStageCount ? " is-visible" : ""}${phase === "running" && step.threshold === completedStageCount ? " is-current" : ""}`}
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
                 <span>{step.label}</span>
@@ -348,7 +357,7 @@ export function HeroTerminal() {
                 ))}
               </g>
             </g>
-            <g className={`hero-signal-output${completedStageCount >= 5 ? " is-active" : ""}`}>
+            <g className={`hero-signal-output${completedStageCount >= 5 ? " is-active" : ""}${phase === "running" && visibleStepCount === 5 ? " is-current" : ""}`}>
               <path className="hero-signal-output-route" d="M312 94C342 94 355 94 385 94" />
               <path
                 className={`hero-topology-signal${phase === "running" && visibleStepCount === 5 ? " is-current" : ""}`}
@@ -363,7 +372,7 @@ export function HeroTerminal() {
       </div>
       <div className="hero-terminal-progress-row">
         <span className="hero-terminal-progress-copy">
-          {readyVisible ? "FIELD STABLE" : "ROUTING SIGNALS"}
+          {progressLabel}
         </span>
         <div className="hero-terminal-progress" aria-hidden="true">
           <span className="hero-terminal-progress-fill" />

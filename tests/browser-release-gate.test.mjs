@@ -1017,7 +1017,7 @@ test("terminal loop runs one CLI command, holds ready, and resets cleanly", { ti
       };
     });
     assert.equal(progressBefore.animationName, "hero-terminal-progress");
-    assert.equal(progressBefore.animationDuration, "4.5s");
+    assert.equal(progressBefore.animationDuration, "4.8s");
     assert.notEqual(progressBefore.animationTimingFunction, "linear");
     assert.equal(progressBefore.visibleSteps, "1");
     assert.equal(progressAfter.visibleSteps, "1");
@@ -1057,17 +1057,35 @@ test("terminal loop runs one CLI command, holds ready, and resets cleanly", { ti
     assert.equal(ready.readyText, "◆ BUILD READY");
     assert.equal(ready.readyVisible, true);
     assert.match(ready.backgroundImage, /linear-gradient/i);
+    assert.match(ready.backgroundImage, /rgb\(79,\s*247,\s*213\)/i);
+    assert.match(ready.backgroundImage, /rgb\(138,\s*114,\s*255\)/i);
+    assert.match(ready.backgroundImage, /rgb\(255,\s*107,\s*87\)/i);
 
-    await page.waitForTimeout(2_100);
+    await page.waitForTimeout(1_200);
     assert.equal(
       await page.locator(".hero-terminal").getAttribute("data-phase"),
       "ready",
-      "the completed CLI did not remain still for at least two seconds",
+      "the completed CLI did not remain still long enough to read",
     );
 
     await page.waitForFunction(() => (
       document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "resetting"
-    ), null, { timeout: 2_000 });
+    ), null, { timeout: 2_500 });
+    const resetting = await page.locator(".hero-terminal-progress-fill").evaluate((fill) => {
+      const style = getComputedStyle(fill);
+      return {
+        animationDuration: style.animationDuration,
+        animationName: style.animationName,
+        transformOriginX: Number.parseFloat(style.transformOrigin),
+        width: fill.clientWidth,
+      };
+    });
+    assert.equal(resetting.animationName, "hero-terminal-reset");
+    assert.equal(resetting.animationDuration, "0.7s");
+    assert.ok(
+      resetting.transformOriginX >= resetting.width - 1,
+      `reset did not retract from the right edge: ${JSON.stringify(resetting)}`,
+    );
     await page.waitForFunction(() => (
       document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "typing"
       && document.querySelectorAll(".hero-terminal-line.is-visible").length === 0

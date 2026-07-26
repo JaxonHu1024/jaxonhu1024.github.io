@@ -99,7 +99,7 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
           const primary = [1, 4, 6, 7, 8].includes(index);
           const pulse = reducedMotion ? 0 : (Math.sin(phase * 1.8 + index * 0.9) + 1) * 0.55;
           const size = (primary ? 9 : 5) + pulse;
-          ctx.fillStyle = primary ? "#e9fff9" : "#7c5cff";
+          ctx.fillStyle = primary ? "#e9fff9" : "#8a72ff";
           ctx.shadowColor = primary ? "rgba(79,247,213,.85)" : "rgba(181,140,255,.7)";
           ctx.shadowBlur = primary ? 11 : 7;
           ctx.fillRect(x * w - size / 2, y * h - size / 2, size, size);

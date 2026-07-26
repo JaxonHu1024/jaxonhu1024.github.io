@@ -77,15 +77,15 @@ test("keeps remaining ambient motion compositor-friendly and omits the detached 
   const timelineScan = css.match(
     /@keyframes timeline-scan\s*\{[\s\S]*?\n\}/,
   )?.[0] ?? "";
-  const readyAnimation = css.match(
-    /@keyframes hero-terminal-ready\s*\{[\s\S]*?\n\}/,
-  )?.[0] ?? "";
 
   // The terminal progress bar animates via transform (scaleX), never layout.
   assert.match(progressFill, /transform: scaleX\(var\(--progress/);
   assert.doesNotMatch(css, /\.hero-terminal-progress-fill \{[^}]*\bwidth:\s*\d/s);
-  assert.match(readyAnimation, /box-shadow:/);
-  assert.doesNotMatch(readyAnimation, /filter:/);
+  assert.doesNotMatch(
+    css,
+    /@keyframes hero-terminal-(?:spectrum|ready)|animation:\s*hero-terminal-(?:spectrum|ready)/,
+  );
+  assert.doesNotMatch(css, /\.hero-terminal-progress(?:-fill)?::after/);
   assert.match(timelineScan, /translate3d/);
   assert.doesNotMatch(timelineScan, /\b(?:top|left|width|height|margin):/);
   assert.doesNotMatch(css, /trace-out|outbound-packet|--packet-travel/);
@@ -99,6 +99,9 @@ test("drives one stable CLI sequence without per-frame progress work", async () 
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const lineRule = css.match(/\.hero-terminal\[data-motion="running"\] \.hero-terminal-line \{[^}]*\}/s)?.[0] ?? "";
   const progressFill = css.match(/\.hero-terminal-progress-fill \{[^}]*\}/s)?.[0] ?? "";
+  const progressAnimation = css.match(
+    /@keyframes hero-terminal-progress\s*\{[\s\S]*?\n\}/,
+  )?.[0] ?? "";
 
   assert.match(terminal, /visibleStepCount/);
   assert.doesNotMatch(terminal, /requestAnimationFrame|cancelAnimationFrame|percentRef/);
@@ -109,9 +112,15 @@ test("drives one stable CLI sequence without per-frame progress work", async () 
   );
   assert.match(
     progressFill,
-    /linear-gradient\([^}]*var\(--color-accent\)[^}]*color-mix\([^}]*74%[^}]*var\(--color-foreground\)[^}]*\)/s,
+    /linear-gradient\([^}]*var\(--color-accent\)[^}]*var\(--color-accent-signal\)[^}]*var\(--color-status-active\)[^}]*var\(--color-accent\)[^}]*\)/s,
   );
-  assert.doesNotMatch(progressFill, /var\(--color-accent-signal\)/);
+  assert.match(css, /--violet:\s*#8a72ff/);
+  assert.match(progressAnimation, /from\s*\{[^}]*scaleX\(0\)/s);
+  assert.match(progressAnimation, /to\s*\{[^}]*scaleX\(1\)/s);
+  assert.doesNotMatch(progressAnimation, /\b(?:20|40|60|80)%/);
+  assert.match(css, /@keyframes hero-terminal-reset\s*\{[\s\S]*?scaleX\(0\)/s);
+  assert.match(css, /\.hero-activation-cell\.tone-2\.is-active\s*\{[^}]*var\(--color-accent-signal\)/s);
+  assert.match(css, /\.hero-activation-cell\.tone-3\.is-active\s*\{[^}]*var\(--color-status-active\)/s);
   assert.match(css, /\.hero-topology-signal\.is-current\s*\{[^}]*animation:\s*hero-topology-signal/s);
   assert.doesNotMatch(
     css,

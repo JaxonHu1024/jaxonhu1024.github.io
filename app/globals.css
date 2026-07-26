@@ -4,7 +4,7 @@
   --void: #05070b;
   --terminal: #030507;
   --mint: #4ff7d5;
-  --violet: #7c5cff;
+  --violet: #8a72ff;
   --coral: #ff6b57;
   --text: #e9fff9;
   --experience: #071018;
@@ -414,9 +414,7 @@ a { color: inherit; text-decoration: none; }
   font-family: var(--mono);
   color: var(--color-foreground);
   overflow: hidden;
-  transition:
-    opacity var(--duration-reveal) var(--ease-out),
-    box-shadow .9s var(--ease-out);
+  transition: opacity var(--duration-reveal) var(--ease-out);
 }
 
 /* Corner ticks echo the header's HUD registration marks. */
@@ -556,7 +554,22 @@ a { color: inherit; text-decoration: none; }
   white-space: nowrap;
 }
 
-.hero-terminal-line.is-visible .hero-terminal-status { color: var(--color-accent); }
+.hero-terminal-line.is-visible .hero-terminal-status {
+  color: var(--color-foreground-muted);
+}
+
+.hero-terminal-line.is-current .hero-terminal-step,
+.hero-terminal-line.is-current .hero-terminal-status {
+  color: var(--terminal-step-color, var(--color-accent));
+}
+
+.hero-terminal-line.tone-primary { --terminal-step-color: var(--color-accent); }
+.hero-terminal-line.tone-signal { --terminal-step-color: var(--color-accent-signal); }
+.hero-terminal-line.tone-status { --terminal-step-color: var(--color-status-active); }
+
+.hero-terminal[data-phase="ready"] .hero-terminal-line.is-visible .hero-terminal-status {
+  color: var(--color-accent);
+}
 
 .hero-terminal-ready {
   min-height: 1.25em;
@@ -655,7 +668,7 @@ a { color: inherit; text-decoration: none; }
 
 .hero-topology-signal.is-current {
   opacity: 1;
-  animation: hero-topology-signal 900ms linear both;
+  animation: hero-topology-signal var(--step-duration, 960ms) linear both;
 }
 
 .hero-activation-frame {
@@ -691,17 +704,17 @@ a { color: inherit; text-decoration: none; }
 
 .hero-activation-cell.is-active { opacity: 1; }
 .hero-activation-cell.tone-1.is-active {
-  fill: color-mix(in srgb, var(--color-accent) 32%, transparent);
+  fill: color-mix(in srgb, var(--color-accent) 72%, transparent);
 }
 .hero-activation-cell.tone-2.is-active {
-  fill: color-mix(in srgb, var(--color-accent) 55%, transparent);
+  fill: color-mix(in srgb, var(--color-accent-signal) 82%, transparent);
 }
 .hero-activation-cell.tone-3.is-active {
-  fill: color-mix(in srgb, var(--color-accent) 82%, var(--color-foreground));
+  fill: color-mix(in srgb, var(--color-status-active) 78%, var(--color-foreground));
 }
 
 .hero-activation-cell.is-current {
-  animation: hero-activation-cell 900ms var(--ease-out) both;
+  animation: hero-activation-cell var(--step-duration, 960ms) var(--ease-out) both;
 }
 
 .hero-signal-output-route,
@@ -727,6 +740,18 @@ a { color: inherit; text-decoration: none; }
 }
 
 .hero-signal-output.is-active .hero-signal-output-label { fill: var(--color-foreground); }
+
+.hero-signal-output.is-current :is(.hero-signal-output-route, .hero-signal-output-node) {
+  stroke: var(--color-status-active);
+}
+
+.hero-signal-output.is-current .hero-signal-output-node {
+  fill: color-mix(in srgb, var(--color-status-active) 24%, rgba(5,8,12,.9));
+}
+
+.hero-signal-output.is-current .hero-signal-output-label {
+  fill: var(--color-status-active);
+}
 
 .hero-signal-output-label {
   font-size: 7px;
@@ -760,7 +785,7 @@ a { color: inherit; text-decoration: none; }
 
 .hero-terminal-progress {
   position: relative;
-  height: 2px;
+  height: 3px;
   background: var(--color-line-subtle);
   overflow: hidden;
 }
@@ -772,19 +797,23 @@ a { color: inherit; text-decoration: none; }
   transform: scaleX(var(--progress, 1));
   background: linear-gradient(
     90deg,
-    var(--color-accent),
-    color-mix(in srgb, var(--color-accent) 74%, var(--color-foreground))
+    var(--color-accent) 0%,
+    var(--color-accent-signal) 44%,
+    var(--color-status-active) 72%,
+    var(--color-accent) 100%
   );
   box-shadow:
     0 0 9px color-mix(in srgb, var(--color-accent) 52%, transparent);
+  will-change: transform;
 }
 
-/* The bar advances continuously across the entire run. Irregular keyframe
-   targets and a non-linear curve keep the motion organic without per-frame JS. */
+/* One continuous non-linear curve spans the entire run. Keeping intermediate
+   CLI stages out of the transform keyframes avoids restarting the easing curve
+   at every status update, so the bar never appears to hesitate between steps. */
 .hero-terminal[data-motion="running"][data-phase="running"] .hero-terminal-progress-fill {
   animation: hero-terminal-progress
     var(--progress-run-duration, 4500ms)
-    cubic-bezier(.32, .08, .58, .92)
+    cubic-bezier(.32, .08, .36, 1)
     both;
 }
 
@@ -828,28 +857,24 @@ a { color: inherit; text-decoration: none; }
 }
 
 .hero-terminal[data-motion="running"][data-phase="typing"] .hero-terminal-command-text {
-  animation: hero-terminal-type .7s steps(35, end) both;
+  animation: hero-terminal-type var(--command-duration, 750ms) steps(35, end) both;
 }
 
 .hero-terminal[data-motion="running"] .hero-terminal-caret {
   animation: hero-terminal-caret 1s steps(2, start) infinite;
 }
 
-.hero-terminal[data-motion="running"][data-phase="ready"] {
-  box-shadow: inset 0 1px 0 rgba(233,255,249,.05), var(--shadow-panel), 0 0 26px color-mix(in srgb, var(--color-accent) 40%, transparent);
-  will-change: box-shadow;
-}
-.hero-terminal[data-motion="running"][data-phase="ready"] .hero-terminal-progress-fill {
-  animation: hero-terminal-ready 1.6s ease-in-out;
-}
-
 .hero-terminal[data-motion="running"][data-phase="resetting"]
   :is(.hero-terminal-body, .hero-terminal-progress-row) {
-  opacity: .38;
+  opacity: .42;
 }
 
-.hero-terminal[data-motion="running"]:is([data-phase="typing"], [data-phase="resetting"])
-  .hero-terminal-progress-fill {
+.hero-terminal[data-motion="running"][data-phase="resetting"] .hero-terminal-progress-fill {
+  transform-origin: right center;
+  animation: hero-terminal-reset var(--reset-duration, 700ms) var(--ease-emphasized) both;
+}
+
+.hero-terminal[data-motion="running"][data-phase="typing"] .hero-terminal-progress-fill {
   animation: none;
   transform: scaleX(0);
 }
@@ -997,8 +1022,8 @@ a { color: inherit; text-decoration: none; }
   height: 39px;
   transform: translateY(-50%);
   border: 1px solid var(--color-line-medium);
-  background: rgba(124,92,255,.13);
-  box-shadow: inset 0 0 20px rgba(124,92,255,.2);
+  background: rgba(138,114,255,.13);
+  box-shadow: inset 0 0 20px rgba(138,114,255,.2);
 }
 
 .timeline-node::after {
@@ -1006,7 +1031,7 @@ a { color: inherit; text-decoration: none; }
   position: absolute;
   inset: 11px;
   background: var(--color-accent-signal);
-  box-shadow: 0 0 18px rgba(124,92,255,.8);
+  box-shadow: 0 0 18px rgba(138,114,255,.8);
 }
 
 .node-lead {
@@ -1134,20 +1159,20 @@ a { color: inherit; text-decoration: none; }
     - var(--experience-axis) - 10px
   );
   height: 1px;
-  background: linear-gradient(90deg, rgba(124,92,255,.52), rgba(124,92,255,.11));
+  background: linear-gradient(90deg, rgba(138,114,255,.52), rgba(138,114,255,.11));
 }
 
 .experience-group-branch::before {
   content: "";
   position: absolute;
   top: 50%;
-  background: rgba(124,92,255,.76);
-  border: 1px solid rgba(124,92,255,.56);
+  background: rgba(138,114,255,.76);
+  border: 1px solid rgba(138,114,255,.56);
   transform: translateY(-50%) rotate(45deg);
   left: -5px;
   width: 9px;
   height: 9px;
-  box-shadow: 0 0 10px rgba(124,92,255,.28);
+  box-shadow: 0 0 10px rgba(138,114,255,.28);
 }
 
 .experience-group-heading h3 {
@@ -1168,7 +1193,7 @@ a { color: inherit; text-decoration: none; }
   );
   margin-left: calc(var(--experience-timeline-column) + var(--experience-copy-inset));
   padding-left: 34px;
-  border-left: 1px solid rgba(124,92,255,.34);
+  border-left: 1px solid rgba(138,114,255,.34);
 }
 
 .experience-subentry {
@@ -1190,9 +1215,9 @@ a { color: inherit; text-decoration: none; }
   left: -38px;
   width: 7px;
   height: 7px;
-  background: rgba(124,92,255,.72);
-  border: 1px solid rgba(124,92,255,.54);
-  box-shadow: 0 0 8px rgba(124,92,255,.27);
+  background: rgba(138,114,255,.72);
+  border: 1px solid rgba(138,114,255,.54);
+  box-shadow: 0 0 8px rgba(138,114,255,.27);
 }
 
 .experience-subentry-copy { min-width: 0; }
@@ -1227,7 +1252,7 @@ a { color: inherit; text-decoration: none; }
   min-height: auto;
   padding: var(--section-block-space) 2.8vw;
   background:
-    radial-gradient(circle at 78% 22%, rgba(124,92,255,.065), transparent 34%),
+    radial-gradient(circle at 78% 22%, rgba(138,114,255,.065), transparent 34%),
     var(--research);
 }
 
@@ -1277,8 +1302,8 @@ a { color: inherit; text-decoration: none; }
   padding: 8px 18px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 72% 46%, rgba(124,92,255,.075), transparent 34%),
-    linear-gradient(135deg, rgba(79,247,213,.025), rgba(124,92,255,.025));
+    radial-gradient(circle at 72% 46%, rgba(138,114,255,.075), transparent 34%),
+    linear-gradient(135deg, rgba(79,247,213,.025), rgba(138,114,255,.025));
 }
 .research-canvas { display: block; width: 100%; height: 100%; min-height: 0; }
 
@@ -1342,7 +1367,7 @@ a { color: inherit; text-decoration: none; }
   border: 2px solid var(--color-foreground);
   background: var(--color-background);
 }
-.education-node::after { content: ""; position: absolute; inset: 6px; background: var(--color-accent-signal); box-shadow: 0 0 12px rgba(124,92,255,.7); }
+.education-node::after { content: ""; position: absolute; inset: 6px; background: var(--color-accent-signal); box-shadow: 0 0 12px rgba(138,114,255,.7); }
 
 .education-crest {
   position: static;
@@ -1448,7 +1473,7 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   padding: clamp(118px, 15vh, 176px) max(20px, 6vw) 44px;
   background:
-    radial-gradient(circle at 74% 42%, rgba(124,92,255,.1), transparent 30%),
+    radial-gradient(circle at 74% 42%, rgba(138,114,255,.1), transparent 30%),
     radial-gradient(circle at 25% 72%, rgba(79,247,213,.075), transparent 34%),
     var(--color-background);
 }
@@ -1487,7 +1512,7 @@ a { color: inherit; text-decoration: none; }
   min-height: auto;
   padding: var(--section-block-space) 4.7vw;
   background:
-    radial-gradient(circle at 77% 54%, rgba(124,92,255,.075), transparent 29%),
+    radial-gradient(circle at 77% 54%, rgba(138,114,255,.075), transparent 29%),
     radial-gradient(circle at 18% 78%, rgba(79,247,213,.055), transparent 34%),
     var(--color-background);
 }
@@ -1692,17 +1717,13 @@ a { color: inherit; text-decoration: none; }
 }
 
 @keyframes hero-terminal-progress {
-  0% { transform: scaleX(0); }
-  20% { transform: scaleX(.11); }
-  40% { transform: scaleX(.3); }
-  60% { transform: scaleX(.57); }
-  80% { transform: scaleX(.82); }
-  100% { transform: scaleX(1); }
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }
 
-@keyframes hero-terminal-ready {
-  0%, 100% { box-shadow: 0 0 10px color-mix(in srgb, var(--mint) 55%, transparent); }
-  40% { box-shadow: 0 0 20px color-mix(in srgb, var(--mint) 78%, transparent); }
+@keyframes hero-terminal-reset {
+  from { opacity: 1; transform: scaleX(1); }
+  to { opacity: 0; transform: scaleX(0); }
 }
 
 @keyframes hero-topology-signal {
@@ -1906,7 +1927,17 @@ html[data-page-active="false"] .contact-marquee-track {
     color: var(--color-foreground-muted);
     opacity: 1;
   }
-  .hero-terminal-mobile-line.is-visible > span:last-child { color: var(--color-accent); }
+  .hero-terminal-mobile-line.is-visible > span:last-child { color: var(--color-foreground-muted); }
+  .hero-terminal-mobile-line.tone-primary { --terminal-step-color: var(--color-accent); }
+  .hero-terminal-mobile-line.tone-signal { --terminal-step-color: var(--color-accent-signal); }
+  .hero-terminal-mobile-line.tone-status { --terminal-step-color: var(--color-status-active); }
+  .hero-terminal-mobile-line.is-current > span:first-child,
+  .hero-terminal-mobile-line.is-current > span:last-child {
+    color: var(--terminal-step-color, var(--color-accent));
+  }
+  .hero-terminal[data-phase="ready"] .hero-terminal-mobile-line.is-visible > span:last-child {
+    color: var(--color-accent);
+  }
   .hero-terminal-ready { font-size: 11px; line-height: 1.15; }
   .hero-terminal-progress-row {
     grid-template-columns: auto minmax(0, 1fr);
