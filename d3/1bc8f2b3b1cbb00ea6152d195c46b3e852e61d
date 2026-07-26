@@ -1,0 +1,31 @@
+app/components/HeroTerminal.tsx
+  s_a03e9138cbb361::t_ef370e43f081e7 17,21-25,29-31,65-66,68-69,213,219-223,237,239-240,265,279,360,375
+app/components/ResearchVisual.tsx
+  s_a03e9138cbb361::t_95dac3187bb474 102
+app/globals.css
+  s_a03e9138cbb361::t_f15b525d48f115 7,417,557-572,671,707,710,713,717,744-755,788,800-803,807,810-812,816,860,869-874,877,1025-1026,1034,1162,1169-1170,1175,1196,1218-1220,1255,1305-1306,1370,1476,1515,1720-1721,1724-1726,1930-1940
+public/favicon.svg
+  s_a03e9138cbb361::t_d4d91697868223 5
+tests/browser-release-gate.test.mjs
+  s_a03e9138cbb361::t_e1e14eb1c6b08e 1020,1060-1062,1064,1068,1073-1088
+tests/scroll-performance-contract.test.mjs
+  s_a03e9138cbb361::t_cabdca38f03076 84-88,102-104,115,117-123
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "d31bc8f2b3b1cbb00ea6152d195c46b3e852e61d",
+  "prompts": {},
+  "sessions": {
+    "s_a03e9138cbb361": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9ce1-8664-7881-a29b-7c8724a57dcb",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
