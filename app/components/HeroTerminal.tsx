@@ -9,6 +9,12 @@ import { useEffect, useRef, useState } from "react";
  */
 
 type TerminalPhase = "typing" | "running" | "ready" | "resetting";
+type ActivationTone = 1 | 2 | 3;
+
+type ActivationCellState = {
+  readonly active: boolean;
+  readonly tone: ActivationTone;
+};
 
 type CliStep = {
   readonly progress: number;
@@ -55,12 +61,66 @@ const SIGNAL_LANES = [
   },
 ] as const;
 
-const ACTIVATION_MATRIX = [
-  [3, 4, 2, 5, 4, 3],
-  [2, 3, 5, 3, 2, 4],
-  [4, 2, 3, 4, 5, 2],
-  [3, 5, 4, 2, 3, 5],
-] as const;
+const FIELD_CELL_COUNT = 50;
+const FIELD_DENSITY_BY_STEP = [0.28, 0.42, 0.58, 0.72, 0.52] as const;
+const EMPTY_ACTIVATION_FIELD: readonly ActivationCellState[] = Array.from(
+  { length: FIELD_CELL_COUNT },
+  () => ({ active: false, tone: 1 as ActivationTone }),
+);
+
+function createSeededRandom(seed: number) {
+  let state = seed >>> 0;
+
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
+
+function createActivationField(
+  seed: number,
+  density: number,
+): readonly ActivationCellState[] {
+  const random = createSeededRandom(seed);
+  const positions = Array.from({ length: FIELD_CELL_COUNT }, (_, index) => index);
+
+  for (let index = positions.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [positions[index], positions[swapIndex]] = [positions[swapIndex], positions[index]];
+  }
+
+  const activeCount = Math.max(
+    3,
+    Math.min(
+      FIELD_CELL_COUNT,
+      Math.round(FIELD_CELL_COUNT * density + (random() - 0.5) * 4),
+    ),
+  );
+  const field: ActivationCellState[] = EMPTY_ACTIVATION_FIELD.map((cell) => ({ ...cell }));
+
+  positions.slice(0, activeCount).forEach((position, rank) => {
+    const roll = random();
+    const tone: ActivationTone = rank === 0
+      ? 1
+      : rank === 1
+        ? 2
+        : rank === 2
+          ? 3
+          : roll < 0.62
+            ? 1
+            : roll < 0.9
+              ? 2
+              : 3;
+    field[position] = { active: true, tone };
+  });
+
+  return field;
+}
+
+const STATIC_ACTIVATION_FIELD = createActivationField(0x5a17c9e3, 0.52);
 
 const COMMAND_DURATION_MS = 750;
 const STEP_DURATION_MS = 960;
@@ -74,6 +134,7 @@ export function HeroTerminal() {
   const rootRef = useRef<HTMLDivElement>(null);
   const [phase, setPhase] = useState<TerminalPhase>(STATIC_PHASE);
   const [visibleStepCount, setVisibleStepCount] = useState(STATIC_VISIBLE_STEP_COUNT);
+  const [activationField, setActivationField] = useState(STATIC_ACTIVATION_FIELD);
   const [motion, setMotion] = useState<"running" | "reduced" | undefined>(undefined);
 
   useEffect(() => {
@@ -88,6 +149,7 @@ export function HeroTerminal() {
     let intersecting = initialRect.bottom > 0 && initialRect.top < window.innerHeight;
     let loopActive = false;
     let phaseTimer: number | undefined;
+    let activationSeed = Math.floor(Math.random() * 0xffff_ffff);
 
     const clearTimer = () => {
       if (phaseTimer !== undefined) window.clearTimeout(phaseTimer);
@@ -106,6 +168,7 @@ export function HeroTerminal() {
       if (!loopActive) return;
       setPhase("typing");
       setVisibleStepCount(0);
+      setActivationField(EMPTY_ACTIVATION_FIELD);
       schedule(() => enterStep(1), COMMAND_DURATION_MS);
     }
 
@@ -113,6 +176,11 @@ export function HeroTerminal() {
       if (!loopActive) return;
       setPhase("running");
       setVisibleStepCount(stepCount);
+      activationSeed = (activationSeed + 0x9e3779b9 + stepCount) >>> 0;
+      setActivationField(createActivationField(
+        activationSeed,
+        FIELD_DENSITY_BY_STEP[stepCount - 1],
+      ));
       schedule(
         stepCount < CLI_STEPS.length
           ? () => enterStep(stepCount + 1)
@@ -132,6 +200,7 @@ export function HeroTerminal() {
       if (!loopActive) return;
       setPhase("resetting");
       setVisibleStepCount(0);
+      setActivationField(EMPTY_ACTIVATION_FIELD);
       schedule(enterTyping, RESET_DURATION_MS);
     }
 
@@ -171,6 +240,7 @@ export function HeroTerminal() {
         setMotion("reduced");
         setPhase(STATIC_PHASE);
         setVisibleStepCount(STATIC_VISIBLE_STEP_COUNT);
+        setActivationField(STATIC_ACTIVATION_FIELD);
         syncActivity();
         return;
       }
@@ -331,40 +401,42 @@ export function HeroTerminal() {
             <g className={`hero-activation-core${completedStageCount >= 2 ? " is-active" : ""}`}>
               <path
                 className="hero-activation-frame"
-                d="M178 42H190V34H300V42H312V146H300V154H190V146H178Z"
+                d="M186 38H304L312 46V142L304 150H186L178 142V46Z"
               />
               <text className="hero-activation-title" x="245" y="26">
                 LATENT FIELD
               </text>
-              <g className="hero-activation-matrix">
-                {ACTIVATION_MATRIX.flatMap((row, rowIndex) => (
-                  row.map((threshold, columnIndex) => {
-                    const active = threshold <= completedStageCount;
-                    const current = phase === "running" && threshold === visibleStepCount;
-                    const tone = (rowIndex + columnIndex) % 3;
-
-                    return (
-                      <rect
-                        key={`${rowIndex}-${columnIndex}`}
-                        className={`hero-activation-cell tone-${tone + 1}${active ? " is-active" : ""}${current ? " is-current" : ""}`}
-                        x={194 + columnIndex * 18}
-                        y={54 + rowIndex * 22}
-                        width="11"
-                        height="11"
-                      />
-                    );
-                  })
-                ))}
+              <g className="hero-activation-field">
+                {activationField.map((cell, index) => {
+                  const row = Math.floor(index / 10);
+                  const column = index % 10;
+                  return (
+                    <rect
+                      key={`${row}-${column}`}
+                      className={`hero-activation-cell tone-${cell.tone}${cell.active ? " is-active" : " is-dormant"}`}
+                      x={191 + column * 11}
+                      y={52 + row * 18}
+                      width="6"
+                      height="6"
+                      style={
+                        {
+                          "--cell-breathe-delay": `${-((index * 137) % 1_100)}ms`,
+                          "--cell-breathe-duration": `${1_350 + (index % 7) * 95}ms`,
+                        } as React.CSSProperties
+                      }
+                    />
+                  );
+                })}
               </g>
             </g>
             <g className={`hero-signal-output${completedStageCount >= 5 ? " is-active" : ""}${phase === "running" && visibleStepCount === 5 ? " is-current" : ""}`}>
-              <path className="hero-signal-output-route" d="M312 94C342 94 355 94 385 94" />
+              <path className="hero-signal-output-route" d="M312 94H386" />
               <path
                 className={`hero-topology-signal${phase === "running" && visibleStepCount === 5 ? " is-current" : ""}`}
-                d="M312 94C342 94 355 94 385 94"
+                d="M312 94H386"
                 pathLength="1"
               />
-              <path className="hero-signal-output-node" d="M398 82 410 94 398 106 386 94Z" />
+              <path className="hero-signal-output-node" d="M386 84V104M386 94H404" />
               <text className="hero-signal-output-label" x="398" y="121">OUT</text>
             </g>
           </svg>

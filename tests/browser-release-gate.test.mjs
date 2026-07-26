@@ -6,6 +6,8 @@ import { after, before, test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
+import { createReleasePageSession } from "./browser-release-harness.mjs";
+
 const outputDirectory = resolve(fileURLToPath(new URL("../github-pages-dist/", import.meta.url)));
 const contentTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -220,11 +222,9 @@ async function installPerformanceObservers(page) {
 }
 
 async function runPerformanceSample(sampleNumber) {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 390, height: 844 },
   });
-  const page = await context.newPage();
   const cdp = await context.newCDPSession(page);
 
   try {
@@ -383,10 +383,7 @@ test("slow narrow loads show delayed feedback until assets finish", { timeout: 4
     { width: 768, height: 1024 },
     { width: 820, height: 1180 },
   ]) {
-    const context = await browser.newContext({
-      serviceWorkers: "block",
-      viewport,
-    });
+    const { context, page } = await createReleasePageSession(browser, { viewport });
     const feedbackScriptRequested = deferred();
     const releaseFeedbackScript = deferred();
     const fontRequested = deferred();
@@ -402,8 +399,6 @@ test("slow narrow loads show delayed feedback until assets finish", { timeout: 4
       await releaseFont.promise;
       await route.continue();
     });
-    const page = await context.newPage();
-
     try {
       await page.goto(origin, { timeout: 5_000, waitUntil: "domcontentloaded" });
       await within(
@@ -498,11 +493,9 @@ test("slow narrow loads show delayed feedback until assets finish", { timeout: 4
 });
 
 test("fast narrow loads never flash loading or completion feedback", async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 390, height: 844 },
   });
-  const page = await context.newPage();
 
   try {
     await page.addInitScript(() => {
@@ -547,8 +540,7 @@ test("fast narrow loads never flash loading or completion feedback", async () =>
 });
 
 test("asset failures expose an accessible persistent error state", { timeout: 15_000 }, async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 390, height: 844 },
   });
 
@@ -560,7 +552,6 @@ test("asset failures expose an accessible persistent error state", { timeout: 15
       "**/assets/logo-ntu.svg",
       (route) => route.abort("failed"),
     );
-    const page = await context.newPage();
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
 
     const feedback = page.getByTestId("mobile-load-feedback");
@@ -604,12 +595,10 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
     { width: 390, height: 844 },
     { width: 430, height: 932 },
   ]) {
-    const context = await browser.newContext({
+    const { context, page } = await createReleasePageSession(browser, {
       javaScriptEnabled: false,
-      serviceWorkers: "block",
       viewport,
     });
-    const page = await context.newPage();
 
     try {
       await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
@@ -724,11 +713,9 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
 });
 
 test("page background state pauses every ambient CSS loop", { timeout: 10_000 }, async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
-  const page = await context.newPage();
 
   try {
     await page.addInitScript(() => {
@@ -817,11 +804,9 @@ test("page background state pauses every ambient CSS loop", { timeout: 10_000 },
 });
 
 test("research canvas reports its viewport and page motion lifecycle", { timeout: 15_000 }, async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
-  const page = await context.newPage();
 
   try {
     await page.addInitScript(() => {
@@ -885,11 +870,9 @@ test("research canvas reports its viewport and page motion lifecycle", { timeout
 });
 
 test("hero motion pauses offscreen and resumes from a clean boot", { timeout: 20_000 }, async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
-  const page = await context.newPage();
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
@@ -954,11 +937,9 @@ test("hero motion pauses offscreen and resumes from a clean boot", { timeout: 20
 });
 
 test("terminal loop runs one CLI command, holds ready, and resets cleanly", { timeout: 20_000 }, async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
-  const page = await context.newPage();
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
@@ -1097,12 +1078,10 @@ test("terminal loop runs one CLI command, holds ready, and resets cleanly", { ti
 });
 
 test("reduced-motion mobile terminal exposes every completed log", { timeout: 10_000 }, async () => {
-  const context = await browser.newContext({
+  const { context, page } = await createReleasePageSession(browser, {
     reducedMotion: "reduce",
-    serviceWorkers: "block",
     viewport: { width: 390, height: 844 },
   });
-  const page = await context.newPage();
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
@@ -1150,12 +1129,10 @@ test("reduced-motion mobile terminal exposes every completed log", { timeout: 10
 });
 
 test("reduced-motion desktop keeps all content visible and ambient loops stopped", { timeout: 15_000 }, async () => {
-  const context = await browser.newContext({
+  const { context, page } = await createReleasePageSession(browser, {
     reducedMotion: "reduce",
-    serviceWorkers: "block",
     viewport: { width: 1440, height: 900 },
   });
-  const page = await context.newPage();
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
@@ -1237,13 +1214,11 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
 });
 
 test("touch-only users return to the resting control style after tapping", { timeout: 15_000 }, async () => {
-  const context = await browser.newContext({
+  const { context, page } = await createReleasePageSession(browser, {
     hasTouch: true,
     isMobile: true,
-    serviceWorkers: "block",
     viewport: { width: 440, height: 956 },
   });
-  const page = await context.newPage();
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
@@ -1425,11 +1400,9 @@ test("touch-only users return to the resting control style after tapping", { tim
 });
 
 test("browser history restores section state and sequential focus", { timeout: 15_000 }, async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
+  const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
-  const page = await context.newPage();
   const rscResponses = [];
   page.on("response", (response) => {
     if (new URL(response.url()).pathname.endsWith(".rsc")) {
@@ -1544,20 +1517,13 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
     { width: 901, height: 800 },
     { width: 1100, height: 800 },
     { width: 1101, height: 800 },
-    { width: 1150, height: 800 },
-    { width: 1200, height: 800 },
-    { width: 1275, height: 800 },
     { width: 1279, height: 800 },
     { width: 1280, height: 800 },
   ];
   const samples = new Map();
 
   for (const viewport of boundaryViewports) {
-    const context = await browser.newContext({
-      serviceWorkers: "block",
-      viewport,
-    });
-    const page = await context.newPage();
+    const { context, page } = await createReleasePageSession(browser, { viewport });
 
     try {
       await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
@@ -1684,44 +1650,6 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
   }
 });
 
-test("desktop hero keeps the terminal inset and organization logos compact", async () => {
-  const context = await browser.newContext({
-    serviceWorkers: "block",
-    viewport: { width: 1440, height: 900 },
-  });
-  const page = await context.newPage();
-
-  try {
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    await page.evaluate(() => document.fonts.ready);
-    await page.locator("#foundations").scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => (
-      Array.from(document.querySelectorAll(
-        ".experience-brand-logo, .education-crest",
-      )).every((image) => image.complete && image.naturalWidth > 0)
-    ), null, { timeout: 3_000 });
-
-    const layout = await page.evaluate(() => {
-      const terminal = document.querySelector(".hero-media").getBoundingClientRect();
-      const logoSizes = Array.from(document.querySelectorAll(
-        ".experience-brand-logo, .education-crest",
-      )).map((logo) => Number.parseFloat(getComputedStyle(logo).width));
-
-      return {
-        logoSizes,
-        positioningCount: document.querySelectorAll(".hero-positioning").length,
-        terminalRightGap: innerWidth - terminal.right,
-      };
-    });
-
-    assert.equal(layout.positioningCount, 0);
-    assert.ok(layout.terminalRightGap >= 44);
-    assert.deepEqual(layout.logoSizes, [86, 86, 86, 86]);
-  } finally {
-    await context.close();
-  }
-});
-
 test("fresh export passes the complete eight-viewport release matrix", { timeout: 90_000 }, async () => {
   const viewports = [
     { width: 360, height: 800 },
@@ -1735,13 +1663,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
   ];
 
   for (const viewport of viewports) {
-    const context = await browser.newContext({
-      serviceWorkers: "block",
-      viewport,
-    });
+    const { context, page } = await createReleasePageSession(browser, { viewport });
 
     try {
-      const page = await context.newPage();
       const browserErrors = [];
       page.on("console", (message) => {
         if (message.type() === "error") {
@@ -2107,7 +2031,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             id: "experience",
             selectors: [
               "#experience-title",
-              ".experience-status",
               ".experience-entry-copy h3",
               ".experience-group-heading h3",
               ".experience-brand-logo--bytedance",

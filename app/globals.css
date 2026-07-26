@@ -672,7 +672,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 .hero-activation-frame {
-  fill: rgba(5,8,12,.42);
+  fill: rgba(5,8,12,.28);
   stroke: var(--color-line-medium);
   stroke-width: 1;
   transition:
@@ -687,70 +687,71 @@ a { color: inherit; text-decoration: none; }
 }
 
 .hero-activation-core.is-active .hero-activation-frame {
-  fill: color-mix(in srgb, var(--color-accent) 4%, rgba(5,8,12,.66));
-  stroke: color-mix(in srgb, var(--color-accent) 48%, var(--color-line-medium));
+  fill: color-mix(in srgb, var(--color-accent) 2%, rgba(5,8,12,.62));
+  stroke: color-mix(in srgb, var(--color-accent) 42%, var(--color-line-medium));
 }
 
 .hero-activation-core.is-active .hero-activation-title { fill: var(--color-foreground-muted); }
 
 .hero-activation-cell {
-  fill: var(--color-line-subtle);
-  opacity: .2;
+  fill: color-mix(in srgb, var(--color-line-medium) 48%, transparent);
+  opacity: .12;
+  transform-box: fill-box;
+  transform-origin: center;
   vector-effect: non-scaling-stroke;
   transition:
     fill var(--duration-normal) var(--ease-out),
-    opacity var(--duration-normal) var(--ease-out);
+    opacity var(--duration-normal) var(--ease-out),
+    transform var(--duration-normal) var(--ease-out);
 }
 
+.hero-activation-cell.is-dormant { opacity: .09; }
 .hero-activation-cell.is-active { opacity: 1; }
 .hero-activation-cell.tone-1.is-active {
-  fill: color-mix(in srgb, var(--color-accent) 72%, transparent);
+  fill: color-mix(in srgb, var(--color-accent) 78%, transparent);
 }
 .hero-activation-cell.tone-2.is-active {
-  fill: color-mix(in srgb, var(--color-accent-signal) 82%, transparent);
+  fill: color-mix(in srgb, var(--color-accent-signal) 86%, transparent);
 }
 .hero-activation-cell.tone-3.is-active {
-  fill: color-mix(in srgb, var(--color-status-active) 78%, var(--color-foreground));
+  fill: color-mix(in srgb, var(--color-status-active) 84%, transparent);
 }
 
-.hero-activation-cell.is-current {
-  animation: hero-activation-cell var(--step-duration, 960ms) var(--ease-out) both;
+.hero-terminal[data-motion="running"] .hero-activation-cell.is-active {
+  animation: hero-activation-breathe
+    var(--cell-breathe-duration, 1.6s)
+    cubic-bezier(.45, 0, .55, 1)
+    var(--cell-breathe-delay, 0ms)
+    infinite
+    alternate;
 }
 
 .hero-signal-output-route,
 .hero-signal-output-node {
+  fill: none;
   stroke: var(--color-line-medium);
   stroke-width: 1.2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
   opacity: .36;
   transition:
-    fill var(--duration-normal) var(--ease-out),
     stroke var(--duration-normal) var(--ease-out),
     opacity var(--duration-normal) var(--ease-out);
 }
-
-.hero-signal-output-node { fill: rgba(5,8,12,.86); }
 
 .hero-signal-output.is-active :is(.hero-signal-output-route, .hero-signal-output-node) {
   stroke: var(--color-accent);
   opacity: .95;
 }
 
-.hero-signal-output.is-active .hero-signal-output-node {
-  fill: color-mix(in srgb, var(--color-accent) 18%, rgba(5,8,12,.9));
-}
-
 .hero-signal-output.is-active .hero-signal-output-label { fill: var(--color-foreground); }
 
 .hero-signal-output.is-current :is(.hero-signal-output-route, .hero-signal-output-node) {
-  stroke: var(--color-status-active);
-}
-
-.hero-signal-output.is-current .hero-signal-output-node {
-  fill: color-mix(in srgb, var(--color-status-active) 24%, rgba(5,8,12,.9));
+  stroke: var(--color-accent-signal);
 }
 
 .hero-signal-output.is-current .hero-signal-output-label {
-  fill: var(--color-status-active);
+  fill: var(--color-accent-signal);
 }
 
 .hero-signal-output-label {
@@ -1090,16 +1091,6 @@ a { color: inherit; text-decoration: none; }
 .experience-group-header:hover .experience-brand-logo {
   opacity: .78;
   filter: saturate(1) drop-shadow(0 0 14px color-mix(in srgb, var(--color-accent) 25%, transparent));
-}
-
-.experience-status {
-  display: block;
-  margin-bottom: 8px;
-  color: var(--color-accent);
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 1.3;
-  letter-spacing: .14em;
 }
 
 .experience-copy h3,
@@ -1731,9 +1722,9 @@ a { color: inherit; text-decoration: none; }
   to { stroke-dashoffset: 0; }
 }
 
-@keyframes hero-activation-cell {
-  0%, 100% { opacity: 1; }
-  40% { opacity: .42; }
+@keyframes hero-activation-breathe {
+  from { opacity: .34; transform: scale(.74); }
+  to { opacity: 1; transform: scale(1.14); }
 }
 
 @keyframes timeline-scan {
@@ -2117,10 +2108,6 @@ html[data-page-active="false"] .contact-marquee-track {
   .experience-group-header { min-height: 120px; }
   .experience-row,
   .experience-row.is-current { padding: 10px 0; }
-  .experience-status {
-    margin-bottom: 6px;
-    font-size: 10px;
-  }
   .experience-group-heading p {
     font-size: 14px;
     line-height: 1.55;

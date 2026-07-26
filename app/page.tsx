@@ -92,7 +92,6 @@ export default function Home() {
               <div className="experience-copy">
                 <div className="experience-entry-heading">
                   <div className="experience-entry-copy">
-                    <span className="experience-status">CURRENT ROLE</span>
                     <h3>{currentExperience.company}</h3>
                     <p>Senior AI Engineer</p>
                   </div>
@@ -116,7 +115,6 @@ export default function Home() {
                 <span className="experience-group-branch" aria-hidden="true" />
                 <div className="experience-group-heading">
                   <div className="experience-entry-copy">
-                    <span className="experience-status">PREVIOUS ROLE</span>
                     <h3 id="alibaba-group-title">Alibaba</h3>
                     <p>Machine Learning Engineer</p>
                   </div>

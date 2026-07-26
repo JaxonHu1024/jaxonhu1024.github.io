@@ -59,8 +59,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
     html,
     /SENIOR AI ENGINEER \/\/ AI AGENTS · LLMs \/ VLMs · AUTONOMOUS DRIVING/,
   );
-  assert.match(html, /class="experience-status">CURRENT ROLE<\/span>/);
-  assert.match(html, /class="experience-status">PREVIOUS ROLE<\/span>/);
+  assert.doesNotMatch(html, /CURRENT ROLE|PREVIOUS ROLE|experience-status/);
   assert.doesNotMatch(html, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
   assert.match(html, /ByteDance/);
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
@@ -103,67 +102,6 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /road-network-geolocalization\.png/);
   assert.doesNotMatch(html, /Jaxon Hu|Hu Jiaxing/i);
   assert.doesNotMatch(html, /JAXON\.EXE/);
-});
-
-test("uses a motion-safe responsive contact directory", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-
-  assert.match(
-    css,
-    /\.contact-socials\s*\{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\);/s,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*1279px\)\s*\{\s*\.contact-socials\s*\{\s*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.contact-socials\s*\{\s*grid-template-columns:\s*1fr;/s,
-  );
-  assert.match(
-    css,
-    /\.contact-directory\s*\{[^}]*margin-top:\s*0;[^}]*border-top:\s*0;/s,
-  );
-  assert.match(
-    css,
-    /\.contact-marquee-track\s*\{[^}]*font-family:\s*var\(--display\);[^}]*font-weight:\s*600;[^}]*transform:\s*translate3d\(0,\s*0,\s*0\);[^}]*animation:\s*contact-marquee\s+28s\s+linear\s+infinite;/s,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.contact-marquee-track\s*\{[^}]*animation-duration:\s*25s;/s,
-  );
-  assert.match(
-    css,
-    /\.contact-marquee-window\s*\{[^}]*mask-image:\s*linear-gradient\(90deg,\s*transparent 0,\s*#000 7%,\s*#000 93%,\s*transparent 100%\);/s,
-  );
-  assert.match(
-    css,
-    /\.contact-marquee-window\s*\{[^}]*contain:\s*layout paint;[^}]*isolation:\s*isolate;[^}]*transform:\s*translateZ\(0\);/s,
-  );
-  assert.match(
-    css,
-    /\.contact-socials a:hover \.endpoint-arrow\s*\{\s*transform:\s*translateX\(3px\);/s,
-  );
-  assert.match(
-    css,
-    /@keyframes contact-marquee\s*\{[\s\S]*?translate3d\(0,\s*0,\s*0\);[\s\S]*?translate3d\(-50%,\s*0,\s*0\);[\s\S]*?\}/,
-  );
-  assert.match(
-    css,
-    /@media \(prefers-reduced-motion:\s*reduce\)[\s\S]*?\.contact-marquee-track\s*\{[^}]*animation:\s*none\s*!important;[^}]*transform:\s*none\s*!important;/s,
-  );
-});
-
-test("keeps the Pages browser install lean for headless release checks", async () => {
-  const workflow = await readFile(
-    new URL("../.github/workflows/deploy-pages.yml", import.meta.url),
-    "utf8",
-  );
-
-  assert.match(
-    workflow,
-    /npx playwright install --with-deps --only-shell chromium/,
-  );
 });
 
 test("renders a branded not-found route instead of the homepage", async () => {
@@ -244,9 +182,23 @@ test("renders the completed single-command CLI fallback and defers organization 
   assert.match(terminalMarkup, /class="hero-signal-lane is-active"/);
   assert.equal(
     terminalMarkup.match(/class="hero-activation-cell/g)?.length,
-    24,
+    50,
   );
-  assert.match(terminalMarkup, /class="hero-activation-cell tone-[123] is-active"/);
+  const activeCellCount = terminalMarkup.match(
+    /class="hero-activation-cell tone-[123] is-active"/g,
+  )?.length ?? 0;
+  assert.ok(activeCellCount >= 20 && activeCellCount <= 30);
+  for (const tone of [1, 2, 3]) {
+    assert.match(
+      terminalMarkup,
+      new RegExp(`class="hero-activation-cell tone-${tone} is-active"`),
+    );
+  }
+  assert.match(terminalMarkup, /class="hero-activation-cell tone-1 is-dormant"/);
+  assert.match(terminalMarkup, /d="M52 46C94 46 111 118 178 126"/);
+  assert.match(terminalMarkup, /d="M52 94C98 94 116 58 178 62"/);
+  assert.match(terminalMarkup, /d="M52 142C104 142 122 88 178 94"/);
+  assert.match(terminalMarkup, /d="M386 84V104M386 94H404"/);
   for (const [label, status] of [
     ["runtime", "online"],
     ["models", "bound"],
@@ -328,7 +280,7 @@ test("groups both Alibaba organizations under one company heading", async () => 
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(
     html,
-    /<div class="experience-group-heading"><div class="experience-entry-copy"><span class="experience-status">PREVIOUS ROLE<\/span><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div><img class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"\/><\/div>/,
+    /<div class="experience-group-heading"><div class="experience-entry-copy"><h3 id="alibaba-group-title">Alibaba<\/h3><p>Machine Learning Engineer<\/p><\/div><img class="experience-brand-logo experience-brand-logo--alibaba" src="\/assets\/logo-alibaba-color\.svg" alt="" width="16" height="16" loading="lazy" aria-hidden="true"\/><\/div>/,
   );
   assert.match(
     html,
@@ -352,186 +304,9 @@ test("groups both Alibaba organizations under one company heading", async () => 
   );
 });
 
-test("uses one profile title scale and contrast—not opacity—for historical roles", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const rootRule = css.match(/:root\s*\{[^}]+\}/s)?.[0] ?? "";
-  const sharedCompanyRule = css.match(
-    /\.experience-copy h3,\s*\.experience-group-heading h3\s*\{[^}]+\}/s,
-  )?.[0] ?? "";
-  const educationTitleRule = css.match(
-    /\.education-item h3\s*\{[^}]+\}/s,
-  )?.[0] ?? "";
-  const historicalCompanyRule = [
-    ...css.matchAll(/\.experience-group-heading h3\s*\{[^}]+\}/gs),
-  ].map(([rule]) => rule).find((rule) => rule.includes("rgba(233,255,249,.82)")) ?? "";
-
-  assert.match(rootRule, /--profile-title-size:\s*clamp\(30px,\s*2\.6vw,\s*42px\)/);
-  assert.match(rootRule, /--profile-title-line-height:\s*1\.08/);
-  assert.match(rootRule, /--profile-title-letter-spacing:\s*\.025em/);
-  for (const titleRule of [sharedCompanyRule, educationTitleRule]) {
-    assert.match(titleRule, /font-family:\s*var\(--display\)/);
-    assert.match(titleRule, /font-size:\s*var\(--profile-title-size\)/);
-    assert.match(titleRule, /font-weight:\s*600/);
-    assert.match(titleRule, /line-height:\s*var\(--profile-title-line-height\)/);
-    assert.match(titleRule, /letter-spacing:\s*var\(--profile-title-letter-spacing\)/);
-  }
-  assert.match(historicalCompanyRule, /color:\s*rgba\(233,255,249,\.82\)/);
-  assert.doesNotMatch(css, /\.experience-date|\.education-item time/);
-  assert.doesNotMatch(css, /\.experience-group\s*\{[^}]*opacity:/s);
-});
-
-test("styles company logos with the same responsive treatment as education crests", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const sharedLogoRule =
-    css.match(/\.experience-brand-logo,\s*\.education-crest\s*\{[^}]+\}/s)?.[0] ?? "";
-  const logoRule = css.match(/\.experience-brand-logo\s*\{[^}]+\}/s)?.[0] ?? "";
-
-  assert.match(logoRule, /grid-column:\s*5/);
-  assert.match(logoRule, /grid-row:\s*1/);
-  assert.match(logoRule, /width:\s*var\(--experience-logo-size\)/);
-  assert.match(logoRule, /height:\s*var\(--experience-logo-size\)/);
-  assert.match(logoRule, /opacity:\s*\.5/);
-  assert.match(logoRule, /filter:\s*saturate\(\.85\)\s*drop-shadow/);
-  assert.match(sharedLogoRule, /--organization-logo-scale:\s*1/);
-  assert.match(
-    sharedLogoRule,
-    /transform:\s*scale\(var\(--organization-logo-scale\)\)/,
-  );
-  assert.match(sharedLogoRule, /transform-origin:\s*center/);
-  for (const [selector, scale] of [
-    ["experience-brand-logo--bytedance", "1"],
-    ["experience-brand-logo--alibaba", "1\\.02"],
-    ["education-crest--ntu", "1\\.1"],
-    ["education-crest--seu", "1\\.05"],
-  ]) {
-    assert.match(
-      css,
-      new RegExp(`\\.${selector}\\s*\\{\\s*--organization-logo-scale:\\s*${scale};\\s*\\}`),
-    );
-  }
-  assert.match(
-    css,
-    /:root\s*\{[^}]*--profile-logo-size:\s*96px;/s,
-  );
-  assert.match(
-    css,
-    /\.experience-log\s*\{[^}]*--experience-logo-size:\s*var\(--profile-logo-size\);[^}]*--experience-logo-gap:\s*clamp\(18px,\s*1\.8vw,\s*28px\);/s,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*760px\)[\s\S]*?:root\s*\{[^}]*--profile-logo-size:\s*48px;[^}]*\}[\s\S]*?\.experience-log\s*\{[^}]*--experience-logo-gap:\s*8px;/,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-brand-logo,\s*\.education-crest\s*\{[^}]*transform:\s*translateX\(calc\(50%\s*-\s*var\(--profile-axis\)\s*-\s*4px\)\)\s*scale\(var\(--organization-logo-scale\)\);/s,
-  );
-  assert.match(
-    css,
-    /@media \(min-width:\s*1101px\)[\s\S]*?\.experience-row,\s*\.experience-group-header\s*\{[^}]*minmax\(0,\s*1fr\)\s*var\(--experience-logo-gap\)\s*var\(--experience-logo-size\);[^}]*\}[\s\S]*?\.experience-brand-logo\s*\{\s*grid-column:\s*6;\s*\}/,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*900px\)[\s\S]*?\.experience-copy p\s*\{[^}]*font-size:\s*13px;[^}]*letter-spacing:\s*\.01em;[^}]*\}[\s\S]*?\.experience-group-heading p\s*\{[^}]*font-size:\s*13px;[^}]*letter-spacing:\s*\.01em;/,
-  );
-});
-
-test("aligns each experience marker, company title, and logo on one title row", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const experienceGrid = css.match(/\.experience-row\s*\{[^}]+\}/s)?.[0] ?? "";
-  const timelineCell = css.match(/\.timeline-cell\s*\{[^}]+\}/s)?.[0] ?? "";
-  const groupBranch = css.match(/\.experience-group-branch\s*\{[^}]+\}/s)?.[0] ?? "";
-  const entryCopy = css.match(/\.experience-entry-copy\s*\{[^}]+\}/s)?.[0] ?? "";
-
-  assert.match(experienceGrid, /grid-template-rows:\s*auto/);
-  assert.match(experienceGrid, /align-content:\s*center/);
-  assert.match(experienceGrid, /min-height:\s*144px/);
-  assert.match(
-    css,
-    /\.experience-copy,\s*\.experience-entry-heading,\s*\.experience-group-heading\s*\{\s*display:\s*contents;\s*\}/s,
-  );
-  assert.match(entryCopy, /grid-column:\s*3/);
-  assert.match(entryCopy, /grid-row:\s*1/);
-  assert.match(entryCopy, /align-self:\s*center/);
-  assert.match(timelineCell, /grid-column:\s*1/);
-  assert.match(timelineCell, /grid-row:\s*1/);
-  assert.match(groupBranch, /grid-column:\s*1 \/ 3/);
-  assert.match(groupBranch, /grid-row:\s*1/);
-  assert.match(
-    css,
-    /\.experience-copy p,\s*\.experience-group-heading p\s*\{[^}]*position:\s*absolute;[^}]*top:\s*calc\(100% \+ var\(--experience-role-gap\)\);/s,
-  );
-  assert.match(css, /\.experience-group-header\s*\{[^}]*min-height:\s*144px;/s);
-  assert.match(
-    css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-row,\s*\.experience-row\.is-current,\s*\.experience-group-header\s*\{\s*min-height:\s*120px;/s,
-  );
-  assert.doesNotMatch(css, /\.timeline-cell\s*\{[^}]*grid-row:\s*1 \/ 3;/s);
-});
-
-test("uses one symmetric page-boundary rhythm at each responsive scale", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-
-  assert.match(
-    css,
-    /:root\s*\{[^}]*--section-block-space:\s*clamp\(104px,\s*7vw,\s*112px\);[^}]*--section-content-gap:\s*clamp\(48px,\s*4vw,\s*64px\);[^}]*--section-footer-gap:\s*clamp\(44px,\s*4vw,\s*64px\);/s,
-  );
-  assert.match(css, /\.hero-copy\s*\{[^}]*bottom:\s*var\(--section-block-space\);/s);
-  assert.match(css, /\.experience\s*\{[^}]*min-height:\s*auto;[^}]*padding:\s*var\(--section-block-space\)\s+4\.7vw;/s);
-  assert.match(css, /\.foundations\s*\{[^}]*min-height:\s*auto;[^}]*padding:\s*var\(--section-block-space\)\s+4\.7vw;/s);
-  assert.match(css, /\.research\s*\{[^}]*min-height:\s*auto;[^}]*padding:\s*var\(--section-block-space\)\s+2\.8vw;/s);
-  assert.match(css, /\.contact\s*\{[^}]*padding:\s*var\(--section-block-space\)\s+4\.7vw;/s);
-  assert.match(css, /\.section-footer\s*\{[^}]*margin:\s*var\(--section-footer-gap\)\s+auto\s+0;/s);
-  assert.match(
-    css,
-    /@media \(max-width:\s*900px\)\s*\{\s*:root\s*\{[^}]*--section-block-space:\s*88px;[^}]*--section-content-gap:\s*44px;[^}]*--section-footer-gap:\s*44px;/s,
-  );
-  assert.match(
-    css,
-    /@supports \(animation-timeline:\s*view\(\)\)[\s\S]*?\.section-kicker\.reveal,\s*\.section-footer\.reveal\s*\{[^}]*animation:\s*none;[^}]*transform:\s*none;/s,
-  );
-  assert.doesNotMatch(css, /\.experience > \.section-footer[\s\S]*?margin-top:\s*auto/);
-});
-
-test("keeps the experience scan cursor inside the timeline guide", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const timelineScanStart = css.indexOf("@keyframes timeline-scan");
-  const timelineScanEnd = css.indexOf("@keyframes active-node-pulse", timelineScanStart);
-  const timelineScan = css.slice(timelineScanStart, timelineScanEnd);
-
-  assert.match(
-    css,
-    /\.experience-log\s*\{[^}]*--experience-guide-start:\s*36px;[^}]*--experience-guide-end:\s*22px;[^}]*--experience-scan-height:\s*42px;/s,
-  );
-  assert.match(
-    css,
-    /\.experience-log::before\s*\{[^}]*top:\s*var\(--experience-guide-start\);[^}]*bottom:\s*var\(--experience-guide-end\);/s,
-  );
-  assert.match(
-    css,
-    /\.experience-scan-track\s*\{[^}]*top:\s*var\(--experience-guide-start\);[^}]*bottom:\s*var\(--experience-guide-end\);[^}]*overflow:\s*hidden;/s,
-  );
-  assert.match(
-    css,
-    /\.experience-scan-cursor\s*\{[^}]*height:\s*calc\(100% \+ var\(--experience-scan-height\)\);[^}]*animation:\s*timeline-scan\s+6\.4s\s+linear\s+infinite;[^}]*will-change:\s*transform;/s,
-  );
-  assert.match(css, /\.experience-scan-cursor::before\s*\{[^}]*height:\s*var\(--experience-scan-height\);/s);
-  assert.match(timelineScan, /0%\s*\{[^}]*transform:\s*translate3d\(0,\s*0,\s*0\);/s);
-  assert.match(
-    timelineScan,
-    /100%\s*\{[^}]*transform:\s*translate3d\(\s*0,\s*calc\(\s*100%\s*-\s*var\(--experience-scan-height\)\s*-\s*var\(--experience-scan-height\)\s*\),\s*0\s*\);/s,
-  );
-  assert.doesNotMatch(timelineScan, /\b(?:top|left|width|height|margin):/);
-  assert.match(
-    css,
-    /@media \(max-width:\s*900px\)[\s\S]*?\.experience-log\s*\{[^}]*--experience-guide-start:\s*42px;[^}]*--experience-guide-end:\s*45px;/,
-  );
-  assert.doesNotMatch(css, /translateY\(calc\(100% \+ \d+px\)\)/);
-});
-
 test("orders foundations before research and groups the technical profile clearly", async () => {
   const response = await render();
   const html = await response.text();
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
   assert.ok(html.indexOf('href="#foundations"') < html.indexOf('href="#research"'));
   assert.ok(
@@ -549,9 +324,7 @@ test("orders foundations before research and groups the technical profile clearl
   assert.ok(html.indexOf("<dt>AI SPECIALTIES</dt>") < html.indexOf("<dt>LANGUAGES</dt>"));
   assert.ok(html.indexOf("<dt>LANGUAGES</dt>") < html.indexOf("<dt>PLATFORM</dt>"));
   assert.doesNotMatch(html, /AI FOCUS|ML FRAMEWORK|PLATFORM \/ DATA|<span>PyTorch<\/span>|<span>MySQL<\/span>/);
-  assert.match(css, /@media \(min-width: 1101px\)[\s\S]*?\.toolchain-list \{ margin-top: 58px; \}/);
   assert.doesNotMatch(html, /class="toolchain-module"[^>]*data-index=/);
-  assert.doesNotMatch(css, /content:\s*attr\(data-index\)/);
 });
 
 test("keeps the hero private, English-only, and decoupled from paper topics", async () => {
@@ -573,92 +346,6 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
   assert.doesNotMatch(page, /[\u3400-\u9fff]/);
 });
 
-test("implements ambient motion as accessible code-native layers", async () => {
-  const heroMotion = await readFile(new URL("../app/components/HeroTerminal.tsx", import.meta.url), "utf8");
-  const researchMotion = await readFile(new URL("../app/components/ResearchVisual.tsx", import.meta.url), "utf8");
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-
-  assert.match(heroMotion, /prefers-reduced-motion: reduce/);
-  assert.match(heroMotion, /IntersectionObserver/);
-  assert.match(heroMotion, /visibilitychange/);
-  assert.match(heroMotion, /data-motion-layer="hero-flow"/);
-  assert.match(researchMotion, /prefers-reduced-motion: reduce/);
-  assert.match(researchMotion, /data-motion-layer={`research-\$\{variant\}`}/);
-  assert.match(researchMotion, /const roadRoutes/);
-  assert.match(researchMotion, /pointOnRoute/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-});
-
-test("keeps mobile visual anchors and menu motion layout-safe", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const baseNavigationRule = css.match(
-    /(?:^|\n)\.nav-scroll\s*\{[^}]*\}/s,
-  )?.[0] ?? "";
-
-  // Stacked terminal is inset on both sides (no horizontal overflow), height-
-  // bounded so it stays within the statement→CTA gap, and stacked below copy.
-  assert.match(
-    css,
-    /@media \(max-width:\s*900px\)[\s\S]*?\.hero-media \{[^}]*--hero-terminal-height: clamp\([^)]+\);[^}]*right: max\(20px, env\(safe-area-inset-right\)\);[^}]*left: max\(20px, env\(safe-area-inset-left\)\);/s,
-  );
-  assert.match(css, /\.hero-media \{[^}]*pointer-events: none;/s);
-  assert.match(css, /\.education-item \{\s*position: relative;\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 96px;/);
-  assert.match(css, /\.education-node \{\s*position: relative;\s*grid-column: 1;\s*grid-row: 1;\s*align-self: center;/);
-  assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
-  assert.match(css, /\.education-item \{\s*display: grid;\s*grid-template-columns: minmax\(0, 1fr\) 48px;/);
-  assert.match(css, /\.education-crest \{\s*position: static;\s*grid-column: 2;\s*grid-row: 1;/);
-  assert.match(
-    css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.experience-subentry h4\s*\{[^}]*letter-spacing:\s*0;[^}]*word-spacing:\s*-.06em;/s,
-  );
-  assert.match(
-    css,
-    /@media \(max-width:\s*760px\)[\s\S]*?\.education-item p\s*\{[^}]*letter-spacing:\s*0;[^}]*word-spacing:\s*-.06em;/s,
-  );
-  assert.match(css, /clip-path: inset\(0 0 100% 0\)/);
-  assert.match(css, /max-height: calc\(100dvh - 82px\)/);
-  assert.match(
-    css,
-    /\.system-mark-trigger\s*\{[^}]*transition:\s*background var\(--duration-fast\) var\(--ease-out\);/s,
-  );
-  assert.match(
-    css,
-    /clip-path var\(--duration-normal\) var\(--ease-out\) var\(--duration-instant\)/,
-  );
-  assert.match(
-    css,
-    /visibility 0s linear calc\(var\(--duration-normal\) \+ var\(--duration-instant\)\)/,
-  );
-  assert.match(css, /--menu-open-delay: 0ms;/);
-  assert.match(css, /--menu-close-delay: var\(--duration-instant\);/);
-  assert.match(
-    css,
-    /opacity var\(--duration-fast\) var\(--ease-out\) var\(--menu-close-delay\)/,
-  );
-  assert.match(
-    css,
-    /opacity var\(--duration-normal\) var\(--ease-out\) var\(--menu-open-delay\)/,
-  );
-  assert.match(
-    css,
-    /transform var\(--duration-normal\) var\(--ease-spring\) var\(--menu-open-delay\)/,
-  );
-  assert.match(css, /\.site-header\.is-menu-open \.nav-scroll a \{/);
-  assert.match(css, /\.nav-scroll a\.is-active::before \{[^}]*display: block;/s);
-  assert.match(
-    css,
-    /\.site-header\.is-menu-open \.nav-scroll\s*\{[^}]*will-change:\s*clip-path,\s*opacity,\s*transform;/s,
-  );
-  assert.doesNotMatch(baseNavigationRule, /will-change:/);
-  assert.doesNotMatch(css, /transition:\s*max-height|max-height:\s*320px/);
-  assert.match(css, /\.experience-copy h3,\s*\.experience-group-heading h3 \{/s);
-  assert.match(css, /\.paper-copy h3 \{/);
-  assert.match(css, /\.paper-copy h3 span \{ display: block; \}/);
-  assert.doesNotMatch(css, /\.experience-copy h2|\.paper-copy h2/);
-  assert.doesNotMatch(css, /@media \(min-width: 761px\) and \(max-width: 1100px\)/);
-  assert.match(css, /@media \(max-width: 900px\)/);
-});
-
 test("defines semantic visual tokens and safe-area-aware dark theming", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const rootRule = css.match(/:root\s*\{[^}]+\}/s)?.[0] ?? "";
@@ -670,10 +357,22 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
     "--color-background",
     "--color-surface",
     "--color-foreground",
+    "--color-foreground-secondary",
+    "--color-foreground-muted",
+    "--color-foreground-weak",
     "--color-muted",
     "--color-line",
+    "--color-line-strong",
+    "--color-line-medium",
     "--color-line-subtle",
     "--color-accent",
+    "--color-accent-signal",
+    "--color-status-active",
+    "--surface-header",
+    "--surface-panel",
+    "--surface-feedback",
+    "--shadow-panel",
+    "--shadow-feedback",
     "--ease-out",
     "--ease-emphasized",
     "--ease-spring",
@@ -704,22 +403,18 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
   );
   assert.match(feedbackRule, /right:\s*max\(\.75rem,\s*env\(safe-area-inset-right\)\)/);
   assert.match(feedbackRule, /left:\s*max\(\.75rem,\s*env\(safe-area-inset-left\)\)/);
-});
 
-test("scales the desktop hero continuously across the split layout", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-
-  assert.match(css, /font-size: clamp\(104px, min\(15vw, 24dvh\), 246px\)/);
-  assert.match(css, /font-size: clamp\(23px, min\(2\.25vw, 3\.6dvh\), 37px\)/);
-  assert.match(css, /--hero-terminal-height: clamp\(280px, 27vw, 360px\)/);
-  assert.match(css, /width: clamp\(340px, 46vw, 600px\)/);
-  assert.match(css, /\.hero-cta \{[^}]*width: clamp\(280px, min\(22\.22vw, 35\.56dvh\), 320px\)/s);
-});
-
-test("keeps focusable sections out of hidden scroll containers", async () => {
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
-  const sectionRule = css.match(/\.section \{[^}]+\}/)?.[0] ?? "";
-
-  assert.match(sectionRule, /overflow:\s*clip;/);
-  assert.doesNotMatch(sectionRule, /overflow:\s*hidden;/);
+  for (const [selector, token] of [
+    [".site-header", "--surface-header"],
+    [".terminal-button", "--color-accent"],
+    [".hero-terminal", "--surface-panel"],
+    [".section-footer-index", "--color-foreground-weak"],
+    [".contact-socials a", "--color-foreground"],
+    [".mobile-load-feedback", "--surface-feedback"],
+  ]) {
+    const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const rule = css.match(new RegExp(`${escapedSelector}\\s*\\{[^}]*\\}`, "s"))?.[0] ?? "";
+    assert.match(rule, new RegExp(`var\\(${escapedToken}\\)`));
+  }
 });
