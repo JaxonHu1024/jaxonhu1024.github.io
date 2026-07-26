@@ -1,0 +1,31 @@
+app/components/Navigation.tsx
+  s_a95c82d7713b36::t_08ea1fc6a65a93 9,310,336,340
+app/globals.css
+  s_a95c82d7713b36::t_5927a079e72033 10,157,164,187,885-1138,1191,2047-2048,2080-2082,2297-2300,2349-2370
+app/page.tsx
+  s_a95c82d7713b36::t_4586774b948fdf 62-63,72-204,278,358,398
+tests/browser-release-gate.test.mjs
+  s_a95c82d7713b36::t_4a658327bb7706 612,1287,1897,2031-2040
+tests/rendered-html.test.mjs
+  s_a95c82d7713b36::t_96f659149bef47 69,242-247,321-322,335-357,361
+tests/scroll-performance-contract.test.mjs
+  s_a95c82d7713b36::t_d0c87282ec321c 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "08f3e4d617038988d53eb2e9c59800a0a8155689",
+  "prompts": {},
+  "sessions": {
+    "s_a95c82d7713b36": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019f9d38-1b56-7972-8b80-d9c4b6cdd8b7",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
