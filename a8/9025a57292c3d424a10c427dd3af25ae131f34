@@ -1,0 +1,27 @@
+app/components/HeroTerminal.tsx
+  s_5ec4d035578047::t_51de7a0b58007d 119-145,310-334,363,367-368,392-404,457
+app/globals.css
+  s_5ec4d035578047::t_73de2305756afa 497-498,558,1761-1765,1951,1955-1956,1960-1969,1972,1977-1978,1980,1983,1985-2002,2004-2005,2007-2009,2011,2013-2018,2020-2021,2023-2024,2354-2448
+tests/browser-release-gate.test.mjs
+  s_5ec4d035578047::t_6e9bb6e3250d19 1080-1133,1145-1195,1197-1201,1203,1206-1228
+tests/rendered-html.test.mjs
+  s_5ec4d035578047::t_d90cc667259141 182,184-187,189-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a89025a57292c3d424a10c427dd3af25ae131f34",
+  "prompts": {},
+  "sessions": {
+    "s_5ec4d035578047": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa2f1-562d-7371-bc6a-3f210112b39f",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
