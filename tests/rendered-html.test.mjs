@@ -380,6 +380,11 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
     "--duration-fast",
     "--duration-normal",
     "--duration-reveal",
+    "--layout-max-width",
+    "--layout-gutter",
+    "--layout-inline-start",
+    "--layout-inline-end",
+    "--layout-center-gap",
     "--z-feedback",
     "--z-header",
     "--z-skip-link",
@@ -390,8 +395,16 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
   assert.match(htmlRule, /background:\s*var\(--color-background\)/);
   assert.match(sectionRule, /scroll-margin-top:\s*calc\(var\(--nav-height\) \+ 2rem \+ env\(safe-area-inset-top\)\)/);
   assert.match(
+    rootRule,
+    /--layout-inline-start:\s*max\([^;]*env\(safe-area-inset-left,\s*0px\)[^;]*\);/s,
+  );
+  assert.match(
+    rootRule,
+    /--layout-inline-end:\s*max\([^;]*env\(safe-area-inset-right,\s*0px\)[^;]*\);/s,
+  );
+  assert.match(
     css,
-    /\.site-header\s*\{[^}]*top:\s*max\(14px,\s*env\(safe-area-inset-top\)\);[^}]*right:\s*max\(14px,\s*env\(safe-area-inset-right\)\);[^}]*left:\s*max\(14px,\s*env\(safe-area-inset-left\)\);/s,
+    /\.site-header\s*\{[^}]*top:\s*max\(14px,\s*env\(safe-area-inset-top\)\);[^}]*right:\s*var\(--layout-inline-end\);[^}]*left:\s*var\(--layout-inline-start\);/s,
   );
   assert.match(
     css,

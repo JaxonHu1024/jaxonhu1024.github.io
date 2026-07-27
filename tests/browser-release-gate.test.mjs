@@ -1890,8 +1890,59 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const toolchainColumn = document.querySelector(".toolchain-column");
         const educationRect = educationColumn?.getBoundingClientRect();
         const toolchainRect = toolchainColumn?.getBoundingClientRect();
+        const shellSelectors = [
+          ".site-header",
+          ".hero-layout",
+          ".experience > .section-kicker",
+          ".experience-log",
+          ".experience > .section-footer",
+          ".foundations > .section-kicker",
+          ".foundations-grid",
+          ".foundations > .section-footer",
+          ".research > .section-kicker",
+          ".research-frame",
+          ".research > .section-footer",
+          ".contact-inner",
+        ];
+        const alignmentShells = shellSelectors.map((selector) => {
+          const rect = document.querySelector(selector)?.getBoundingClientRect();
+          return rect ? {
+            center: rect.left + rect.width / 2,
+            left: rect.left,
+            right: rect.right,
+            selector,
+          } : null;
+        }).filter((metric) => metric !== null);
+        const splitMetric = (selector) => {
+          const element = document.querySelector(selector);
+          const rect = element?.getBoundingClientRect();
+          if (!element || !rect) return null;
+          const style = getComputedStyle(element);
+          const columns = style.gridTemplateColumns
+            .split(/\s+/)
+            .map((value) => Number.parseFloat(value));
+          const parsedGap = Number.parseFloat(style.columnGap);
+          const gap = Number.isFinite(parsedGap) ? parsedGap : 0;
+          const contentLeft = Number.parseFloat(style.borderLeftWidth)
+            + Number.parseFloat(style.paddingLeft);
+          return {
+            center: rect.left + rect.width / 2,
+            columns,
+            gap,
+            seam: columns.length === 2
+              ? rect.left + contentLeft + columns[0] + gap / 2
+              : null,
+            selector,
+          };
+        };
 
         return {
+          alignmentShells,
+          centerSplits: [
+            window.innerWidth > 900 ? splitMetric(".hero-layout") : null,
+            window.innerWidth > 1100 ? splitMetric(".foundations-grid") : null,
+            window.innerWidth > 760 ? splitMetric(".research-packet") : null,
+          ].filter((metric) => metric !== null),
           experienceLogoMetrics: Array.from(
             document.querySelectorAll(".experience-entry-heading, .experience-group-heading"),
           ).map((heading) => {
@@ -1945,6 +1996,38 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           && initialLayout.header.top >= -0.5,
         `${viewport.width}x${viewport.height} header escaped the viewport: ${JSON.stringify(initialLayout.header)}`,
       );
+      assert.equal(
+        sectionRhythm.alignmentShells.length,
+        12,
+        `${viewport.width}x${viewport.height} did not render every alignment shell`,
+      );
+      for (const edge of ["left", "center", "right"]) {
+        const positions = sectionRhythm.alignmentShells.map((metric) => metric[edge]);
+        assert.ok(
+          Math.max(...positions) - Math.min(...positions) <= 0.75,
+          `${viewport.width}x${viewport.height} ${edge} alignment diverged: `
+            + sectionRhythm.alignmentShells
+              .map((metric) => `${metric.selector}=${metric[edge].toFixed(2)}`)
+              .join(", "),
+        );
+      }
+      for (const split of sectionRhythm.centerSplits) {
+        assert.equal(
+          split.columns.length,
+          2,
+          `${viewport.width}x${viewport.height} ${split.selector} did not render two columns`,
+        );
+        assert.ok(
+          Math.abs(split.columns[0] - split.columns[1]) <= 0.75,
+          `${viewport.width}x${viewport.height} ${split.selector} columns diverged: `
+            + `${split.columns.join(", ")}`,
+        );
+        assert.ok(
+          split.seam !== null && Math.abs(split.seam - split.center) <= 0.75,
+          `${viewport.width}x${viewport.height} ${split.selector} center seam=`
+            + `${split.seam}px, shell center=${split.center}px`,
+        );
+      }
       assert.equal(
         await page.locator(".hero-positioning").count(),
         0,
