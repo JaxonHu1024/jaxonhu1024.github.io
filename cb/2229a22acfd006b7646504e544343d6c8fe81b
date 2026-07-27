@@ -1,0 +1,25 @@
+app/globals.css
+  s_9643aafc6eaa33::t_18d5ea75e813dc 51-63,127-128,319-320,330-333,340-341,924-925,968-969,975,982-983,1293-1294,1305,1319,1356-1357,1365-1368,1550-1551,1571,1870-1873,1881-1886,2035-2036,2177-2178,2255-2256,2269-2270,2305-2308
+tests/browser-release-gate.test.mjs
+  s_9643aafc6eaa33::t_42574c703a2d6d 1893-1937,1940-1945,1999-2030
+tests/rendered-html.test.mjs
+  s_9643aafc6eaa33::t_36ea372b5d80e9 383-387,397-404,407
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "cb2229a22acfd006b7646504e544343d6c8fe81b",
+  "prompts": {},
+  "sessions": {
+    "s_9643aafc6eaa33": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fa237-1617-7a33-bc39-ee3747893f1c",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
