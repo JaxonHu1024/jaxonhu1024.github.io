@@ -49,23 +49,25 @@ export default function Home() {
       <main id="content">
         <section className="section hero grid-surface" id="hero" aria-labelledby="hero-title" tabIndex={-1}>
           <div className="hero-frame" aria-hidden="true" />
-          <h1 className="hero-name" id="hero-title">
-            JAXON
-          </h1>
-          <div className="hero-copy">
-            <div className="hero-message">
-              <p className="hero-statement">
-                <span>COMPILING INTELLIGENCE</span>
-                <span>FOR THE REAL WORLD_</span>
-              </p>
+          <div className="hero-layout">
+            <h1 className="hero-name" id="hero-title">
+              JAXON
+            </h1>
+            <div className="hero-copy">
+              <div className="hero-message">
+                <p className="hero-statement">
+                  <span>COMPILING INTELLIGENCE</span>
+                  <span>FOR THE REAL WORLD_</span>
+                </p>
+              </div>
+              <a className="terminal-button hero-cta" href="#experience">
+                <span>VIEW EXPERIENCE</span>
+                <span className="button-arrow" aria-hidden="true">›</span>
+              </a>
             </div>
-            <a className="terminal-button hero-cta" href="#experience">
-              <span>VIEW EXPERIENCE</span>
-              <span className="button-arrow" aria-hidden="true">›</span>
-            </a>
-          </div>
-          <div className="hero-media" aria-hidden="true">
-            <HeroTerminal />
+            <div className="hero-media" aria-hidden="true">
+              <HeroTerminal />
+            </div>
           </div>
         </section>
 

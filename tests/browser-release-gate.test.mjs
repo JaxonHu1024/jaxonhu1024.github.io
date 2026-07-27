@@ -1540,7 +1540,12 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         terminal: ".hero-media",
       });
       const responsiveDetails = await page.evaluate(() => {
+        const ctaLabel = document.querySelector(".hero-cta > span:first-child");
         const contact = document.querySelector(".contact-socials");
+        const ctaRange = document.createRange();
+        if (ctaLabel) ctaRange.selectNodeContents(ctaLabel);
+        const educationColumn = document.querySelector(".education-column");
+        const toolchainColumn = document.querySelector(".toolchain-column");
         const clippedContactLabels = Array.from(
           document.querySelectorAll(".endpoint-copy b, .endpoint-copy small"),
         ).filter((label) => label.scrollWidth > label.clientWidth + 1)
@@ -1553,6 +1558,43 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
           document.querySelectorAll(".hero-terminal-text"),
         ).filter((label) => label.scrollWidth > label.clientWidth + 1)
           .map((label) => label.textContent?.trim() ?? "");
+        const experienceLogoMetrics = Array.from(
+          document.querySelectorAll(".experience-entry-heading, .experience-group-heading"),
+        ).map((heading) => {
+          const textRects = Array.from(heading.querySelectorAll("h3, p")).map((element) => {
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            return range.getBoundingClientRect();
+          });
+          const logoRect = heading.querySelector(".experience-brand-logo")?.getBoundingClientRect();
+          const rowRect = heading.closest(
+            ".experience-row, .experience-group-header",
+          )?.getBoundingClientRect();
+          const textRight = Math.max(...textRects.map((rect) => rect.right));
+          return textRects.length && logoRect ? {
+            gap: logoRect.left - textRight,
+            right: logoRect.right,
+            rightInset: rowRect ? rowRect.right - logoRect.right : null,
+          } : null;
+        }).filter((metric) => metric !== null);
+        const educationTimeline = document.querySelector(".education-timeline");
+        const educationTimelineRect = educationTimeline?.getBoundingClientRect();
+        const educationRailStyle = educationTimeline
+          ? getComputedStyle(educationTimeline, "::before")
+          : null;
+        const educationRailCenter = educationTimelineRect && educationRailStyle
+          ? educationTimelineRect.left
+            + Number.parseFloat(educationRailStyle.left)
+            + Number.parseFloat(educationRailStyle.width) / 2
+          : null;
+        const educationAxisOffsets = educationRailCenter === null ? [] : Array.from(
+          document.querySelectorAll(".education-node"),
+        ).map((node) => {
+          const rect = node.getBoundingClientRect();
+          return Math.abs(rect.left + rect.width / 2 - educationRailCenter);
+        });
+        const educationRect = educationColumn?.getBoundingClientRect();
+        const toolchainRect = toolchainColumn?.getBoundingClientRect();
 
         return {
           clippedContactLabels,
@@ -1562,6 +1604,12 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
             .split(" ")
             .filter(Boolean)
             .length,
+          educationAxisOffsets,
+          experienceLogoMetrics,
+          foundationsColumnGap: educationRect && toolchainRect
+            ? toolchainRect.top - educationRect.bottom
+            : null,
+          heroCtaLineCount: ctaLabel ? ctaRange.getClientRects().length : 0,
           terminalStepCount,
           terminalVisibleLogCount,
         };
@@ -1616,6 +1664,54 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         [],
         `${viewport.width}px clipped CLI output: ${metrics.clippedTerminalLabels.join(", ")}`,
       );
+      assert.equal(
+        metrics.heroCtaLineCount,
+        1,
+        `${viewport.width}px wrapped the hero CTA across ${metrics.heroCtaLineCount} lines`,
+      );
+      if (viewport.width <= 900) {
+        const statementMediaGap = terminal.top - message.bottom;
+        const mediaCtaGap = cta.top - terminal.bottom;
+        assert.ok(
+          statementMediaGap >= 24 && statementMediaGap <= 64,
+          `${viewport.width}px hero statement/media gap=${statementMediaGap}px`,
+        );
+        assert.ok(
+          mediaCtaGap >= 24 && mediaCtaGap <= 64,
+          `${viewport.width}px hero media/CTA gap=${mediaCtaGap}px`,
+        );
+      }
+      if (viewport.width <= 760) {
+        assert.ok(
+          metrics.foundationsColumnGap >= 48 && metrics.foundationsColumnGap <= 72,
+          `${viewport.width}px foundations column gap=${metrics.foundationsColumnGap}px`,
+        );
+      }
+      if (viewport.width >= 1101) {
+        const logoRightEdges = metrics.experienceLogoMetrics.map(({ right }) => right);
+        assert.ok(
+          Math.max(...logoRightEdges) - Math.min(...logoRightEdges) <= 0.75,
+          `${viewport.width}px experience logo right edges diverged: ${logoRightEdges.join(", ")}`,
+        );
+        for (const { gap } of metrics.experienceLogoMetrics) {
+          assert.ok(
+            gap >= 12,
+            `${viewport.width}px experience copy/logo gap=${gap}px`,
+          );
+        }
+        for (const { rightInset } of metrics.experienceLogoMetrics) {
+          assert.ok(
+            rightInset !== null && Math.abs(rightInset) <= 0.75,
+            `${viewport.width}px experience logo right inset=${rightInset}px`,
+          );
+        }
+      }
+      for (const offset of metrics.educationAxisOffsets) {
+        assert.ok(
+          offset <= 0.25,
+          `${viewport.width}px education node/rail offset=${offset}px`,
+        );
+      }
       for (const [pair, area] of Object.entries(metrics.intersections)) {
         assert.ok(
           area <= 1,
@@ -1743,6 +1839,99 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         scrollHeight: terminal.scrollHeight,
         stepCount: terminal.querySelectorAll(".hero-terminal-line").length,
       }));
+      const heroFlow = await page.evaluate(() => {
+        const cta = document.querySelector(".hero-cta");
+        const ctaLabel = cta?.querySelector(":scope > span:first-child");
+        const media = document.querySelector(".hero-media");
+        const statement = document.querySelector(".hero-message");
+        const ctaRange = document.createRange();
+        if (ctaLabel) ctaRange.selectNodeContents(ctaLabel);
+        const ctaRect = cta?.getBoundingClientRect();
+        const mediaRect = media?.getBoundingClientRect();
+        const statementRect = statement?.getBoundingClientRect();
+
+        return {
+          ctaLineCount: ctaLabel ? ctaRange.getClientRects().length : 0,
+          mediaCtaGap: ctaRect && mediaRect ? ctaRect.top - mediaRect.bottom : null,
+          statementMediaGap: mediaRect && statementRect
+            ? mediaRect.top - statementRect.bottom
+            : null,
+        };
+      });
+      const contactPresentation = await page.evaluate(() => {
+        const contact = document.querySelector("#contact");
+        const footer = document.querySelector("#contact .site-footer");
+        const marqueeWindow = document.querySelector(".contact-marquee-window");
+        const summary = document.querySelector(".contact-marquee-summary");
+        const isVisible = (element) => {
+          if (!element) return false;
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return (
+            style.display !== "none"
+            && style.visibility !== "hidden"
+            && Number.parseFloat(style.opacity) > 0
+            && rect.width > 10
+            && rect.height > 10
+          );
+        };
+
+        return {
+          footerBottomGap: contact && footer
+            ? contact.getBoundingClientRect().bottom - footer.getBoundingClientRect().bottom
+            : null,
+          marqueeWindowVisible: isVisible(marqueeWindow),
+          summaryText: summary?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+          summaryVisible: isVisible(summary),
+        };
+      });
+      const sectionRhythm = await page.evaluate(() => {
+        const educationColumn = document.querySelector(".education-column");
+        const toolchainColumn = document.querySelector(".toolchain-column");
+        const educationRect = educationColumn?.getBoundingClientRect();
+        const toolchainRect = toolchainColumn?.getBoundingClientRect();
+
+        return {
+          experienceLogoMetrics: Array.from(
+            document.querySelectorAll(".experience-entry-heading, .experience-group-heading"),
+          ).map((heading) => {
+            const textRects = Array.from(heading.querySelectorAll("h3, p")).map((element) => {
+              const range = document.createRange();
+              range.selectNodeContents(element);
+              return range.getBoundingClientRect();
+            });
+            const logoRect = heading.querySelector(".experience-brand-logo")?.getBoundingClientRect();
+            const rowRect = heading.closest(
+              ".experience-row, .experience-group-header",
+            )?.getBoundingClientRect();
+            const textRight = Math.max(...textRects.map((rect) => rect.right));
+            return textRects.length && logoRect ? {
+              gap: logoRect.left - textRight,
+              right: logoRect.right,
+              rightInset: rowRect ? rowRect.right - logoRect.right : null,
+            } : null;
+          }).filter((metric) => metric !== null),
+          educationAxisOffsets: (() => {
+            const timeline = document.querySelector(".education-timeline");
+            const timelineRect = timeline?.getBoundingClientRect();
+            const railStyle = timeline ? getComputedStyle(timeline, "::before") : null;
+            const railCenter = timelineRect && railStyle
+              ? timelineRect.left
+                + Number.parseFloat(railStyle.left)
+                + Number.parseFloat(railStyle.width) / 2
+              : null;
+            return railCenter === null ? [] : Array.from(
+              document.querySelectorAll(".education-node"),
+            ).map((node) => {
+              const rect = node.getBoundingClientRect();
+              return Math.abs(rect.left + rect.width / 2 - railCenter);
+            });
+          })(),
+          foundationsColumnGap: educationRect && toolchainRect
+            ? toolchainRect.top - educationRect.bottom
+            : null,
+        };
+      });
 
       assert.equal(
         initialLayout.scrollWidth,
@@ -1772,6 +1961,89 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         initialLayout.hero.ctaHeight >= 44,
         `${viewport.width}x${viewport.height} hero CTA height=${initialLayout.hero.ctaHeight}px`,
       );
+      assert.equal(
+        heroFlow.ctaLineCount,
+        1,
+        `${viewport.width}x${viewport.height} wrapped the hero CTA across `
+          + `${heroFlow.ctaLineCount} lines`,
+      );
+      if (viewport.width <= 900) {
+        assert.ok(
+          heroFlow.statementMediaGap >= 24 && heroFlow.statementMediaGap <= 64,
+          `${viewport.width}x${viewport.height} hero statement/media gap=`
+            + `${heroFlow.statementMediaGap}px`,
+        );
+        assert.ok(
+          heroFlow.mediaCtaGap >= 24 && heroFlow.mediaCtaGap <= 64,
+          `${viewport.width}x${viewport.height} hero media/CTA gap=${heroFlow.mediaCtaGap}px`,
+        );
+        assert.equal(
+          contactPresentation.summaryVisible,
+          true,
+          `${viewport.width}x${viewport.height} hid the complete contact message`,
+        );
+        assert.equal(
+          contactPresentation.marqueeWindowVisible,
+          false,
+          `${viewport.width}x${viewport.height} kept the moving contact marquee visible`,
+        );
+      } else {
+        assert.equal(
+          contactPresentation.summaryVisible,
+          false,
+          `${viewport.width}x${viewport.height} exposed the screen-reader contact summary`,
+        );
+        assert.equal(
+          contactPresentation.marqueeWindowVisible,
+          true,
+          `${viewport.width}x${viewport.height} hid the desktop contact marquee`,
+        );
+      }
+      assert.equal(
+        contactPresentation.summaryText,
+        "For project collaborations, technical consulting, or career opportunities, feel free to reach out.",
+        `${viewport.width}x${viewport.height} changed the contact message`,
+      );
+      assert.ok(
+        contactPresentation.footerBottomGap >= 72
+          && contactPresentation.footerBottomGap <= 128,
+        `${viewport.width}x${viewport.height} contact footer bottom gap=`
+          + `${contactPresentation.footerBottomGap}px`,
+      );
+      if (viewport.width <= 760) {
+        assert.ok(
+          sectionRhythm.foundationsColumnGap >= 48
+            && sectionRhythm.foundationsColumnGap <= 72,
+          `${viewport.width}x${viewport.height} foundations column gap=`
+            + `${sectionRhythm.foundationsColumnGap}px`,
+        );
+      }
+      if (viewport.width >= 1101) {
+        const logoRightEdges = sectionRhythm.experienceLogoMetrics.map(({ right }) => right);
+        assert.ok(
+          Math.max(...logoRightEdges) - Math.min(...logoRightEdges) <= 0.75,
+          `${viewport.width}x${viewport.height} experience logo right edges diverged: `
+            + `${logoRightEdges.join(", ")}`,
+        );
+        for (const { gap } of sectionRhythm.experienceLogoMetrics) {
+          assert.ok(
+            gap >= 12,
+            `${viewport.width}x${viewport.height} experience copy/logo gap=${gap}px`,
+          );
+        }
+        for (const { rightInset } of sectionRhythm.experienceLogoMetrics) {
+          assert.ok(
+            rightInset !== null && Math.abs(rightInset) <= 0.75,
+            `${viewport.width}x${viewport.height} experience logo right inset=${rightInset}px`,
+          );
+        }
+      }
+      for (const offset of sectionRhythm.educationAxisOffsets) {
+        assert.ok(
+          offset <= 0.25,
+          `${viewport.width}x${viewport.height} education node/rail offset=${offset}px`,
+        );
+      }
       assert.equal(
         terminalLayout.stepCount,
         5,
@@ -1909,6 +2181,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           await page.waitForFunction((sectionId) => {
             const targetTop = document.getElementById(sectionId)?.getBoundingClientRect().top
               ?? Number.POSITIVE_INFINITY;
+            if (sectionId === "contact") return Math.abs(targetTop) <= 1;
             const maxScrollY = document.documentElement.scrollHeight - innerHeight;
             return (
               Math.abs(targetTop) <= 1
@@ -1968,6 +2241,18 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 && canvases.some((canvas) => canvas.getAttribute("data-motion") === "running");
             }
             if (sectionId === "contact") {
+              if (innerWidth <= 900) {
+                const summary = section.querySelector(".contact-marquee-summary");
+                const marqueeWindow = section.querySelector(".contact-marquee-window");
+                const summaryRect = summary?.getBoundingClientRect();
+                return Boolean(
+                  summaryRect
+                  && summaryRect.width > 0
+                  && summaryRect.height > 0
+                  && getComputedStyle(summary).visibility !== "hidden"
+                  && getComputedStyle(marqueeWindow).display === "none"
+                );
+              }
               return getComputedStyle(
                 section.querySelector(".contact-marquee-track"),
               ).animationPlayState === "running";
@@ -1998,6 +2283,11 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                     section.querySelector(".contact-marquee-track"),
                   ).animationPlayState
                 : null,
+              marqueeWindowDisplay: section?.querySelector(".contact-marquee-window")
+                ? getComputedStyle(
+                    section.querySelector(".contact-marquee-window"),
+                  ).display
+                : null,
               revealOpacity: revealStyle?.opacity ?? null,
               revealTranslateY: revealTransform?.m42 ?? null,
               scan: section?.querySelector(".experience-scan-cursor")
@@ -2006,6 +2296,17 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                   ).animationPlayState
                 : null,
               sectionVisible: section?.dataset.sectionVisible ?? null,
+              summary: section?.querySelector(".contact-marquee-summary")
+                ? (() => {
+                    const summary = section.querySelector(".contact-marquee-summary");
+                    const rect = summary.getBoundingClientRect();
+                    return {
+                      height: rect.height,
+                      visibility: getComputedStyle(summary).visibility,
+                      width: rect.width,
+                    };
+                  })()
+                : null,
               scrollY,
             };
           }, id);
