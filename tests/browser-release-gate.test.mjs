@@ -1077,7 +1077,60 @@ test("terminal loop runs one CLI command, holds ready, and resets cleanly", { ti
   }
 });
 
-test("reduced-motion mobile terminal exposes every completed log", { timeout: 10_000 }, async () => {
+test("mobile terminal advances through one live log line", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 390, height: 844 },
+  });
+
+  const readLiveLog = () => page.locator(".hero-terminal").evaluate((terminal) => {
+    const liveLog = terminal.querySelector(".hero-terminal-mobile-live-log");
+    return {
+      display: getComputedStyle(liveLog).display,
+      key: liveLog?.getAttribute("data-log-key") ?? "",
+      lineCount: terminal.querySelectorAll(".hero-terminal-mobile-live-log").length,
+      parts: Array.from(liveLog?.children ?? [])
+        .map((part) => part.textContent?.trim() ?? ""),
+    };
+  });
+  const expectedParts = new Map([
+    ["command", ["›_", "agentctl compile --prod", ""]],
+    ["step-1", ["01", "runtime", "online"]],
+    ["step-2", ["02", "models", "bound"]],
+    ["step-3", ["03", "policy", "verified"]],
+    ["step-4", ["04", "graph", "optimized"]],
+    ["step-5", ["05", "artifact", "shipped"]],
+    ["resetting", ["↻", "field", "recycling"]],
+  ]);
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => {
+      const terminal = document.querySelector(".hero-terminal");
+      const liveLog = terminal?.querySelector(".hero-terminal-mobile-live-log");
+      return terminal?.getAttribute("data-motion") === "running"
+        && getComputedStyle(liveLog).display === "grid";
+    }, null, { timeout: 3_000 });
+
+    const first = await readLiveLog();
+    assert.equal(first.display, "grid");
+    assert.equal(first.lineCount, 1);
+    assert.deepEqual(first.parts, expectedParts.get(first.key));
+
+    await page.waitForFunction((previousKey) => (
+      document.querySelector(".hero-terminal-mobile-live-log")
+        ?.getAttribute("data-log-key") !== previousKey
+    ), first.key, { timeout: 4_500 });
+
+    const next = await readLiveLog();
+    assert.equal(next.lineCount, 1);
+    assert.notEqual(next.key, first.key);
+    assert.deepEqual(next.parts, expectedParts.get(next.key));
+  } finally {
+    await context.close();
+  }
+});
+
+test("reduced-motion mobile terminal exposes one completed log and the full signal field", { timeout: 10_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     reducedMotion: "reduce",
     viewport: { width: 390, height: 844 },
@@ -1089,31 +1142,90 @@ test("reduced-motion mobile terminal exposes every completed log", { timeout: 10
       document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "reduced"
     ), null, { timeout: 3_000 });
 
-    const terminal = await page.locator(".hero-terminal").evaluate((element) => ({
-      clientHeight: element.clientHeight,
-      mobileDisplays: Array.from(element.querySelectorAll(".hero-terminal-mobile-line"))
-        .map((line) => getComputedStyle(line).display),
-      mobileVisible: element.querySelectorAll(".hero-terminal-mobile-line.is-visible").length,
-      percent: element.querySelector(".hero-terminal-percent")?.textContent,
-      readyText: element.querySelector(".hero-terminal-ready")?.textContent?.trim() ?? "",
-      readyVisible: element.querySelector(".hero-terminal-ready")
-        ?.classList.contains("is-visible") ?? false,
-      runningAnimations: element.getAnimations({ subtree: true })
-        .filter((animation) => animation.playState === "running")
-        .map((animation) => ({
-          targetClass: animation.effect?.target?.className ?? null,
-          transitionProperty: animation.transitionProperty ?? null,
-          type: animation.constructor.name,
-        })),
-      scrollHeight: element.scrollHeight,
-    }));
+    const terminal = await page.locator(".hero-terminal").evaluate((element) => {
+      const map = element.querySelector(".hero-topology-map");
+      const mapRect = map?.getBoundingClientRect();
+      const liveLog = element.querySelector(".hero-terminal-mobile-live-log");
+      const readyLine = element.querySelector(".hero-terminal-ready");
 
-    assert.equal(terminal.mobileDisplays.length, 3);
-    assert.equal(terminal.mobileDisplays.every((display) => display !== "none"), true);
-    assert.equal(terminal.mobileVisible, 3);
+      return {
+        barFontSize: Number.parseFloat(getComputedStyle(
+          element.querySelector(".hero-terminal-bar"),
+        ).fontSize),
+        captionFontSize: Number.parseFloat(getComputedStyle(
+          element.querySelector(".hero-topology-caption"),
+        ).fontSize),
+        clientHeight: element.clientHeight,
+        clientWidth: element.clientWidth,
+        commandDisplay: getComputedStyle(
+          element.querySelector(".hero-terminal-command"),
+        ).display,
+        desktopLogDisplay: getComputedStyle(
+          element.querySelector(".hero-terminal-log"),
+        ).display,
+        liveDisplay: getComputedStyle(liveLog).display,
+        liveLineCount: element.querySelectorAll(".hero-terminal-mobile-live-log").length,
+        liveParts: Array.from(liveLog?.children ?? [])
+          .map((part) => part.textContent?.trim() ?? ""),
+        mapDisplay: getComputedStyle(map).display,
+        mapHeight: mapRect?.height ?? 0,
+        mapWidth: mapRect?.width ?? 0,
+        percent: element.querySelector(".hero-terminal-percent")?.textContent,
+        progressText: element.querySelector(".hero-terminal-progress-copy")?.textContent?.trim(),
+        readyDisplay: getComputedStyle(readyLine).display,
+        readyText: readyLine?.textContent?.trim() ?? "",
+        readyVisible: readyLine?.classList.contains("is-visible") ?? false,
+        runningAnimations: element.getAnimations({ subtree: true })
+          .filter((animation) => animation.playState === "running")
+          .map((animation) => ({
+            targetClass: animation.effect?.target?.className ?? null,
+            transitionProperty: animation.transitionProperty ?? null,
+            type: animation.constructor.name,
+          })),
+        scrollHeight: element.scrollHeight,
+        signalLabelFontSize: Number.parseFloat(getComputedStyle(
+          map.querySelector(".hero-signal-label"),
+        ).fontSize),
+        signalLabels: [
+          ...Array.from(map.querySelectorAll(".hero-signal-label")),
+          map.querySelector(".hero-activation-title"),
+          map.querySelector(".hero-signal-output-label"),
+        ].map((label) => label?.textContent?.trim() ?? ""),
+      };
+    });
+
+    assert.equal(terminal.liveLineCount, 1);
+    assert.equal(terminal.liveDisplay, "grid");
+    assert.deepEqual(terminal.liveParts, ["05", "artifact", "shipped"]);
+    assert.equal(terminal.commandDisplay, "none");
+    assert.equal(terminal.desktopLogDisplay, "none");
     assert.equal(terminal.percent, "100");
+    assert.equal(terminal.progressText, "FIELD STABLE");
     assert.equal(terminal.readyText, "◆ BUILD READY");
     assert.equal(terminal.readyVisible, true);
+    assert.equal(terminal.readyDisplay, "none");
+    assert.equal(terminal.mapDisplay, "block");
+    assert.deepEqual(
+      terminal.signalLabels,
+      ["LANG", "VISION", "CONTEXT", "LATENT FIELD", "OUT"],
+    );
+    assert.ok(
+      terminal.mapWidth >= terminal.clientWidth * 0.85,
+      `signal field did not use the available width: ${JSON.stringify(terminal)}`,
+    );
+    assert.ok(
+      terminal.mapHeight >= 120,
+      `signal field was too short to read: ${JSON.stringify(terminal)}`,
+    );
+    assert.ok(terminal.barFontSize >= 10, `mobile terminal bar text was ${terminal.barFontSize}px`);
+    assert.ok(
+      terminal.captionFontSize >= 10,
+      `mobile topology caption was ${terminal.captionFontSize}px`,
+    );
+    assert.ok(
+      terminal.signalLabelFontSize >= 11,
+      `mobile signal labels were ${terminal.signalLabelFontSize}px`,
+    );
     assert.deepEqual(
       terminal.runningAnimations,
       [],

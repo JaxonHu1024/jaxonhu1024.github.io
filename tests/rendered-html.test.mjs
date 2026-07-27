@@ -179,12 +179,21 @@ test("renders the completed single-command CLI fallback and defers organization 
   const terminalMarkup = html.slice(terminalStart, terminalEnd);
   assert.doesNotMatch(terminalMarkup, /jaxon/i);
   assert.match(terminalMarkup, /class="hero-topology-map"/);
+  assert.doesNotMatch(terminalMarkup, /hero-topology-map--(?:desktop|mobile)/);
   assert.match(terminalMarkup, /class="hero-signal-lane is-active"/);
-  assert.equal(
-    terminalMarkup.match(/class="hero-activation-cell/g)?.length,
-    50,
+  assert.match(terminalMarkup, /class="hero-activation-field"/);
+  assert.match(
+    terminalMarkup,
+    /class="hero-terminal-mobile-live-log tone-primary" data-log-key="step-5"/,
   );
-  const activeCellCount = terminalMarkup.match(
+  assert.doesNotMatch(terminalMarkup, /hero-terminal-mobile-(?:node|line)/);
+  const topologies = terminalMarkup.match(
+    /<svg class="hero-topology-map"[\s\S]*?<\/svg>/g,
+  ) ?? [];
+  assert.equal(topologies.length, 1);
+  const [topology] = topologies;
+  assert.equal(topology.match(/class="hero-activation-cell/g)?.length, 50);
+  const activeCellCount = topology.match(
     /class="hero-activation-cell tone-[123] is-active"/g,
   )?.length ?? 0;
   assert.ok(activeCellCount >= 20 && activeCellCount <= 30);

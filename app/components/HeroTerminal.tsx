@@ -31,12 +31,6 @@ const CLI_STEPS: readonly CliStep[] = [
   { progress: 1, label: "artifact", status: "shipped", tone: "primary" },
 ];
 
-const MOBILE_STEPS = [
-  { label: "boot", status: "online", threshold: 1, tone: "primary" },
-  { label: "verify", status: "verified", threshold: 3, tone: "status" },
-  { label: "ship", status: "ready", threshold: 5, tone: "signal" },
-] as const;
-
 const SIGNAL_LANES = [
   {
     id: "language",
@@ -121,6 +115,33 @@ function createActivationField(
 }
 
 const STATIC_ACTIVATION_FIELD = createActivationField(0x5a17c9e3, 0.52);
+
+function ActivationField({ cells }: { readonly cells: readonly ActivationCellState[] }) {
+  return (
+    <g className="hero-activation-field">
+      {cells.map((cell, index) => {
+        const row = Math.floor(index / 10);
+        const column = index % 10;
+        return (
+          <rect
+            key={`${row}-${column}`}
+            className={`hero-activation-cell tone-${cell.tone}${cell.active ? " is-active" : " is-dormant"}`}
+            x={191 + column * 11}
+            y={52 + row * 18}
+            width="6"
+            height="6"
+            style={
+              {
+                "--cell-breathe-delay": `${-((index * 137) % 1_100)}ms`,
+                "--cell-breathe-duration": `${1_350 + (index % 7) * 95}ms`,
+              } as React.CSSProperties
+            }
+          />
+        );
+      })}
+    </g>
+  );
+}
 
 const COMMAND_DURATION_MS = 750;
 const STEP_DURATION_MS = 960;
@@ -286,6 +307,31 @@ export function HeroTerminal() {
   const progressPercent = Math.round(progress * 100);
   const readyVisible = phase === "ready";
   const completedStageCount = phase === "ready" ? CLI_STEPS.length : visibleStepCount;
+  const currentStepIndex = Math.max(0, Math.min(CLI_STEPS.length - 1, visibleStepCount - 1));
+  const currentStep = CLI_STEPS[currentStepIndex];
+  const mobileLiveLog = phase === "typing"
+    ? {
+        key: "command",
+        prefix: "›_",
+        label: "agentctl compile --prod",
+        status: "",
+        tone: "primary" as const,
+      }
+    : phase === "resetting"
+      ? {
+          key: "resetting",
+          prefix: "↻",
+          label: "field",
+          status: "recycling",
+          tone: "status" as const,
+        }
+      : {
+          key: `step-${currentStepIndex + 1}`,
+          prefix: String(currentStepIndex + 1).padStart(2, "0"),
+          label: currentStep.label,
+          status: currentStep.status,
+          tone: currentStep.tone,
+        };
   const progressLabel = phase === "ready"
     ? "FIELD STABLE"
     : phase === "resetting"
@@ -314,11 +360,12 @@ export function HeroTerminal() {
       <div className="hero-terminal-bar">
         <span className="hero-terminal-identity">
           <span className="hero-terminal-index">SYS/07</span>
-          <span>NEURAL PIPELINE</span>
+          <span className="hero-terminal-identity-label">NEURAL PIPELINE</span>
         </span>
         <span className="hero-terminal-environment">
           <i aria-hidden="true" />
-          PRODUCTION · ONLINE
+          <span className="hero-terminal-environment-desktop">PRODUCTION · ONLINE</span>
+          <span className="hero-terminal-environment-mobile">ONLINE</span>
         </span>
       </div>
       <div className="hero-terminal-stage">
@@ -342,18 +389,19 @@ export function HeroTerminal() {
               </li>
             ))}
           </ol>
-          <ol className="hero-terminal-mobile-log">
-            {MOBILE_STEPS.map((step, index) => (
-              <li
-                key={step.label}
-                className={`hero-terminal-mobile-line tone-${step.tone}${step.threshold <= completedStageCount ? " is-visible" : ""}${phase === "running" && step.threshold === completedStageCount ? " is-current" : ""}`}
-              >
-                <span>{String(index + 1).padStart(2, "0")}</span>
-                <span>{step.label}</span>
-                <span>{step.status}</span>
-              </li>
-            ))}
-          </ol>
+          <p
+            key={mobileLiveLog.key}
+            className={`hero-terminal-mobile-live-log tone-${mobileLiveLog.tone}`}
+            data-log-key={mobileLiveLog.key}
+          >
+            <span className="hero-terminal-mobile-live-prefix">{mobileLiveLog.prefix}</span>
+            <span className="hero-terminal-mobile-live-label">{mobileLiveLog.label}</span>
+            {mobileLiveLog.status ? (
+              <span className="hero-terminal-mobile-live-status">{mobileLiveLog.status}</span>
+            ) : (
+              <span className="hero-terminal-mobile-live-caret" aria-hidden="true" />
+            )}
+          </p>
           <p className={`hero-terminal-ready${readyVisible ? " is-visible" : ""}`}>
             <span aria-hidden="true">◆</span> BUILD READY
           </p>
@@ -406,28 +454,7 @@ export function HeroTerminal() {
               <text className="hero-activation-title" x="245" y="26">
                 LATENT FIELD
               </text>
-              <g className="hero-activation-field">
-                {activationField.map((cell, index) => {
-                  const row = Math.floor(index / 10);
-                  const column = index % 10;
-                  return (
-                    <rect
-                      key={`${row}-${column}`}
-                      className={`hero-activation-cell tone-${cell.tone}${cell.active ? " is-active" : " is-dormant"}`}
-                      x={191 + column * 11}
-                      y={52 + row * 18}
-                      width="6"
-                      height="6"
-                      style={
-                        {
-                          "--cell-breathe-delay": `${-((index * 137) % 1_100)}ms`,
-                          "--cell-breathe-duration": `${1_350 + (index % 7) * 95}ms`,
-                        } as React.CSSProperties
-                      }
-                    />
-                  );
-                })}
-              </g>
+              <ActivationField cells={activationField} />
             </g>
             <g className={`hero-signal-output${completedStageCount >= 5 ? " is-active" : ""}${phase === "running" && visibleStepCount === 5 ? " is-current" : ""}`}>
               <path className="hero-signal-output-route" d="M312 94H386" />
