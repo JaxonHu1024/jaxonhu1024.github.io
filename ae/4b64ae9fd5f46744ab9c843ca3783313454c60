@@ -1,0 +1,33 @@
+app/components/AboutParticleField.tsx
+  s_f10a2ef8a4a403::t_d520ec08888b54 1-780
+app/components/Navigation.tsx
+  s_f10a2ef8a4a403::t_2628c5a7aa1f19 9,336,343-348
+app/globals.css
+  s_f10a2ef8a4a403::t_5375cfc4d76a34 169,176,199,922-1086,1141,2202-2204,2206-2221,2318,2329,2501,2519-2532,2753-2758
+app/page.tsx
+  s_f10a2ef8a4a403::t_8b111b339e02dd 2,64-65,75-133,207,287,327
+tests/browser-release-gate.test.mjs
+  s_f10a2ef8a4a403::t_600ade6c506e2b 129-147,629-632,635,644-654,716-727,853-931,1259,1364-1452,1467-1472,1499-1510,1547-1552,1564-1646,1717,1976-1977,1986-1989,2038,2040-2052,2098-2112,2349-2351,2365-2367,2415,2474,2537-2551,2718,2767-2786,2829-2838,2888-2997,3009-3020
+tests/rendered-html.test.mjs
+  s_f10a2ef8a4a403::t_aaffbd3658936a 69,95-104,176-202,288,353,357-358,360-363,368-371,387
+tests/scroll-performance-contract.test.mjs
+  s_f10a2ef8a4a403::t_23bd09daf4620c 5,13,20-59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ae4b64ae9fd5f46744ab9c843ca3783313454c60",
+  "prompts": {},
+  "sessions": {
+    "s_f10a2ef8a4a403": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fb20b-c017-7ad0-b33d-6590ec3c8d46",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
