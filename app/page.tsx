@@ -40,6 +40,44 @@ const papers = [
 
 const contactMessage = "For project collaborations, technical consulting, or career opportunities, feel free to reach out.";
 
+const aboutContext = [
+  {
+    label: "FIELDS",
+    value: "Agents · Generative AI · Language + vision · Autonomous systems",
+  },
+  {
+    label: "MODE",
+    value: "Evidence first · Constraints explicit",
+  },
+] as const;
+
+const aboutMethod = [
+  {
+    id: "01",
+    step: "FRAME",
+    detail: "Expose the real constraint.",
+    output: "CONSTRAINT",
+  },
+  {
+    id: "02",
+    step: "MODEL",
+    detail: "Make assumptions legible.",
+    output: "STRUCTURE",
+  },
+  {
+    id: "03",
+    step: "BUILD",
+    detail: "Close the testable loop.",
+    output: "SYSTEM",
+  },
+  {
+    id: "04",
+    step: "VERIFY",
+    detail: "Prove behavior before release.",
+    output: "EVIDENCE",
+  },
+] as const;
+
 export default function Home() {
   return (
     <>
@@ -78,51 +116,57 @@ export default function Home() {
           aria-labelledby="about-title"
           tabIndex={-1}
         >
-          <h2 className="section-kicker reveal" id="about-title">
+          <p className="section-kicker reveal" aria-hidden="true">
             <span>JAXON.CONTEXT</span>
             <span className="kicker-rule" aria-hidden="true" />
             <span className="square-end" aria-hidden="true" />
-          </h2>
+          </p>
 
           <div className="about-layout reveal">
             <div className="about-copy">
-              <p className="about-role">AI ALGORITHM ENGINEER</p>
-              <p className="about-statement">
+              <p className="about-role"><span>PROFILE /</span> AI ALGORITHM ENGINEER</p>
+              <h2 className="about-statement" id="about-title">
                 <span>I TURN AMBIGUITY</span>
                 <span>INTO TESTABLE SYSTEMS.</span>
-              </p>
+              </h2>
               <div className="about-introduction">
                 <p>
-                  I&apos;m Jaxon, an AI algorithm engineer exploring agents, generative AI,
-                  language and vision models, and autonomous systems.
-                </p>
-                <p>
-                  I work from evidence, make constraints explicit, and treat verification
-                  as part of the build.
+                  I&apos;m Jaxon. I explore agents, generative AI, language and vision models,
+                  and autonomous systems—domains where the problem is rarely clean at the start.
                 </p>
               </div>
+              <dl className="about-context" aria-label="Profile context">
+                {aboutContext.map((item) => (
+                  <div key={item.label}>
+                    <dt>{item.label}</dt>
+                    <dd>{item.value}</dd>
+                  </div>
+                ))}
+              </dl>
             </div>
 
             <AboutParticleField />
 
-            <ol className="about-method" aria-label="Working method">
-              <li>
-                <span>FRAME</span>
-                <p>Find the real constraint.</p>
-              </li>
-              <li>
-                <span>MODEL</span>
-                <p>Make the system legible.</p>
-              </li>
-              <li>
-                <span>BUILD</span>
-                <p>Turn decisions into software.</p>
-              </li>
-              <li>
-                <span>VERIFY</span>
-                <p>Ship with evidence.</p>
-              </li>
-            </ol>
+            <div className="about-process">
+              <p className="about-process-heading" aria-hidden="true">
+                <span>OPERATING LOOP</span>
+                <span>01—04 / CONTINUOUS</span>
+              </p>
+              <ol className="about-method" aria-label="Working method">
+                {aboutMethod.map((item) => (
+                  <li key={item.id}>
+                    <span className="about-method-index">{item.id}</span>
+                    <div className="about-method-copy">
+                      <span className="about-method-label">{item.step}</span>
+                      <p>{item.detail}</p>
+                    </div>
+                    <span className="about-method-output" aria-hidden="true">
+                      OUT / {item.output}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
           </div>
 
           <p className="section-footer reveal" aria-hidden="true">

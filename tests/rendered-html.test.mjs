@@ -94,10 +94,11 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
   assert.match(
     html,
-    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\baria-hidden="true")[^>]*>/,
+    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Unstructured context flowing through an evidence lens into testable output")[^>]*>/,
   );
   assert.match(html, /class="about-particle-fallback" aria-hidden="true"/);
   assert.match(html, /<canvas class="about-particle-canvas" aria-hidden="true"><\/canvas>/);
+  assert.match(html, /class="about-field-overlay" aria-hidden="true"/);
   assert.doesNotMatch(
     html,
     /about-data-weave\.webp|about-weave|about-intelligence-field|about-signal-|about-fingerprint/,
@@ -186,15 +187,26 @@ test("introduces a new public-safe About section before Experience", async () =>
   const about = html.slice(aboutStart, experienceStart);
   assert.match(about, /JAXON\.CONTEXT/);
   assert.match(about, /AI ALGORITHM ENGINEER/);
+  assert.match(
+    about,
+    /<h2(?=[^>]*\bclass="about-statement")(?=[^>]*\bid="about-title")[^>]*>/,
+  );
   assert.match(about, /I TURN AMBIGUITY/);
   assert.match(about, /INTO TESTABLE SYSTEMS\./);
-  assert.match(about, /I work from evidence, make constraints explicit, and treat verification/);
+  assert.match(about, /I explore agents, generative AI, language and vision models/);
+  assert.match(about, /Evidence first · Constraints explicit/);
   assert.match(about, /class="about-particle-field"/);
   assert.match(about, /class="about-particle-canvas" aria-hidden="true"/);
   assert.match(about, /class="about-particle-fallback" aria-hidden="true"/);
+  assert.match(about, /RAW CONTEXT/);
+  assert.match(about, /EVIDENCE LENS/);
+  assert.match(about, /TESTABLE OUTPUT/);
   assert.match(about, /aria-label="Working method"/);
   for (const step of ["FRAME", "MODEL", "BUILD", "VERIFY"]) {
     assert.match(about, new RegExp(`>${step}<`));
+  }
+  for (const output of ["CONSTRAINT", "STRUCTURE", "SYSTEM", "EVIDENCE"]) {
+    assert.match(about, new RegExp(`OUT \/ (?:<!-- -->)?${output}`));
   }
   assert.doesNotMatch(about, /ByteDance|Alibaba|Senior|Jaxon Hu|Hu Jiaxing|Nanyang|Southeast/i);
   assert.doesNotMatch(html, /VIEW EXPERIENCE/);

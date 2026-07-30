@@ -2,21 +2,22 @@
 
 import { useEffect, useRef } from "react";
 
-const MIN_PARTICLES = 1300;
-const MAX_PARTICLES = 1650;
-const MIN_COMPACT_PARTICLES = 800;
-const MAX_COMPACT_PARTICLES = 1000;
-const TRAIL_STEPS = 9;
+const MIN_PARTICLES = 1040;
+const MAX_PARTICLES = 1360;
+const MIN_COMPACT_PARTICLES = 620;
+const MAX_COMPACT_PARTICLES = 780;
+const TRAIL_STEPS = 7;
 const RAIL_POSITIONS = [0.22, 0.405, 0.595, 0.78] as const;
 const LENS_BOUNDARIES = [-1.06, -0.8, 0.8, 1.06] as const;
-const PARTICLE_COLORS = ["#d6ebe6", "#4ff7d5", "#a592ff", "#ff8a78"] as const;
+// Mirrors the site tokens: --text, --mint, --violet, and --coral.
+const PARTICLE_COLORS = ["#e9fff9", "#4ff7d5", "#8a72ff", "#ff6b57"] as const;
 const PARTICLE_SHADOWS = [
   "transparent",
   "rgba(79,247,213,.72)",
-  "rgba(165,146,255,.68)",
-  "rgba(255,138,120,.62)",
+  "rgba(138,114,255,.68)",
+  "rgba(255,107,87,.62)",
 ] as const;
-const MAX_VORTEX_PARTICLES = 440;
+const MAX_VORTEX_PARTICLES = 360;
 const VORTEX_ARM_TONES = [1, 2, 1, 3] as const;
 const VORTEX_FRAME = {
   depth: new Float32Array(MAX_VORTEX_PARTICLES),
@@ -121,7 +122,7 @@ function createParticleBuffer(width: number, height: number, compact: boolean): 
         MIN_COMPACT_PARTICLES,
         MAX_COMPACT_PARTICLES,
       )
-    : clamp(Math.round((width * height) / 160), MIN_PARTICLES, MAX_PARTICLES);
+    : clamp(Math.round((width * height) / 180), MIN_PARTICLES, MAX_PARTICLES);
   const random = createRandom(Math.round(width * 31 + height * 17 + count * 13));
   const buffer: ParticleBuffer = {
     count,
@@ -312,7 +313,7 @@ function drawParticleVortex(
   const centerY = baseY + offsetY;
   const radiusX = width * (width <= 600 ? 0.108 : 0.098);
   const radiusY = height * (width <= 600 ? 0.205 : 0.2);
-  const vortexCount = width <= 600 ? 320 : MAX_VORTEX_PARTICLES;
+  const vortexCount = width <= 600 ? 260 : MAX_VORTEX_PARTICLES;
   const tilt = -0.1;
   const tiltCosine = Math.cos(tilt);
   const tiltSine = Math.sin(tilt);
@@ -472,7 +473,7 @@ function drawParticleField(
       );
     }
     context.globalAlpha = 0.018 + ageStrength * 0.065;
-    context.strokeStyle = "#c7ddd8";
+    context.strokeStyle = "#e9fff9";
     context.lineWidth = 0.48;
     context.stroke();
 
@@ -771,10 +772,17 @@ export function AboutParticleField() {
       data-particle-count="0"
       data-pointer-active="false"
       data-ready="false"
-      aria-hidden="true"
+      role="img"
+      aria-label="Unstructured context flowing through an evidence lens into testable output"
     >
       <div className="about-particle-fallback" aria-hidden="true" />
       <canvas ref={canvasRef} className="about-particle-canvas" aria-hidden="true" />
+      <div className="about-field-overlay" aria-hidden="true">
+        <span className="about-field-label about-field-label--input">RAW CONTEXT</span>
+        <span className="about-field-label about-field-label--lens">EVIDENCE LENS</span>
+        <span className="about-field-label about-field-label--output">TESTABLE OUTPUT</span>
+        <span className="about-field-state">POINTER FIELD / </span>
+      </div>
     </figure>
   );
 }

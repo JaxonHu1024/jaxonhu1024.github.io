@@ -721,7 +721,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.notEqual(state.aboutField.fallbackBackground, "none");
       assert.ok(state.aboutField.width > 0);
       assert.ok(
-        state.aboutField.height >= 220 && state.aboutField.height <= 270,
+        state.aboutField.height >= 200 && state.aboutField.height <= 246,
         `${viewport.width}x${viewport.height} no-JS About fallback height was `
           + `${state.aboutField.height}px`,
       );
@@ -1394,9 +1394,9 @@ test("reduced-motion mobile keeps terminal, About particles, and contact ticker 
     assert.equal(aboutField.runningAnimations, 0);
     assert.equal(aboutField.canvasOpacity, "1");
     assert.equal(aboutField.fallbackOpacity, "0");
-    assert.ok(aboutField.particleCount >= 800 && aboutField.particleCount <= 1000);
+    assert.ok(aboutField.particleCount >= 620 && aboutField.particleCount <= 780);
     assert.ok(
-      aboutField.height >= 220 && aboutField.height <= 270,
+      aboutField.height >= 200 && aboutField.height <= 246,
       `reduced mobile About particle field height was ${aboutField.height}px`,
     );
     assert.ok(
@@ -1611,7 +1611,7 @@ test("About particles respond to pointer and touch without blocking page gesture
     }));
     assert.equal(mobileState.touchAction, "pan-y pinch-zoom");
     assert.ok(
-      mobileState.particleCount >= 800 && mobileState.particleCount <= 1000,
+      mobileState.particleCount >= 620 && mobileState.particleCount <= 780,
       `mobile particle count was ${mobileState.particleCount}`,
     );
 
@@ -2968,10 +2968,10 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       const compactParticleField = aboutParticleLayout.figureWidth <= 600;
       assert.ok(
         compactParticleField
-          ? aboutParticleLayout.particleCount >= 800
-            && aboutParticleLayout.particleCount <= 1000
-          : aboutParticleLayout.particleCount >= 1300
-            && aboutParticleLayout.particleCount <= 1650,
+          ? aboutParticleLayout.particleCount >= 620
+            && aboutParticleLayout.particleCount <= 780
+          : aboutParticleLayout.particleCount >= 1040
+            && aboutParticleLayout.particleCount <= 1360,
         `${viewport.width}x${viewport.height} About particle count was `
           + `${aboutParticleLayout.particleCount}`,
       );
@@ -2981,7 +2981,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       );
       if (viewport.width <= 900) {
         assert.ok(
-          aboutParticleLayout.figureHeight >= 220 && aboutParticleLayout.figureHeight <= 270,
+          aboutParticleLayout.figureHeight >= 200 && aboutParticleLayout.figureHeight <= 246,
           `${viewport.width}x${viewport.height} About particle field height=`
             + `${aboutParticleLayout.figureHeight}px`,
         );
