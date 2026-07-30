@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("wires the hero CTA into cancellable navigation without client-rendering the page", async () => {
+test("wires the hero CTA to About through cancellable navigation without client-rendering the page", async () => {
   const controller = await readFile(
     new URL("../app/components/HeroInteractionController.tsx", import.meta.url),
     "utf8",
@@ -10,11 +10,51 @@ test("wires the hero CTA into cancellable navigation without client-rendering th
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(page, /className="terminal-button hero-cta" href="#experience"/);
+  assert.match(page, /className="terminal-button hero-cta" href="#about"/);
   assert.match(controller, /a\.hero-cta\[href\^=['"]#['"]\]/);
   assert.match(controller, /createHashNavigation/);
   assert.match(layout, /<HeroInteractionController \/>/);
   assert.doesNotMatch(page, /^"use client";/);
+});
+
+test("isolates the interactive About particle field and stops its frame work when inactive", async () => {
+  const particleField = await readFile(
+    new URL("../app/components/AboutParticleField.tsx", import.meta.url),
+    "utf8",
+  );
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.match(particleField, /^"use client";/);
+  assert.match(page, /<AboutParticleField \/>/);
+  assert.doesNotMatch(page, /^"use client";/);
+  assert.match(particleField, /new IntersectionObserver/);
+  assert.match(particleField, /entry\.intersectionRatio >= 0\.05/);
+  assert.match(particleField, /new ResizeObserver/);
+  assert.match(particleField, /document\.addEventListener\("visibilitychange"/);
+  assert.match(particleField, /window\.requestAnimationFrame/);
+  assert.match(particleField, /window\.cancelAnimationFrame/);
+  assert.match(particleField, /prefers-reduced-motion: reduce/);
+  assert.match(particleField, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
+  assert.match(particleField, /const MAX_PARTICLES = 1650/);
+  assert.match(particleField, /const MAX_COMPACT_PARTICLES = 1000/);
+  assert.match(particleField, /const TRAIL_STEPS = 9/);
+  assert.match(particleField, /const RAIL_POSITIONS = \[0\.22, 0\.405, 0\.595, 0\.78\]/);
+  assert.match(particleField, /flowTargetY/);
+  assert.match(particleField, /drawParticleVortex/);
+  assert.match(particleField, /frameAccumulator \+= elapsedMs/);
+  assert.match(particleField, /visualTime \+= advanceMs/);
+  assert.doesNotMatch(particleField, /visualTime = time/);
+  assert.match(particleField, /#a592ff/);
+  assert.match(particleField, /#ff8a78/);
+  assert.doesNotMatch(particleField, /createRadialGradient|setLineDash/);
+  assert.match(particleField, /Float32Array/);
+  assert.match(particleField, /resizeObserver\.disconnect\(\)/);
+  assert.match(particleField, /visibilityObserver\.disconnect\(\)/);
+  assert.match(particleField, /removeEventListener\("pointermove"/);
+  assert.match(particleField, /removeEventListener\("visibilitychange"/);
+  assert.doesNotMatch(particleField, /\buseState\b|setInterval|addEventListener\(["']scroll["']/);
+  assert.match(css, /\.about-particle-field\s*\{[^}]*touch-action:\s*pan-y/s);
 });
 
 test("keeps ambient motion compositor-friendly and cheap while offscreen", async () => {

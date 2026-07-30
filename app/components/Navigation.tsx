@@ -6,6 +6,7 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import { startCancellableScroll } from "../lib/cancellable-scroll";
 
 const links = [
+  ["about", "ABOUT"],
   ["experience", "EXPERIENCE"],
   ["foundations", "FOUNDATIONS"],
   ["research", "RESEARCH"],
@@ -332,12 +333,18 @@ export function Navigation() {
               white-space: normal;
             }
 
-            .site-header .nav-scroll a:nth-child(-n + 2) {
+            .site-header .nav-scroll a:nth-child(-n + 4) {
               border-bottom: 1px solid rgba(233, 255, 249, .1) !important;
             }
 
             .site-header .nav-scroll a:nth-child(2n) {
               border-right: 0 !important;
+            }
+
+            .site-header .nav-scroll a:last-of-type {
+              grid-column: 1 / -1;
+              border-right: 0 !important;
+              border-bottom: 0 !important;
             }
           }
         `}</style>

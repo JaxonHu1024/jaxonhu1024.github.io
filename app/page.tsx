@@ -1,4 +1,5 @@
 import { Navigation } from "./components/Navigation";
+import { AboutParticleField } from "./components/AboutParticleField";
 import { HeroTerminal } from "./components/HeroTerminal";
 import { ResearchVisual } from "./components/ResearchVisual";
 
@@ -60,8 +61,8 @@ export default function Home() {
                   <span>FOR THE REAL WORLD_</span>
                 </p>
               </div>
-              <a className="terminal-button hero-cta" href="#experience">
-                <span>VIEW EXPERIENCE</span>
+              <a className="terminal-button hero-cta" href="#about">
+                <span>ABOUT ME</span>
                 <span className="button-arrow" aria-hidden="true">›</span>
               </a>
             </div>
@@ -69,6 +70,65 @@ export default function Home() {
               <HeroTerminal />
             </div>
           </div>
+        </section>
+
+        <section
+          className="section about grid-surface"
+          id="about"
+          aria-labelledby="about-title"
+          tabIndex={-1}
+        >
+          <h2 className="section-kicker reveal" id="about-title">
+            <span>JAXON.CONTEXT</span>
+            <span className="kicker-rule" aria-hidden="true" />
+            <span className="square-end" aria-hidden="true" />
+          </h2>
+
+          <div className="about-layout reveal">
+            <div className="about-copy">
+              <p className="about-role">AI ALGORITHM ENGINEER</p>
+              <p className="about-statement">
+                <span>I TURN AMBIGUITY</span>
+                <span>INTO TESTABLE SYSTEMS.</span>
+              </p>
+              <div className="about-introduction">
+                <p>
+                  I&apos;m Jaxon, an AI algorithm engineer exploring agents, generative AI,
+                  language and vision models, and autonomous systems.
+                </p>
+                <p>
+                  I work from evidence, make constraints explicit, and treat verification
+                  as part of the build.
+                </p>
+              </div>
+            </div>
+
+            <AboutParticleField />
+
+            <ol className="about-method" aria-label="Working method">
+              <li>
+                <span>FRAME</span>
+                <p>Find the real constraint.</p>
+              </li>
+              <li>
+                <span>MODEL</span>
+                <p>Make the system legible.</p>
+              </li>
+              <li>
+                <span>BUILD</span>
+                <p>Turn decisions into software.</p>
+              </li>
+              <li>
+                <span>VERIFY</span>
+                <p>Ship with evidence.</p>
+              </li>
+            </ol>
+          </div>
+
+          <p className="section-footer reveal" aria-hidden="true">
+            <span className="section-footer-index"><b>01</b> {"// IDENTITY LAYER"}</span>
+            <span className="section-footer-rule" />
+          </p>
         </section>
 
         <section
@@ -144,7 +204,7 @@ export default function Home() {
             </section>
           </div>
           <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>01</b> {"// EXPERIENCE LAYER"}</span>
+            <span className="section-footer-index"><b>02</b> {"// EXPERIENCE LAYER"}</span>
             <span className="section-footer-rule" />
           </p>
         </section>
@@ -224,7 +284,7 @@ export default function Home() {
             </div>
           </div>
           <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>02</b> {"// FOUNDATION LAYER"}</span>
+            <span className="section-footer-index"><b>03</b> {"// FOUNDATION LAYER"}</span>
             <span className="section-footer-rule" />
           </p>
         </section>
@@ -264,7 +324,7 @@ export default function Home() {
             ))}
           </div>
           <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>03</b> {"// RESEARCH LAYER"}</span>
+            <span className="section-footer-index"><b>04</b> {"// RESEARCH LAYER"}</span>
             <span className="section-footer-rule" />
           </p>
         </section>

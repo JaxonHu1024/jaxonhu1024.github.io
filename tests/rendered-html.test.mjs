@@ -66,7 +66,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /DAMO Academy/);
   assert.match(html, /FOUNDATIONS/);
   assert.match(html, /FOUNDATIONS\.INDEX/);
-  for (const id of ["hero", "experience", "research", "foundations", "contact"]) {
+  for (const id of ["hero", "about", "experience", "research", "foundations", "contact"]) {
     assert.match(
       html,
       new RegExp(`<section(?=[^>]*\\bid="${id}")(?=[^>]*\\btabindex="-1")[^>]*>`),
@@ -92,6 +92,16 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   );
   assert.doesNotMatch(html, /trace-out|>➤</);
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
+  assert.match(
+    html,
+    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\baria-hidden="true")[^>]*>/,
+  );
+  assert.match(html, /class="about-particle-fallback" aria-hidden="true"/);
+  assert.match(html, /<canvas class="about-particle-canvas" aria-hidden="true"><\/canvas>/);
+  assert.doesNotMatch(
+    html,
+    /about-data-weave\.webp|about-weave|about-intelligence-field|about-signal-|about-fingerprint/,
+  );
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9170807/);
   assert.match(html, /https:\/\/ieeexplore\.ieee\.org\/document\/9831898/);
   assert.match(html, /PUBLICATION\s*(?:<!-- -->)?\s*01/);
@@ -161,6 +171,33 @@ test("renders every organization logo with its measured intrinsic dimensions", a
       ),
     );
   }
+});
+
+test("introduces a new public-safe About section before Experience", async () => {
+  const response = await render();
+  const html = await response.text();
+  const aboutStart = html.indexOf('id="about"');
+  const experienceStart = html.indexOf('id="experience"');
+
+  assert.ok(aboutStart >= 0 && experienceStart > aboutStart);
+  assert.match(html, /href="#about"[^>]*>\s*<span>ABOUT ME<\/span>/);
+  assert.ok(html.indexOf('href="#about"') < html.indexOf('href="#experience"'));
+
+  const about = html.slice(aboutStart, experienceStart);
+  assert.match(about, /JAXON\.CONTEXT/);
+  assert.match(about, /AI ALGORITHM ENGINEER/);
+  assert.match(about, /I TURN AMBIGUITY/);
+  assert.match(about, /INTO TESTABLE SYSTEMS\./);
+  assert.match(about, /I work from evidence, make constraints explicit, and treat verification/);
+  assert.match(about, /class="about-particle-field"/);
+  assert.match(about, /class="about-particle-canvas" aria-hidden="true"/);
+  assert.match(about, /class="about-particle-fallback" aria-hidden="true"/);
+  assert.match(about, /aria-label="Working method"/);
+  for (const step of ["FRAME", "MODEL", "BUILD", "VERIFY"]) {
+    assert.match(about, new RegExp(`>${step}<`));
+  }
+  assert.doesNotMatch(about, /ByteDance|Alibaba|Senior|Jaxon Hu|Hu Jiaxing|Nanyang|Southeast/i);
+  assert.doesNotMatch(html, /VIEW EXPERIENCE/);
 });
 
 test("renders the completed single-command CLI fallback and defers organization logos", async () => {
@@ -248,7 +285,7 @@ test("renders all public portfolio copy in English", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(html, /<html lang="en">/);
-  assert.match(html, /VIEW EXPERIENCE/);
+  assert.match(html, /ABOUT ME/);
   assert.match(html, /<h3>ByteDance<\/h3>/);
   assert.match(html, /<p>Senior AI Engineer<\/p>/);
   assert.match(
@@ -313,17 +350,25 @@ test("groups both Alibaba organizations under one company heading", async () => 
   );
 });
 
-test("orders foundations before research and groups the technical profile clearly", async () => {
+test("orders About, Experience, Foundations, and Research with distinct layer indices", async () => {
   const response = await render();
   const html = await response.text();
 
+  assert.ok(html.indexOf('href="#about"') < html.indexOf('href="#experience"'));
+  assert.ok(html.indexOf('href="#experience"') < html.indexOf('href="#foundations"'));
   assert.ok(html.indexOf('href="#foundations"') < html.indexOf('href="#research"'));
+  assert.ok(
+    html.indexOf('class="section about grid-surface"')
+      < html.indexOf('class="section experience grid-surface"'),
+  );
   assert.ok(
     html.indexOf('class="section foundations grid-surface"')
       < html.indexOf('class="section research grid-surface"'),
   );
-  assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ FOUNDATION LAYER/);
-  assert.match(html, /<b>03<\/b>\s*(?:<!-- -->)?\s*\/\/ RESEARCH LAYER/);
+  assert.match(html, /<b>01<\/b>\s*(?:<!-- -->)?\s*\/\/ IDENTITY LAYER/);
+  assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ EXPERIENCE LAYER/);
+  assert.match(html, /<b>03<\/b>\s*(?:<!-- -->)?\s*\/\/ FOUNDATION LAYER/);
+  assert.match(html, /<b>04<\/b>\s*(?:<!-- -->)?\s*\/\/ RESEARCH LAYER/);
   for (const group of ["AI SPECIALTIES", "LANGUAGES", "PLATFORM"]) {
     assert.match(html, new RegExp(`<dt>${group.replace("/", "\\/")}<\\/dt>`));
   }
@@ -339,7 +384,7 @@ test("orders foundations before research and groups the technical profile clearl
 test("keeps the hero private, English-only, and decoupled from paper topics", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const heroStart = page.indexOf('<section className="section hero');
-  const heroEnd = page.indexOf('<section\n          className="section experience');
+  const heroEnd = page.indexOf('<section\n          className="section about');
   assert.ok(heroStart >= 0 && heroEnd > heroStart);
 
   const hero = page.slice(heroStart, heroEnd);
