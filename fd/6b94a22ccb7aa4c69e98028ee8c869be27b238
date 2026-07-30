@@ -1,0 +1,31 @@
+app/components/AboutParticleField.tsx
+  s_936a2edefa068c::t_b790dc11e6538c 5-9,12-13,17-18,20,125,316,476,775-776,780-785
+app/globals.css
+  s_936a2edefa068c::t_13544c596d0a65 13,928,930-933,943,946,951,957,964-965,970,972-974,981-982,985,991-1024,1030,1034,1036-1046,1048-1073,1082-1083,1123-1183,1185,1187-1188,1190,1194-1209,1211-1214,1216-1234,1237-1242,1244,1247,1252,1255-1256,1260-1267,2393,2396-2397,2399,2401,2701-2705,2707-2708,2711-2755
+app/page.tsx
+  s_936a2edefa068c::t_6ff2a778e1b898 43-80,119,123,127-128,131,134-135,138-145,150-169
+tests/browser-release-gate.test.mjs
+  s_936a2edefa068c::t_8acace3e4586c1 724,1397,1399,1614,2971-2974,2984
+tests/rendered-html.test.mjs
+  s_936a2edefa068c::t_deb3f6f67dceff 97,101,190-193,196-197,201-203,208-210
+tests/scroll-performance-contract.test.mjs
+  s_936a2edefa068c::t_d900a1d7734691 39-41,48-49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "fd6b94a22ccb7aa4c69e98028ee8c869be27b238",
+  "prompts": {},
+  "sessions": {
+    "s_936a2edefa068c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fb267-37b1-7141-866e-b99426da5f6f",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
