@@ -1,0 +1,21 @@
+app/components/AboutParticleField.tsx
+  s_936a2edefa068c::t_ccd304db95383a 301,365-376,551-885,895-900,923,948-952,988-992,1046-1059,1107,1111-1112,1124-1125,1130,1133,1141-1142,1155
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "f6dddadaa30e7d9b413e31a247eedf1c1be0d0ab",
+  "prompts": {},
+  "sessions": {
+    "s_936a2edefa068c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fb267-37b1-7141-866e-b99426da5f6f",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
