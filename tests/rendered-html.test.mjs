@@ -94,7 +94,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
   assert.match(
     html,
-    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Unstructured context flowing through an evidence lens into testable output")[^>]*>/,
+    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-renderer="pending")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Unstructured context flowing through an evidence lens into testable output")[^>]*>/,
   );
   assert.match(html, /class="about-particle-fallback" aria-hidden="true"/);
   assert.match(html, /<canvas class="about-particle-canvas" aria-hidden="true"><\/canvas>/);

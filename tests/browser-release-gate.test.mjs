@@ -929,6 +929,98 @@ test("About particle field renders, pauses offscreen, and follows page visibilit
   }
 });
 
+test("About particle field prioritizes WebGL2 with a Canvas 2D fallback", { timeout: 10_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1280, height: 800 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-ready") === "true"
+    ), null, { timeout: 3_000 });
+
+    const renderer = await page.locator(".about-particle-field").getAttribute("data-renderer");
+    const supportsWebGL2 = await page.evaluate(() => (
+      Boolean(document.createElement("canvas").getContext("webgl2"))
+    ));
+    assert.equal(renderer, supportsWebGL2 ? "webgl2" : "canvas2d");
+  } finally {
+    await context.close();
+  }
+});
+
+test("About particle field keeps a rendered Canvas 2D fallback without WebGL2", { timeout: 10_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1280, height: 800 },
+  });
+
+  try {
+    await page.addInitScript(() => {
+      const nativeGetContext = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function getContext(type, ...options) {
+        if (type === "webgl2") return null;
+        return nativeGetContext.call(this, type, ...options);
+      };
+    });
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => {
+      const field = document.querySelector(".about-particle-field");
+      return field?.getAttribute("data-ready") === "true"
+        && field.getAttribute("data-renderer") === "canvas2d";
+    }, null, { timeout: 3_000 });
+
+    assert.ok(
+      (await readCanvasProbe(page.locator(".about-particle-canvas"))).visiblePixels > 0,
+      "Canvas 2D fallback rendered a blank About field",
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("About particle motion reconciles from geometry when an observer exit is skipped", { timeout: 10_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1280, height: 800 },
+  });
+
+  try {
+    await page.addInitScript(() => {
+      const NativeIntersectionObserver = window.IntersectionObserver;
+      window.IntersectionObserver = class extends NativeIntersectionObserver {
+        constructor(callback, options) {
+          super((entries, observer) => {
+            const forwardedEntries = entries.filter((entry) => !(
+              entry.target instanceof Element
+              && entry.target.matches(".about-particle-field")
+              && entry.intersectionRatio < 0.05
+              && entry.boundingClientRect.top < 0
+            ));
+            if (forwardedEntries.length > 0) callback(forwardedEntries, observer);
+          }, options);
+        }
+      };
+    });
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+
+    const field = page.locator(".about-particle-field");
+    await field.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "running"
+    ), null, { timeout: 3_000 });
+    await page.locator("#contact").scrollIntoViewIfNeeded();
+
+    await page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "paused"
+    ), null, { timeout: 1_000 });
+    const fieldRect = await field.boundingBox();
+    assert.ok(fieldRect);
+    assert.ok(fieldRect.y + fieldRect.height < 0, `About field was not above the viewport: ${JSON.stringify(fieldRect)}`);
+  } finally {
+    await context.close();
+  }
+});
+
 test("research canvas reports its viewport and page motion lifecycle", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },

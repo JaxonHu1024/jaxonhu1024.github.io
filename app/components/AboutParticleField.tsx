@@ -298,8 +298,7 @@ function updateParticles(
   particles.trailHead = nextTrailHead;
 }
 
-function drawParticleVortex(
-  context: CanvasRenderingContext2D,
+function updateParticleVortexFrame(
   pointer: PointerField,
   width: number,
   height: number,
@@ -362,6 +361,18 @@ function drawParticleVortex(
         ? 2
         : 0;
   }
+
+  return vortexCount;
+}
+
+function drawParticleVortex(
+  context: CanvasRenderingContext2D,
+  pointer: PointerField,
+  width: number,
+  height: number,
+  time: number,
+) {
+  const vortexCount = updateParticleVortexFrame(pointer, width, height, time);
 
   context.save();
   context.globalCompositeOperation = "lighter";
@@ -537,6 +548,341 @@ function drawParticleField(
   context.restore();
 }
 
+const PARTICLE_RGB = [
+  [0.914, 1, 0.976],
+  [0.31, 0.969, 0.835],
+  [0.541, 0.447, 1],
+  [1, 0.42, 0.341],
+] as const;
+const WEBGL_VERTEX_STRIDE = 7;
+const MAX_WEBGL_LINE_VERTICES = (
+  MAX_PARTICLES * (TRAIL_STEPS - 1) * 2
+  + MAX_VORTEX_PARTICLES * 2
+  + RAIL_POSITIONS.length * 2
+);
+const MAX_WEBGL_POINT_VERTICES = MAX_PARTICLES + MAX_VORTEX_PARTICLES;
+
+type WebGLParticleRenderer = {
+  destroy: () => void;
+  draw: (
+    particles: ParticleBuffer,
+    pointer: PointerField,
+    width: number,
+    height: number,
+    time: number,
+  ) => void;
+  resize: (pixelWidth: number, pixelHeight: number, dpr: number) => void;
+};
+
+function createWebGLProgram(
+  gl: WebGL2RenderingContext,
+  vertexSource: string,
+  fragmentSource: string,
+) {
+  const compile = (type: number, source: string) => {
+    const shader = gl.createShader(type);
+    if (!shader) return null;
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+      gl.deleteShader(shader);
+      return null;
+    }
+    return shader;
+  };
+  const vertexShader = compile(gl.VERTEX_SHADER, vertexSource);
+  const fragmentShader = compile(gl.FRAGMENT_SHADER, fragmentSource);
+  if (!vertexShader || !fragmentShader) {
+    if (vertexShader) gl.deleteShader(vertexShader);
+    if (fragmentShader) gl.deleteShader(fragmentShader);
+    return null;
+  }
+
+  const program = gl.createProgram();
+  if (!program) {
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
+    return null;
+  }
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  gl.deleteShader(vertexShader);
+  gl.deleteShader(fragmentShader);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    gl.deleteProgram(program);
+    return null;
+  }
+  return program;
+}
+
+function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRenderer | null {
+  const gl = canvas.getContext("webgl2", {
+    alpha: true,
+    antialias: true,
+    depth: false,
+    desynchronized: true,
+    powerPreference: "high-performance",
+    premultipliedAlpha: false,
+    preserveDrawingBuffer: true,
+    stencil: false,
+  });
+  if (!gl) return null;
+
+  const program = createWebGLProgram(
+    gl,
+    `#version 300 es
+      in vec2 a_position;
+      in vec4 a_color;
+      in float a_size;
+      uniform vec2 u_resolution;
+      out vec4 v_color;
+
+      void main() {
+        vec2 normalized = a_position / u_resolution;
+        vec2 clip = normalized * 2.0 - 1.0;
+        gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
+        gl_PointSize = a_size;
+        v_color = a_color;
+      }
+    `,
+    `#version 300 es
+      precision mediump float;
+      in vec4 v_color;
+      uniform bool u_round_points;
+      out vec4 out_color;
+
+      void main() {
+        float alpha = v_color.a;
+        if (u_round_points) {
+          float distance_from_center = length(gl_PointCoord - vec2(0.5));
+          float core = 1.0 - smoothstep(0.18, 0.5, distance_from_center);
+          float glow = (1.0 - smoothstep(0.0, 0.5, distance_from_center)) * 0.28;
+          alpha *= max(core, glow);
+        }
+        out_color = vec4(v_color.rgb, alpha);
+      }
+    `,
+  );
+  const buffer = gl.createBuffer();
+  const vertexArray = gl.createVertexArray();
+  if (!program || !buffer || !vertexArray) {
+    if (program) gl.deleteProgram(program);
+    if (buffer) gl.deleteBuffer(buffer);
+    if (vertexArray) gl.deleteVertexArray(vertexArray);
+    return null;
+  }
+
+  const positionLocation = gl.getAttribLocation(program, "a_position");
+  const colorLocation = gl.getAttribLocation(program, "a_color");
+  const sizeLocation = gl.getAttribLocation(program, "a_size");
+  const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
+  const roundPointsLocation = gl.getUniformLocation(program, "u_round_points");
+  if (
+    positionLocation < 0
+    || colorLocation < 0
+    || sizeLocation < 0
+    || !resolutionLocation
+    || !roundPointsLocation
+  ) {
+    gl.deleteProgram(program);
+    gl.deleteBuffer(buffer);
+    gl.deleteVertexArray(vertexArray);
+    return null;
+  }
+
+  const lineVertices = new Float32Array(MAX_WEBGL_LINE_VERTICES * WEBGL_VERTEX_STRIDE);
+  const pointVertices = new Float32Array(MAX_WEBGL_POINT_VERTICES * WEBGL_VERTEX_STRIDE);
+  let devicePixelRatio = 1;
+  let resolutionWidth = 1;
+  let resolutionHeight = 1;
+
+  gl.bindVertexArray(vertexArray);
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  const byteStride = WEBGL_VERTEX_STRIDE * Float32Array.BYTES_PER_ELEMENT;
+  gl.enableVertexAttribArray(positionLocation);
+  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, byteStride, 0);
+  gl.enableVertexAttribArray(colorLocation);
+  gl.vertexAttribPointer(
+    colorLocation,
+    4,
+    gl.FLOAT,
+    false,
+    byteStride,
+    2 * Float32Array.BYTES_PER_ELEMENT,
+  );
+  gl.enableVertexAttribArray(sizeLocation);
+  gl.vertexAttribPointer(
+    sizeLocation,
+    1,
+    gl.FLOAT,
+    false,
+    byteStride,
+    6 * Float32Array.BYTES_PER_ELEMENT,
+  );
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
+  gl.disable(gl.DEPTH_TEST);
+  gl.disable(gl.CULL_FACE);
+
+  const writeVertex = (
+    target: Float32Array,
+    offset: number,
+    x: number,
+    y: number,
+    tone: number,
+    alpha: number,
+    size: number,
+  ) => {
+    const color = PARTICLE_RGB[tone];
+    target[offset] = x;
+    target[offset + 1] = y;
+    target[offset + 2] = color[0];
+    target[offset + 3] = color[1];
+    target[offset + 4] = color[2];
+    target[offset + 5] = alpha;
+    target[offset + 6] = size;
+    return offset + WEBGL_VERTEX_STRIDE;
+  };
+
+  const drawVertices = (
+    vertices: Float32Array,
+    floatCount: number,
+    mode: number,
+    roundPoints: boolean,
+  ) => {
+    if (floatCount === 0) return;
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, vertices.subarray(0, floatCount), gl.DYNAMIC_DRAW);
+    gl.uniform1i(roundPointsLocation, roundPoints ? 1 : 0);
+    gl.drawArrays(mode, 0, floatCount / WEBGL_VERTEX_STRIDE);
+  };
+
+  return {
+    destroy: () => {
+      gl.deleteBuffer(buffer);
+      gl.deleteProgram(program);
+      gl.deleteVertexArray(vertexArray);
+    },
+    draw: (particles, pointer, width, height, time) => {
+      resolutionWidth = width;
+      resolutionHeight = height;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.useProgram(program);
+      gl.bindVertexArray(vertexArray);
+      gl.uniform2f(resolutionLocation, resolutionWidth, resolutionHeight);
+
+      let lineOffset = 0;
+      const railStart = width * 0.7;
+      for (const railPosition of RAIL_POSITIONS) {
+        const y = railPosition * height;
+        lineOffset = writeVertex(lineVertices, lineOffset, railStart, y, 1, 0, 1);
+        lineOffset = writeVertex(lineVertices, lineOffset, width, y, 0, 0.12, 1);
+      }
+
+      const vortexCount = updateParticleVortexFrame(pointer, width, height, time);
+      for (let index = 0; index < vortexCount; index += 1) {
+        const tone = VORTEX_FRAME.tone[index];
+        lineOffset = writeVertex(
+          lineVertices,
+          lineOffset,
+          VORTEX_FRAME.tailX[index],
+          VORTEX_FRAME.tailY[index],
+          tone,
+          tone > 0 ? 0.21 : 0.075,
+          1,
+        );
+        lineOffset = writeVertex(
+          lineVertices,
+          lineOffset,
+          VORTEX_FRAME.x[index],
+          VORTEX_FRAME.y[index],
+          tone,
+          tone > 0 ? 0.21 : 0.075,
+          1,
+        );
+      }
+
+      for (let age = TRAIL_STEPS - 2; age >= 0; age -= 1) {
+        const newerSlot = (particles.trailHead - age + TRAIL_STEPS) % TRAIL_STEPS;
+        const olderSlot = (newerSlot - 1 + TRAIL_STEPS) % TRAIL_STEPS;
+        const ageStrength = 1 - age / (TRAIL_STEPS - 1);
+        for (let index = 0; index < particles.count; index += 1) {
+          const tone = particles.tone[index] === 0 && particles.influence[index] >= 0.46
+            ? 1
+            : particles.tone[index];
+          const alpha = tone > 0
+            ? 0.08 + ageStrength * 0.22
+            : 0.018 + ageStrength * 0.065;
+          lineOffset = writeVertex(
+            lineVertices,
+            lineOffset,
+            particles.trailX[olderSlot * particles.count + index],
+            particles.trailY[olderSlot * particles.count + index],
+            tone,
+            alpha,
+            1,
+          );
+          lineOffset = writeVertex(
+            lineVertices,
+            lineOffset,
+            particles.trailX[newerSlot * particles.count + index],
+            particles.trailY[newerSlot * particles.count + index],
+            tone,
+            alpha,
+            1,
+          );
+        }
+      }
+      drawVertices(lineVertices, lineOffset, gl.LINES, false);
+
+      let pointOffset = 0;
+      for (let index = 0; index < vortexCount; index += 1) {
+        const tone = VORTEX_FRAME.tone[index];
+        const depth = VORTEX_FRAME.depth[index];
+        pointOffset = writeVertex(
+          pointVertices,
+          pointOffset,
+          VORTEX_FRAME.x[index],
+          VORTEX_FRAME.y[index],
+          tone,
+          tone > 0 ? 0.5 + depth * 0.32 : 0.24 + depth * 0.24,
+          Math.max(
+            1,
+            (VORTEX_FRAME.radius[index] * 2 + (tone > 0 ? 1.1 : 0)) * devicePixelRatio,
+          ),
+        );
+      }
+      for (let index = 0; index < particles.count; index += 1) {
+        const tone = particles.tone[index] === 0 && particles.influence[index] >= 0.5
+          ? 1
+          : particles.tone[index];
+        const depthBand = Math.min(2, Math.floor(particles.depth[index] * 3));
+        const radius = 0.42
+          + particles.size[index] * (0.18 + depthBand * 0.14)
+          + particles.influence[index] * 0.3;
+        pointOffset = writeVertex(
+          pointVertices,
+          pointOffset,
+          particles.x[index],
+          particles.y[index],
+          tone,
+          tone > 0 ? 0.52 + depthBand * 0.16 : 0.24 + depthBand * 0.14,
+          Math.max(1, (radius * 2 + (tone > 0 ? 0.8 : 0)) * devicePixelRatio),
+        );
+      }
+      drawVertices(pointVertices, pointOffset, gl.POINTS, true);
+      gl.flush();
+    },
+    resize: (pixelWidth, pixelHeight, dpr) => {
+      devicePixelRatio = dpr;
+      gl.viewport(0, 0, pixelWidth, pixelHeight);
+    },
+  };
+}
+
 export function AboutParticleField() {
   const rootRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -546,8 +892,12 @@ export function AboutParticleField() {
     const canvas = canvasRef.current;
     if (!root || !canvas) return;
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
+    const webglRenderer = createWebGLParticleRenderer(canvas);
+    const canvas2d = webglRenderer
+      ? null
+      : canvas.getContext("2d", { alpha: true, desynchronized: true });
+    if (!webglRenderer && !canvas2d) return;
+    root.dataset.renderer = webglRenderer ? "webgl2" : "canvas2d";
 
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const pointer: PointerField = {
@@ -570,6 +920,7 @@ export function AboutParticleField() {
     let pendingHeight = 0;
     let frameInterval = 0;
     let visualTime = 0;
+    let visibilityFrame = 0;
 
     const currentVisibleRatio = () => {
       const rect = root.getBoundingClientRect();
@@ -594,7 +945,11 @@ export function AboutParticleField() {
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
       }
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (webglRenderer) {
+        webglRenderer.resize(pixelWidth, pixelHeight, dpr);
+      } else {
+        canvas2d?.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
 
       if (dimensionsChanged || !particles) {
         cssWidth = nextWidth;
@@ -630,7 +985,11 @@ export function AboutParticleField() {
         visualTime += advanceMs;
         updateParticles(particles, pointer, cssWidth, cssHeight, visualTime, delta);
       }
-      drawParticleField(context, particles, pointer, cssWidth, cssHeight, visualTime);
+      if (webglRenderer) {
+        webglRenderer.draw(particles, pointer, cssWidth, cssHeight, visualTime);
+      } else if (canvas2d) {
+        drawParticleField(canvas2d, particles, pointer, cssWidth, cssHeight, visualTime);
+      }
       if (!ready) {
         ready = true;
         root.dataset.ready = "true";
@@ -684,6 +1043,20 @@ export function AboutParticleField() {
       });
     };
 
+    const reconcileVisibility = () => {
+      const nextVisible = currentVisibleRatio() >= 0.05;
+      if (visible === nextVisible) return;
+      visible = nextVisible;
+      schedule();
+    };
+    const scheduleVisibilityReconciliation = () => {
+      if (visibilityFrame) return;
+      visibilityFrame = window.requestAnimationFrame(() => {
+        visibilityFrame = 0;
+        reconcileVisibility();
+      });
+    };
+
     const setPointerFromEvent = (event: PointerEvent, active: boolean) => {
       if (reducedMotion) return;
       const rect = root.getBoundingClientRect();
@@ -731,11 +1104,12 @@ export function AboutParticleField() {
       pendingWidth = entry.contentRect.width;
       pendingHeight = entry.contentRect.height;
       sizeDirty = true;
+      visible = currentVisibleRatio() >= 0.05;
       schedule();
     });
     resizeObserver.observe(root);
-    const visibilityObserver = new IntersectionObserver(([entry]) => {
-      visible = entry.intersectionRatio >= 0.05;
+    const visibilityObserver = new IntersectionObserver(() => {
+      visible = currentVisibleRatio() >= 0.05;
       schedule();
     }, { threshold: [0, 0.05, 0.2] });
     visibilityObserver.observe(root);
@@ -747,12 +1121,16 @@ export function AboutParticleField() {
     root.addEventListener("pointerleave", handlePointerLeave, { passive: true });
     motionQuery.addEventListener("change", handleMotionPreference);
     document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("scroll", scheduleVisibilityReconciliation, { passive: true });
+    window.addEventListener("resize", scheduleVisibilityReconciliation);
     schedule();
 
     return () => {
       stop();
+      if (visibilityFrame) window.cancelAnimationFrame(visibilityFrame);
       resizeObserver.disconnect();
       visibilityObserver.disconnect();
+      webglRenderer?.destroy();
       root.removeEventListener("pointermove", handlePointerMove);
       root.removeEventListener("pointerdown", handlePointerDown);
       root.removeEventListener("pointerup", handlePointerEnd);
@@ -760,6 +1138,8 @@ export function AboutParticleField() {
       root.removeEventListener("pointerleave", handlePointerLeave);
       motionQuery.removeEventListener("change", handleMotionPreference);
       document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("scroll", scheduleVisibilityReconciliation);
+      window.removeEventListener("resize", scheduleVisibilityReconciliation);
     };
   }, []);
 
@@ -772,6 +1152,7 @@ export function AboutParticleField() {
       data-particle-count="0"
       data-pointer-active="false"
       data-ready="false"
+      data-renderer="pending"
       role="img"
       aria-label="Unstructured context flowing through an evidence lens into testable output"
     >

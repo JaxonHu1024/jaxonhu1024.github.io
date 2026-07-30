@@ -17,7 +17,7 @@ test("wires the hero CTA to About through cancellable navigation without client-
   assert.doesNotMatch(page, /^"use client";/);
 });
 
-test("isolates the interactive About particle field and stops its frame work when inactive", async () => {
+test("isolates the GPU-first About particle field and stops its frame work when inactive", async () => {
   const particleField = await readFile(
     new URL("../app/components/AboutParticleField.tsx", import.meta.url),
     "utf8",
@@ -29,12 +29,20 @@ test("isolates the interactive About particle field and stops its frame work whe
   assert.match(page, /<AboutParticleField \/>/);
   assert.doesNotMatch(page, /^"use client";/);
   assert.match(particleField, /new IntersectionObserver/);
-  assert.match(particleField, /entry\.intersectionRatio >= 0\.05/);
+  assert.match(particleField, /currentVisibleRatio\(\) >= 0\.05/);
   assert.match(particleField, /new ResizeObserver/);
   assert.match(particleField, /document\.addEventListener\("visibilitychange"/);
+  assert.match(
+    particleField,
+    /window\.addEventListener\("scroll", scheduleVisibilityReconciliation, \{ passive: true \}\)/,
+  );
   assert.match(particleField, /window\.requestAnimationFrame/);
   assert.match(particleField, /window\.cancelAnimationFrame/);
   assert.match(particleField, /prefers-reduced-motion: reduce/);
+  assert.match(particleField, /createWebGLParticleRenderer/);
+  assert.match(particleField, /canvas\.getContext\("webgl2"/);
+  assert.match(particleField, /powerPreference: "high-performance"/);
+  assert.match(particleField, /gl\.drawArrays\(mode/);
   assert.match(particleField, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
   assert.match(particleField, /const MAX_PARTICLES = 1360/);
   assert.match(particleField, /const MAX_COMPACT_PARTICLES = 780/);
@@ -53,7 +61,8 @@ test("isolates the interactive About particle field and stops its frame work whe
   assert.match(particleField, /visibilityObserver\.disconnect\(\)/);
   assert.match(particleField, /removeEventListener\("pointermove"/);
   assert.match(particleField, /removeEventListener\("visibilitychange"/);
-  assert.doesNotMatch(particleField, /\buseState\b|setInterval|addEventListener\(["']scroll["']/);
+  assert.match(particleField, /removeEventListener\("scroll", scheduleVisibilityReconciliation\)/);
+  assert.doesNotMatch(particleField, /\buseState\b|setInterval/);
   assert.match(css, /\.about-particle-field\s*\{[^}]*touch-action:\s*pan-y/s);
 });
 
