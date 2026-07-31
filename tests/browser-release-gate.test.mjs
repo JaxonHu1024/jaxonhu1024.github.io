@@ -1922,6 +1922,49 @@ test("touch-only users return to the resting control style after tapping", { tim
   }
 });
 
+test("keyboard section navigation keeps logical focus without a full-width landmark outline", { timeout: 10_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1280, height: 800 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+
+    const heroCta = page.locator(".hero-cta");
+    await heroCta.focus();
+    const triggerFocus = await heroCta.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        focusVisible: element.matches(":focus-visible"),
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    });
+    assert.equal(triggerFocus.focusVisible, true, "keyboard CTA focus was not visible");
+    assert.equal(triggerFocus.outlineStyle, "solid", "interactive focus ring was removed");
+    assert.equal(triggerFocus.outlineWidth, "2px", "interactive focus ring changed width");
+
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => (
+      location.hash === "#about"
+      && document.activeElement?.id === "about"
+    ));
+
+    const sectionFocus = await page.locator("#about").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        focusVisible: element.matches(":focus-visible"),
+        outlineStyle: style.outlineStyle,
+      };
+    });
+    assert.equal(sectionFocus.focusVisible, true, "section lost its logical keyboard focus");
+    assert.equal(sectionFocus.outlineStyle, "none", "section retained the full-width focus line");
+  } finally {
+    await context.close();
+  }
+});
+
 test("browser history restores section state and sequential focus", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
@@ -2418,6 +2461,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       });
       const contactPresentation = await page.evaluate(() => {
         const contact = document.querySelector("#contact");
+        const directory = document.querySelector("#contact .contact-directory");
         const footer = document.querySelector("#contact .site-footer");
         const marqueeWindow = document.querySelector(".contact-marquee-window");
         const summary = document.querySelector(".contact-marquee-summary");
@@ -2435,6 +2479,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         };
 
         return {
+          directoryFooterGap: directory && footer
+            ? footer.getBoundingClientRect().top - directory.getBoundingClientRect().bottom
+            : null,
           footerBottomGap: contact && footer
             ? contact.getBoundingClientRect().bottom - footer.getBoundingClientRect().bottom
             : null,
@@ -2647,6 +2694,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         `${viewport.width}x${viewport.height} changed the contact message`,
       );
       assert.ok(
+        contactPresentation.directoryFooterGap >= 36
+          && contactPresentation.directoryFooterGap <= 96,
+        `${viewport.width}x${viewport.height} contact directory/footer gap=`
+          + `${contactPresentation.directoryFooterGap}px`,
+      );
+      assert.ok(
         contactPresentation.footerBottomGap >= 72
           && contactPresentation.footerBottomGap <= 128,
         `${viewport.width}x${viewport.height} contact footer bottom gap=`
@@ -2823,7 +2876,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           await page.waitForFunction((sectionId) => {
             const targetTop = document.getElementById(sectionId)?.getBoundingClientRect().top
               ?? Number.POSITIVE_INFINITY;
-            if (sectionId === "contact") return Math.abs(targetTop) <= 1;
             const maxScrollY = document.documentElement.scrollHeight - innerHeight;
             return (
               Math.abs(targetTop) <= 1
