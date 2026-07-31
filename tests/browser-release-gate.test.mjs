@@ -940,11 +940,33 @@ test("About particle field prioritizes WebGL2 with a Canvas 2D fallback", { time
       document.querySelector(".about-particle-field")?.getAttribute("data-ready") === "true"
     ), null, { timeout: 3_000 });
 
-    const renderer = await page.locator(".about-particle-field").getAttribute("data-renderer");
+    const rendererState = await page.locator(".about-particle-field").evaluate((field) => ({
+      effectiveParticleCount: Number(field.getAttribute("data-effective-particle-count")),
+      particleCount: Number(field.getAttribute("data-particle-count")),
+      particleInstances: Number(field.getAttribute("data-particle-instances")),
+      renderer: field.getAttribute("data-renderer"),
+      rendererQuality: field.getAttribute("data-renderer-quality"),
+    }));
     const supportsWebGL2 = await page.evaluate(() => (
       Boolean(document.createElement("canvas").getContext("webgl2"))
     ));
-    assert.equal(renderer, supportsWebGL2 ? "webgl2" : "canvas2d");
+    assert.equal(rendererState.renderer, supportsWebGL2 ? "webgl2" : "canvas2d");
+    if (supportsWebGL2) {
+      if (rendererState.rendererQuality === "software") {
+        assert.equal(rendererState.particleInstances, 1);
+        assert.ok(rendererState.effectiveParticleCount > rendererState.particleCount);
+      } else {
+        assert.equal(rendererState.rendererQuality, "hardware");
+        assert.equal(rendererState.particleInstances, 5);
+        assert.ok(
+          rendererState.effectiveParticleCount >= 10_000,
+          `effective WebGL particle count was ${rendererState.effectiveParticleCount}`,
+        );
+      }
+    } else {
+      assert.equal(rendererState.particleInstances, 1);
+      assert.ok(rendererState.effectiveParticleCount > rendererState.particleCount);
+    }
   } finally {
     await context.close();
   }
@@ -1473,9 +1495,13 @@ test("reduced-motion mobile keeps terminal, About particles, and contact ticker 
         canvasWidth: canvasRect?.width ?? 0,
         fallbackOpacity: fallback ? getComputedStyle(fallback).opacity : null,
         height: figureRect.height,
+        effectiveParticleCount: Number(figure.getAttribute("data-effective-particle-count")),
         motion: figure.getAttribute("data-motion"),
         particleCount: Number(figure.getAttribute("data-particle-count")),
+        particleInstances: Number(figure.getAttribute("data-particle-instances")),
         ready: figure.getAttribute("data-ready"),
+        renderer: figure.getAttribute("data-renderer"),
+        rendererQuality: figure.getAttribute("data-renderer-quality"),
         runningAnimations: figure.getAnimations({ subtree: true })
           .filter((animation) => animation.playState === "running").length,
         width: figureRect.width,
@@ -1486,7 +1512,16 @@ test("reduced-motion mobile keeps terminal, About particles, and contact ticker 
     assert.equal(aboutField.runningAnimations, 0);
     assert.equal(aboutField.canvasOpacity, "1");
     assert.equal(aboutField.fallbackOpacity, "0");
-    assert.ok(aboutField.particleCount >= 620 && aboutField.particleCount <= 780);
+    assert.ok(aboutField.particleCount >= 900 && aboutField.particleCount <= 1125);
+    const expectedMobileInstances = aboutField.renderer === "webgl2"
+      && aboutField.rendererQuality === "hardware"
+      ? 4
+      : 1;
+    assert.equal(aboutField.particleInstances, expectedMobileInstances);
+    assert.equal(
+      aboutField.effectiveParticleCount,
+      (aboutField.particleCount + 400) * expectedMobileInstances,
+    );
     assert.ok(
       aboutField.height >= 200 && aboutField.height <= 246,
       `reduced mobile About particle field height was ${aboutField.height}px`,
@@ -1653,6 +1688,85 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
   }
 });
 
+test("About operating trace drives compiler stages with accessible targets", { timeout: 20_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1440, height: 900 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const field = page.locator(".about-particle-field");
+    const buttons = page.locator(".about-method-button");
+    await field.scrollIntoViewIfNeeded();
+    assert.equal(await buttons.count(), 4);
+    assert.equal(await field.getAttribute("data-stage"), "frame");
+    assert.equal(await buttons.nth(0).getAttribute("aria-pressed"), "true");
+
+    for (const button of await buttons.all()) {
+      const box = await button.boundingBox();
+      assert.ok(box && box.height >= 44 && box.width >= 44);
+    }
+
+    await buttons.nth(1).hover();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "model"
+    ));
+    assert.equal(await buttons.nth(1).getAttribute("aria-pressed"), "true");
+
+    await buttons.nth(2).focus();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "build"
+    ));
+    assert.equal(await buttons.nth(2).getAttribute("aria-pressed"), "true");
+
+    await buttons.nth(3).click();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "verify"
+    ));
+    assert.equal(await buttons.nth(3).getAttribute("aria-pressed"), "true");
+  } finally {
+    await context.close();
+  }
+
+  const mobile = await createReleasePageSession(browser, {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+
+  try {
+    await mobile.page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const field = mobile.page.locator(".about-particle-field");
+    const buttons = mobile.page.locator(".about-method-button");
+    await field.scrollIntoViewIfNeeded();
+
+    for (const button of await buttons.all()) {
+      const box = await button.boundingBox();
+      assert.ok(box && box.height >= 44 && box.width >= 44);
+    }
+
+    assert.equal(
+      await buttons.nth(1).locator(".about-method-detail").evaluate(
+        (detail) => getComputedStyle(detail).display,
+      ),
+      "none",
+    );
+    await buttons.nth(1).tap();
+    await mobile.page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "model"
+    ));
+    assert.equal(await buttons.nth(1).getAttribute("aria-pressed"), "true");
+    assert.notEqual(
+      await buttons.nth(1).locator(".about-method-detail").evaluate(
+        (detail) => getComputedStyle(detail).display,
+      ),
+      "none",
+    );
+  } finally {
+    await mobile.context.close();
+  }
+});
+
 test("About particles respond to pointer and touch without blocking page gestures", { timeout: 20_000 }, async () => {
   const desktop = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
@@ -1703,7 +1817,7 @@ test("About particles respond to pointer and touch without blocking page gesture
     }));
     assert.equal(mobileState.touchAction, "pan-y pinch-zoom");
     assert.ok(
-      mobileState.particleCount >= 620 && mobileState.particleCount <= 780,
+      mobileState.particleCount >= 900 && mobileState.particleCount <= 1125,
       `mobile particle count was ${mobileState.particleCount}`,
     );
 
@@ -2549,9 +2663,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
 
         return {
           alignmentShells,
+          aboutSplit: window.innerWidth > 900 ? splitMetric(".about-layout") : null,
           centerSplits: [
             window.innerWidth > 900 ? splitMetric(".hero-layout") : null,
-            window.innerWidth > 900 ? splitMetric(".about-layout") : null,
             window.innerWidth > 1100 ? splitMetric(".foundations-grid") : null,
             window.innerWidth > 760 ? splitMetric(".research-packet") : null,
           ].filter((metric) => metric !== null),
@@ -2638,6 +2752,23 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           split.seam !== null && Math.abs(split.seam - split.center) <= 0.75,
           `${viewport.width}x${viewport.height} ${split.selector} center seam=`
             + `${split.seam}px, shell center=${split.center}px`,
+        );
+      }
+      if (sectionRhythm.aboutSplit) {
+        const [visualColumn, rangeColumn] = sectionRhythm.aboutSplit.columns;
+        assert.equal(
+          sectionRhythm.aboutSplit.columns.length,
+          2,
+          `${viewport.width}x${viewport.height} About did not render two columns`,
+        );
+        assert.ok(
+          visualColumn / rangeColumn >= 1.9 && visualColumn / rangeColumn <= 2.4,
+          `${viewport.width}x${viewport.height} About lost its asymmetric split: `
+            + `${sectionRhythm.aboutSplit.columns.join(", ")}`,
+        );
+        assert.ok(
+          sectionRhythm.aboutSplit.seam > sectionRhythm.aboutSplit.center,
+          `${viewport.width}x${viewport.height} About seam was not offset to the right`,
         );
       }
       assert.equal(
@@ -3079,9 +3210,13 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           figureHeight: figureRect.height,
           figureWidth: figureRect.width,
           expectedMotion: !document.hidden && visibleRatio >= 0.05 ? "running" : "paused",
+          effectiveParticleCount: Number(figure.getAttribute("data-effective-particle-count")),
           motion: figure.getAttribute("data-motion"),
           particleCount: Number(figure.getAttribute("data-particle-count")),
+          particleInstances: Number(figure.getAttribute("data-particle-instances")),
           ready: figure.getAttribute("data-ready"),
+          renderer: figure.getAttribute("data-renderer"),
+          rendererQuality: figure.getAttribute("data-renderer-quality"),
           runningAnimations: figure.getAnimations({ subtree: true })
             .filter((animation) => animation.playState === "running").length,
           touchAction: figureStyle.touchAction,
@@ -3109,30 +3244,40 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         `${viewport.width}x${viewport.height} About bitmap exceeded its DPR budget: `
           + JSON.stringify(aboutParticleLayout),
       );
-      const compactParticleField = aboutParticleLayout.figureWidth <= 600;
+      const compactParticleField = viewport.width <= 600;
       assert.ok(
         compactParticleField
-          ? aboutParticleLayout.particleCount >= 620
-            && aboutParticleLayout.particleCount <= 780
-          : aboutParticleLayout.particleCount >= 1040
-            && aboutParticleLayout.particleCount <= 1360,
+          ? aboutParticleLayout.particleCount >= 900
+            && aboutParticleLayout.particleCount <= 1125
+          : aboutParticleLayout.particleCount >= 1550
+            && aboutParticleLayout.particleCount <= 2050,
         `${viewport.width}x${viewport.height} About particle count was `
           + `${aboutParticleLayout.particleCount}`,
+      );
+      const expectedInstances = aboutParticleLayout.renderer === "webgl2"
+        && aboutParticleLayout.rendererQuality === "hardware"
+        ? compactParticleField ? 4 : 5
+        : 1;
+      const expectedVortexParticles = compactParticleField ? 400 : 550;
+      assert.equal(aboutParticleLayout.particleInstances, expectedInstances);
+      assert.equal(
+        aboutParticleLayout.effectiveParticleCount,
+        (aboutParticleLayout.particleCount + expectedVortexParticles) * expectedInstances,
       );
       assert.ok(
         (await readCanvasProbe(page.locator(".about-particle-canvas"))).visiblePixels > 0,
         `${viewport.width}x${viewport.height} About particle canvas was blank`,
       );
-      if (viewport.width <= 900) {
+      if (viewport.width <= 600) {
         assert.ok(
-          aboutParticleLayout.figureHeight >= 200 && aboutParticleLayout.figureHeight <= 246,
+          aboutParticleLayout.figureHeight >= 200 && aboutParticleLayout.figureHeight <= 224,
           `${viewport.width}x${viewport.height} About particle field height=`
             + `${aboutParticleLayout.figureHeight}px`,
         );
       } else {
         assert.ok(
           Math.abs(
-            aboutParticleLayout.figureWidth / aboutParticleLayout.figureHeight - 5 / 3,
+            aboutParticleLayout.figureWidth / aboutParticleLayout.figureHeight - 1.9,
           ) <= 0.02,
           `${viewport.width}x${viewport.height} About particle ratio diverged: `
             + JSON.stringify(aboutParticleLayout),

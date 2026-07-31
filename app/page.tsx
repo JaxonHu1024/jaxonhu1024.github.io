@@ -1,5 +1,5 @@
 import { Navigation } from "./components/Navigation";
-import { AboutParticleField } from "./components/AboutParticleField";
+import { AboutContextCompiler } from "./components/AboutContextCompiler";
 import { HeroTerminal } from "./components/HeroTerminal";
 import { ResearchVisual } from "./components/ResearchVisual";
 
@@ -42,39 +42,16 @@ const contactMessage = "For project collaborations, technical consulting, or car
 
 const aboutContext = [
   {
-    label: "FIELDS",
-    value: "Agents · Generative AI · Language + vision · Autonomous systems",
+    label: "RANGE",
+    value: "Agents · Multimodal systems · Autonomous intelligence",
   },
   {
-    label: "MODE",
-    value: "Evidence first · Constraints explicit",
-  },
-] as const;
-
-const aboutMethod = [
-  {
-    id: "01",
-    step: "FRAME",
-    detail: "Expose the real constraint.",
-    output: "CONSTRAINT",
+    label: "INSTINCT",
+    value: "Model capability matters only when the system can use it",
   },
   {
-    id: "02",
-    step: "MODEL",
-    detail: "Make assumptions legible.",
-    output: "STRUCTURE",
-  },
-  {
-    id: "03",
-    step: "BUILD",
-    detail: "Close the testable loop.",
-    output: "SYSTEM",
-  },
-  {
-    id: "04",
-    step: "VERIFY",
-    detail: "Prove behavior before release.",
-    output: "EVIDENCE",
+    label: "STANDARD",
+    value: "Observable behavior · Explicit boundaries · Evidence attached",
   },
 ] as const;
 
@@ -126,13 +103,15 @@ export default function Home() {
             <div className="about-copy">
               <p className="about-role"><span>PROFILE /</span> AI ALGORITHM ENGINEER</p>
               <h2 className="about-statement" id="about-title">
-                <span>I TURN AMBIGUITY</span>
-                <span>INTO TESTABLE SYSTEMS.</span>
+                <span>THE MODEL IS ONLY</span>
+                <span>THE BEGINNING.</span>
               </h2>
               <div className="about-introduction">
                 <p>
-                  I&apos;m Jaxon. I explore agents, generative AI, language and vision models,
-                  and autonomous systems—domains where the problem is rarely clean at the start.
+                  I&apos;m Jaxon, an AI algorithm engineer working across agents, multimodal
+                  models, and autonomous systems. I care about the difficult step after a
+                  model looks promising: making its behavior legible, testable, and useful
+                  in the real world.
                 </p>
               </div>
               <dl className="about-context" aria-label="Profile context">
@@ -145,32 +124,11 @@ export default function Home() {
               </dl>
             </div>
 
-            <AboutParticleField />
-
-            <div className="about-process">
-              <p className="about-process-heading" aria-hidden="true">
-                <span>OPERATING LOOP</span>
-                <span>01—04 / CONTINUOUS</span>
-              </p>
-              <ol className="about-method" aria-label="Working method">
-                {aboutMethod.map((item) => (
-                  <li key={item.id}>
-                    <span className="about-method-index">{item.id}</span>
-                    <div className="about-method-copy">
-                      <span className="about-method-label">{item.step}</span>
-                      <p>{item.detail}</p>
-                    </div>
-                    <span className="about-method-output" aria-hidden="true">
-                      OUT / {item.output}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
+            <AboutContextCompiler />
           </div>
 
           <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>01</b> {"// IDENTITY LAYER"}</span>
+            <span className="section-footer-index"><b>01</b> {"// PERSONAL SYSTEM"}</span>
             <span className="section-footer-rule" />
           </p>
         </section>

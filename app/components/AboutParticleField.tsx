@@ -2,10 +2,12 @@
 
 import { useEffect, useRef } from "react";
 
-const MIN_PARTICLES = 1040;
-const MAX_PARTICLES = 1360;
-const MIN_COMPACT_PARTICLES = 620;
-const MAX_COMPACT_PARTICLES = 780;
+export type AboutCompilerStage = "frame" | "model" | "build" | "verify";
+
+const MIN_PARTICLES = 1550;
+const MAX_PARTICLES = 2050;
+const MIN_COMPACT_PARTICLES = 900;
+const MAX_COMPACT_PARTICLES = 1125;
 const TRAIL_STEPS = 7;
 const RAIL_POSITIONS = [0.22, 0.405, 0.595, 0.78] as const;
 const LENS_BOUNDARIES = [-1.06, -0.8, 0.8, 1.06] as const;
@@ -17,8 +19,17 @@ const PARTICLE_SHADOWS = [
   "rgba(138,114,255,.68)",
   "rgba(255,107,87,.62)",
 ] as const;
-const MAX_VORTEX_PARTICLES = 360;
+const COMPACT_POINT_INSTANCES = 4;
+const FULL_POINT_INSTANCES = 5;
+const COMPACT_VORTEX_PARTICLES = 400;
+const MAX_VORTEX_PARTICLES = 550;
 const VORTEX_ARM_TONES = [1, 2, 1, 3] as const;
+const STAGE_FOCUS_POSITIONS: Record<AboutCompilerStage, number> = {
+  frame: 0.14,
+  model: 0.56,
+  build: 0.76,
+  verify: 0.92,
+};
 const VORTEX_FRAME = {
   depth: new Float32Array(MAX_VORTEX_PARTICLES),
   radius: new Float32Array(MAX_VORTEX_PARTICLES),
@@ -29,7 +40,10 @@ const VORTEX_FRAME = {
   y: new Float32Array(MAX_VORTEX_PARTICLES),
 };
 
+type WebGLRendererQuality = "hardware" | "software";
+
 type ParticleBuffer = {
+  compact: boolean;
   count: number;
   depth: Float32Array;
   influence: Float32Array;
@@ -68,6 +82,15 @@ function wrappedDistance(left: number, right: number) {
   return Math.min(distance, 1 - distance);
 }
 
+function pointInstanceCount(compact: boolean, quality: WebGLRendererQuality = "hardware") {
+  if (quality === "software") return 1;
+  return compact ? COMPACT_POINT_INSTANCES : FULL_POINT_INSTANCES;
+}
+
+function vortexParticleCount(compact: boolean) {
+  return compact ? COMPACT_VORTEX_PARTICLES : MAX_VORTEX_PARTICLES;
+}
+
 function createRandom(seed: number) {
   let state = seed >>> 0;
   return () => {
@@ -89,11 +112,11 @@ function flowTargetY(
   time: number,
 ) {
   const lensCenter = 0.56;
-  const lensWidth = width <= 600 ? 0.17 : 0.155;
+  const lensWidth = width <= 600 ? 0.21 : 0.19;
   const normalizedDistance = (progress - lensCenter) / lensWidth;
   const lensInfluence = Math.exp(-(normalizedDistance * normalizedDistance));
-  const order = smoothstep(0.65, 0.92, progress);
-  const chaosEnvelope = 1 - smoothstep(0.18, 0.62, progress);
+  const order = smoothstep(0.58, 0.86, progress);
+  const chaosEnvelope = 1 - smoothstep(0.16, 0.58, progress);
   const chaos = (
     Math.sin(phase + progress * 11.5 + time * 0.00062)
     + Math.cos(phase * 1.63 - progress * 19 + time * 0.0004) * 0.55
@@ -101,7 +124,7 @@ function flowTargetY(
   const railY = RAIL_POSITIONS[rail] * height;
   const unconstrainedY = sourceY + chaos;
   const orderedY = unconstrainedY + (railY - unconstrainedY) * order;
-  const lensRadiusY = height * (width <= 600 ? 0.245 : 0.25);
+  const lensRadiusY = height * (width <= 600 ? 0.29 : 0.3);
   const boundaryY = height * 0.5 + LENS_BOUNDARIES[rail] * lensRadiusY;
   const boundaryStrength = lensInfluence * (1 - order * 0.2);
   return orderedY + (boundaryY - orderedY) * boundaryStrength;
@@ -118,13 +141,14 @@ function resetParticleTrail(particles: ParticleBuffer, index: number) {
 function createParticleBuffer(width: number, height: number, compact: boolean): ParticleBuffer {
   const count = compact
     ? clamp(
-        Math.round((width * height) / 105),
+        Math.round((width * height) / 69),
         MIN_COMPACT_PARTICLES,
         MAX_COMPACT_PARTICLES,
       )
-    : clamp(Math.round((width * height) / 180), MIN_PARTICLES, MAX_PARTICLES);
+    : clamp(Math.round((width * height) / 116), MIN_PARTICLES, MAX_PARTICLES);
   const random = createRandom(Math.round(width * 31 + height * 17 + count * 13));
   const buffer: ParticleBuffer = {
+    compact,
     count,
     depth: new Float32Array(count),
     influence: new Float32Array(count),
@@ -152,11 +176,11 @@ function createParticleBuffer(width: number, height: number, compact: boolean): 
     buffer.phase[index] = random() * Math.PI * 2;
     buffer.size[index] = 0.58 + random() * 0.92;
     const toneRoll = random();
-    buffer.tone[index] = toneRoll > 0.975
+    buffer.tone[index] = toneRoll > 0.97
       ? 3
-      : toneRoll > 0.92
+      : toneRoll > 0.9
         ? 2
-        : toneRoll > 0.8
+        : toneRoll > 0.68
           ? 1
           : 0;
     buffer.vx[index] = 0.34 + random() * 0.34;
@@ -184,6 +208,7 @@ function updateParticles(
   height: number,
   time: number,
   delta: number,
+  stage: AboutCompilerStage,
 ) {
   const targetStrength = pointer.active ? 1 : 0;
   const strengthEase = 1 - Math.pow(0.82, delta);
@@ -191,11 +216,12 @@ function updateParticles(
 
   const lensCenterX = width * 0.56;
   const lensCenterY = height * 0.5;
-  const lensRadiusX = width * (width <= 600 ? 0.13 : 0.12);
-  const lensRadiusY = height * (width <= 600 ? 0.245 : 0.25);
+  const lensRadiusX = width * (width <= 600 ? 0.18 : 0.17);
+  const lensRadiusY = height * (width <= 600 ? 0.29 : 0.3);
   const pointerRadiusX = clamp(width * 0.15, 72, 132);
   const pointerRadiusY = pointerRadiusX * 0.72;
   const signalProgress = (time * 0.000085) % 1;
+  const stageFocus = STAGE_FOCUS_POSITIONS[stage];
   const nextTrailHead = (particles.trailHead + 1) % TRAIL_STEPS;
 
   for (let index = 0; index < particles.count; index += 1) {
@@ -214,7 +240,7 @@ function updateParticles(
       height,
       time,
     );
-    const order = smoothstep(0.64, 0.9, progress);
+    const order = smoothstep(0.58, 0.86, progress);
     const targetVelocity = 0.36 + particles.size[index] * 0.19 + order * 0.1;
     let targetInfluence = particles.tone[index] ? 0.18 : 0;
 
@@ -252,6 +278,19 @@ function updateParticles(
 
     const signal = Math.exp(-Math.pow(wrappedDistance(progress, signalProgress) / 0.032, 2));
     targetInfluence = Math.max(targetInfluence, signal * (particles.tone[index] ? 0.95 : 0.28));
+    const stageSignal = Math.exp(-Math.pow((progress - stageFocus) / 0.068, 2));
+    targetInfluence = Math.max(
+      targetInfluence,
+      stageSignal * (particles.tone[index] ? 0.88 : 0.24),
+    );
+    const packetPhase = (time * 0.00011 + particles.rail[index] * 0.19) % 1;
+    const packetProgress = 0.67 + packetPhase * 0.37;
+    const outputPacket = Math.exp(-Math.pow((progress - packetProgress) / 0.022, 2))
+      * smoothstep(0.6, 0.78, progress);
+    targetInfluence = Math.max(
+      targetInfluence,
+      outputPacket * (particles.tone[index] ? 1 : 0.52),
+    );
     const influenceEase = 1 - Math.pow(0.78, delta);
     particles.influence[index] += (
       targetInfluence - particles.influence[index]
@@ -303,6 +342,7 @@ function updateParticleVortexFrame(
   width: number,
   height: number,
   time: number,
+  compact: boolean,
 ) {
   const baseX = width * 0.56;
   const baseY = height * 0.5;
@@ -310,9 +350,9 @@ function updateParticleVortexFrame(
   const offsetY = clamp((pointer.y - baseY) * 0.018 * pointer.strength, -5, 5);
   const centerX = baseX + offsetX;
   const centerY = baseY + offsetY;
-  const radiusX = width * (width <= 600 ? 0.108 : 0.098);
-  const radiusY = height * (width <= 600 ? 0.205 : 0.2);
-  const vortexCount = width <= 600 ? 260 : MAX_VORTEX_PARTICLES;
+  const radiusX = width * (width <= 600 ? 0.16 : 0.15);
+  const radiusY = height * 0.3;
+  const vortexCount = vortexParticleCount(compact);
   const tilt = -0.1;
   const tiltCosine = Math.cos(tilt);
   const tiltSine = Math.sin(tilt);
@@ -371,8 +411,9 @@ function drawParticleVortex(
   width: number,
   height: number,
   time: number,
+  compact: boolean,
 ) {
-  const vortexCount = updateParticleVortexFrame(pointer, width, height, time);
+  const vortexCount = updateParticleVortexFrame(pointer, width, height, time, compact);
 
   context.save();
   context.globalCompositeOperation = "lighter";
@@ -384,8 +425,8 @@ function drawParticleVortex(
     context.lineTo(VORTEX_FRAME.x[index], VORTEX_FRAME.y[index]);
   }
   context.strokeStyle = PARTICLE_COLORS[0];
-  context.globalAlpha = 0.075;
-  context.lineWidth = 0.42;
+  context.globalAlpha = 0.11;
+  context.lineWidth = 0.52;
   context.shadowColor = "transparent";
   context.shadowBlur = 0;
   context.stroke();
@@ -401,8 +442,8 @@ function drawParticleVortex(
     }
     if (!hasAccentTrail) continue;
     context.strokeStyle = PARTICLE_COLORS[tone];
-    context.globalAlpha = 0.21;
-    context.lineWidth = 0.66;
+    context.globalAlpha = 0.29;
+    context.lineWidth = 0.78;
     context.stroke();
   }
 
@@ -428,10 +469,10 @@ function drawParticleVortex(
       if (!hasParticles) continue;
       context.fillStyle = PARTICLE_COLORS[tone];
       context.globalAlpha = tone > 0
-        ? 0.5 + depthBand * 0.16
-        : 0.24 + depthBand * 0.12;
+        ? 0.58 + depthBand * 0.14
+        : 0.3 + depthBand * 0.12;
       context.shadowColor = PARTICLE_SHADOWS[tone];
-      context.shadowBlur = tone > 0 ? 3.5 : 0;
+      context.shadowBlur = tone > 0 ? 5 : 0;
       context.fill();
     }
   }
@@ -464,7 +505,7 @@ function drawParticleField(
     context.stroke();
   }
 
-  drawParticleVortex(context, pointer, width, height, time);
+  drawParticleVortex(context, pointer, width, height, time, particles.compact);
 
   context.lineCap = "round";
   for (let age = TRAIL_STEPS - 2; age >= 0; age -= 1) {
@@ -483,9 +524,9 @@ function drawParticleField(
         particles.trailY[newerSlot * particles.count + index],
       );
     }
-    context.globalAlpha = 0.018 + ageStrength * 0.065;
+    context.globalAlpha = 0.028 + ageStrength * 0.085;
     context.strokeStyle = "#e9fff9";
-    context.lineWidth = 0.48;
+    context.lineWidth = 0.55;
     context.stroke();
 
     for (let tone = 1; tone < PARTICLE_COLORS.length; tone += 1) {
@@ -507,9 +548,9 @@ function drawParticleField(
         hasSignalTrail = true;
       }
       if (hasSignalTrail) {
-        context.globalAlpha = 0.08 + ageStrength * 0.22;
+        context.globalAlpha = 0.11 + ageStrength * 0.25;
         context.strokeStyle = PARTICLE_COLORS[tone];
-        context.lineWidth = 0.68;
+        context.lineWidth = 0.76;
         context.stroke();
       }
     }
@@ -527,9 +568,9 @@ function drawParticleField(
         if (effectiveTone !== tone) continue;
         const currentDepthBand = Math.min(2, Math.floor(particles.depth[index] * 3));
         if (currentDepthBand !== depthBand) continue;
-        const radius = 0.42
+        const radius = (0.42
           + particles.size[index] * (0.18 + depthBand * 0.14)
-          + particles.influence[index] * 0.3;
+          + particles.influence[index] * 0.3) * 1.22;
         context.moveTo(particles.x[index] + radius, particles.y[index]);
         context.arc(particles.x[index], particles.y[index], radius, 0, Math.PI * 2);
         hasParticles = true;
@@ -537,10 +578,10 @@ function drawParticleField(
       if (!hasParticles) continue;
       context.fillStyle = PARTICLE_COLORS[tone];
       context.globalAlpha = tone > 0
-        ? 0.52 + depthBand * 0.16
-        : 0.24 + depthBand * 0.14;
+        ? 0.6 + depthBand * 0.14
+        : 0.3 + depthBand * 0.13;
       context.shadowColor = PARTICLE_SHADOWS[tone];
-      context.shadowBlur = tone > 0 ? 4 : 0;
+      context.shadowBlur = tone > 0 ? 6 : 0;
       context.fill();
     }
   }
@@ -571,6 +612,7 @@ type WebGLParticleRenderer = {
     height: number,
     time: number,
   ) => void;
+  quality: WebGLRendererQuality;
   resize: (pixelWidth: number, pixelHeight: number, dpr: number) => void;
 };
 
@@ -628,6 +670,15 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
     stencil: false,
   });
   if (!gl) return null;
+  const debugRenderer = gl.getExtension("WEBGL_debug_renderer_info");
+  const rendererName = String(
+    debugRenderer
+      ? gl.getParameter(debugRenderer.UNMASKED_RENDERER_WEBGL)
+      : gl.getParameter(gl.RENDERER),
+  );
+  const quality: WebGLRendererQuality = /swiftshader|llvmpipe|software rasterizer/i.test(
+    rendererName,
+  ) ? "software" : "hardware";
 
   const program = createWebGLProgram(
     gl,
@@ -635,20 +686,57 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
       in vec2 a_position;
       in vec4 a_color;
       in float a_size;
+      uniform float u_alpha_scale;
+      uniform float u_instance_spread;
+      uniform float u_point_scale;
       uniform vec2 u_resolution;
+      uniform float u_satellite_alpha;
+      uniform float u_time;
       out vec4 v_color;
 
+      float hash(float value) {
+        return fract(sin(value) * 43758.5453123);
+      }
+
       void main() {
-        vec2 normalized = a_position / u_resolution;
+        vec2 position = a_position;
+        float instance_strength = 1.0;
+        if (gl_InstanceID > 0) {
+          float vertex_id = float(gl_VertexID) + 1.0;
+          float instance_id = float(gl_InstanceID);
+          float seed = vertex_id * 12.9898 + instance_id * 78.233;
+          float progress = clamp(a_position.x / u_resolution.x, 0.0, 1.0);
+          float direction = mod(instance_id, 2.0) < 1.0 ? -1.0 : 1.0;
+          float angle = hash(seed) * 6.2831853
+            + u_time * (0.00007 + hash(seed + 4.0) * 0.00005) * direction;
+          float spread = u_instance_spread * (0.55 + hash(seed + 3.0) * 0.75);
+          vec2 raw_offset = vec2(cos(angle), sin(angle)) * spread;
+          float order = smoothstep(0.58, 0.88, progress);
+          vec2 rail_offset = vec2(
+            cos(angle) * spread * 1.35,
+            sin(angle) * spread * 0.24
+          );
+          vec2 lens_vector = (a_position / u_resolution - vec2(0.56, 0.5)) * u_resolution;
+          float tangent_angle = atan(lens_vector.y, lens_vector.x) + 1.5707963;
+          vec2 lens_offset = vec2(cos(tangent_angle), sin(tangent_angle)) * spread;
+          float lens = exp(-pow((progress - 0.56) / 0.18, 2.0));
+          vec2 instance_offset = mix(raw_offset, rail_offset, order);
+          instance_offset = mix(instance_offset, lens_offset, lens * 0.62);
+          position += instance_offset;
+          instance_strength = u_satellite_alpha * (0.72 + hash(seed + 9.0) * 0.38);
+        }
+
+        vec2 normalized = position / u_resolution;
         vec2 clip = normalized * 2.0 - 1.0;
         gl_Position = vec4(clip.x, -clip.y, 0.0, 1.0);
-        gl_PointSize = a_size;
-        v_color = a_color;
+        gl_PointSize = max(1.0, a_size * u_point_scale);
+        v_color = vec4(a_color.rgb, a_color.a * u_alpha_scale * instance_strength);
       }
     `,
     `#version 300 es
       precision mediump float;
       in vec4 v_color;
+      uniform bool u_halo_pass;
       uniform bool u_round_points;
       out vec4 out_color;
 
@@ -656,38 +744,60 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
         float alpha = v_color.a;
         if (u_round_points) {
           float distance_from_center = length(gl_PointCoord - vec2(0.5));
-          float core = 1.0 - smoothstep(0.18, 0.5, distance_from_center);
-          float glow = (1.0 - smoothstep(0.0, 0.5, distance_from_center)) * 0.28;
-          alpha *= max(core, glow);
+          if (u_halo_pass) {
+            alpha *= (1.0 - smoothstep(0.0, 0.5, distance_from_center)) * 0.55;
+          } else {
+            float core = 1.0 - smoothstep(0.18, 0.5, distance_from_center);
+            float glow = (1.0 - smoothstep(0.0, 0.5, distance_from_center)) * 0.28;
+            alpha *= max(core, glow);
+          }
         }
         out_color = vec4(v_color.rgb, alpha);
       }
     `,
   );
-  const buffer = gl.createBuffer();
-  const vertexArray = gl.createVertexArray();
-  if (!program || !buffer || !vertexArray) {
+  const lineBuffer = gl.createBuffer();
+  const pointBuffer = gl.createBuffer();
+  const lineVertexArray = gl.createVertexArray();
+  const pointVertexArray = gl.createVertexArray();
+  if (!program || !lineBuffer || !pointBuffer || !lineVertexArray || !pointVertexArray) {
     if (program) gl.deleteProgram(program);
-    if (buffer) gl.deleteBuffer(buffer);
-    if (vertexArray) gl.deleteVertexArray(vertexArray);
+    if (lineBuffer) gl.deleteBuffer(lineBuffer);
+    if (pointBuffer) gl.deleteBuffer(pointBuffer);
+    if (lineVertexArray) gl.deleteVertexArray(lineVertexArray);
+    if (pointVertexArray) gl.deleteVertexArray(pointVertexArray);
     return null;
   }
 
   const positionLocation = gl.getAttribLocation(program, "a_position");
   const colorLocation = gl.getAttribLocation(program, "a_color");
   const sizeLocation = gl.getAttribLocation(program, "a_size");
+  const alphaScaleLocation = gl.getUniformLocation(program, "u_alpha_scale");
+  const haloPassLocation = gl.getUniformLocation(program, "u_halo_pass");
+  const instanceSpreadLocation = gl.getUniformLocation(program, "u_instance_spread");
+  const pointScaleLocation = gl.getUniformLocation(program, "u_point_scale");
   const resolutionLocation = gl.getUniformLocation(program, "u_resolution");
   const roundPointsLocation = gl.getUniformLocation(program, "u_round_points");
+  const satelliteAlphaLocation = gl.getUniformLocation(program, "u_satellite_alpha");
+  const timeLocation = gl.getUniformLocation(program, "u_time");
   if (
     positionLocation < 0
     || colorLocation < 0
     || sizeLocation < 0
+    || !alphaScaleLocation
+    || !haloPassLocation
+    || !instanceSpreadLocation
+    || !pointScaleLocation
     || !resolutionLocation
     || !roundPointsLocation
+    || !satelliteAlphaLocation
+    || !timeLocation
   ) {
     gl.deleteProgram(program);
-    gl.deleteBuffer(buffer);
-    gl.deleteVertexArray(vertexArray);
+    gl.deleteBuffer(lineBuffer);
+    gl.deleteBuffer(pointBuffer);
+    gl.deleteVertexArray(lineVertexArray);
+    gl.deleteVertexArray(pointVertexArray);
     return null;
   }
 
@@ -697,29 +807,38 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
   let resolutionWidth = 1;
   let resolutionHeight = 1;
 
-  gl.bindVertexArray(vertexArray);
-  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   const byteStride = WEBGL_VERTEX_STRIDE * Float32Array.BYTES_PER_ELEMENT;
-  gl.enableVertexAttribArray(positionLocation);
-  gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, byteStride, 0);
-  gl.enableVertexAttribArray(colorLocation);
-  gl.vertexAttribPointer(
-    colorLocation,
-    4,
-    gl.FLOAT,
-    false,
-    byteStride,
-    2 * Float32Array.BYTES_PER_ELEMENT,
-  );
-  gl.enableVertexAttribArray(sizeLocation);
-  gl.vertexAttribPointer(
-    sizeLocation,
-    1,
-    gl.FLOAT,
-    false,
-    byteStride,
-    6 * Float32Array.BYTES_PER_ELEMENT,
-  );
+  const configureVertexStream = (
+    vertexArray: WebGLVertexArrayObject,
+    vertexBuffer: WebGLBuffer,
+    byteCapacity: number,
+  ) => {
+    gl.bindVertexArray(vertexArray);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, byteCapacity, gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(positionLocation);
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, byteStride, 0);
+    gl.enableVertexAttribArray(colorLocation);
+    gl.vertexAttribPointer(
+      colorLocation,
+      4,
+      gl.FLOAT,
+      false,
+      byteStride,
+      2 * Float32Array.BYTES_PER_ELEMENT,
+    );
+    gl.enableVertexAttribArray(sizeLocation);
+    gl.vertexAttribPointer(
+      sizeLocation,
+      1,
+      gl.FLOAT,
+      false,
+      byteStride,
+      6 * Float32Array.BYTES_PER_ELEMENT,
+    );
+  };
+  configureVertexStream(lineVertexArray, lineBuffer, lineVertices.byteLength);
+  configureVertexStream(pointVertexArray, pointBuffer, pointVertices.byteLength);
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
   gl.disable(gl.DEPTH_TEST);
@@ -745,24 +864,52 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
     return offset + WEBGL_VERTEX_STRIDE;
   };
 
+  type DrawVerticesOptions = {
+    alphaScale: number;
+    haloPass: boolean;
+    instanceCount: number;
+    pointScale: number;
+    roundPoints: boolean;
+    satelliteAlpha: number;
+    spread: number;
+    upload: boolean;
+  };
+
   const drawVertices = (
     vertices: Float32Array,
     floatCount: number,
     mode: number,
-    roundPoints: boolean,
+    vertexBuffer: WebGLBuffer,
+    vertexArray: WebGLVertexArrayObject,
+    options: DrawVerticesOptions,
   ) => {
     if (floatCount === 0) return;
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices.subarray(0, floatCount), gl.DYNAMIC_DRAW);
-    gl.uniform1i(roundPointsLocation, roundPoints ? 1 : 0);
-    gl.drawArrays(mode, 0, floatCount / WEBGL_VERTEX_STRIDE);
+    gl.bindVertexArray(vertexArray);
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    if (options.upload) {
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, vertices, 0, floatCount);
+    }
+    gl.uniform1f(alphaScaleLocation, options.alphaScale);
+    gl.uniform1i(haloPassLocation, options.haloPass ? 1 : 0);
+    gl.uniform1f(instanceSpreadLocation, options.spread);
+    gl.uniform1f(pointScaleLocation, options.pointScale);
+    gl.uniform1i(roundPointsLocation, options.roundPoints ? 1 : 0);
+    gl.uniform1f(satelliteAlphaLocation, options.satelliteAlpha);
+    const vertexCount = floatCount / WEBGL_VERTEX_STRIDE;
+    if (options.instanceCount > 1) {
+      gl.drawArraysInstanced(mode, 0, vertexCount, options.instanceCount);
+    } else {
+      gl.drawArrays(mode, 0, vertexCount);
+    }
   };
 
   return {
     destroy: () => {
-      gl.deleteBuffer(buffer);
+      gl.deleteBuffer(lineBuffer);
+      gl.deleteBuffer(pointBuffer);
       gl.deleteProgram(program);
-      gl.deleteVertexArray(vertexArray);
+      gl.deleteVertexArray(lineVertexArray);
+      gl.deleteVertexArray(pointVertexArray);
     },
     draw: (particles, pointer, width, height, time) => {
       resolutionWidth = width;
@@ -771,8 +918,8 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);
       gl.useProgram(program);
-      gl.bindVertexArray(vertexArray);
       gl.uniform2f(resolutionLocation, resolutionWidth, resolutionHeight);
+      gl.uniform1f(timeLocation, time);
 
       let lineOffset = 0;
       const railStart = width * 0.7;
@@ -782,7 +929,13 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
         lineOffset = writeVertex(lineVertices, lineOffset, width, y, 0, 0.12, 1);
       }
 
-      const vortexCount = updateParticleVortexFrame(pointer, width, height, time);
+      const vortexCount = updateParticleVortexFrame(
+        pointer,
+        width,
+        height,
+        time,
+        particles.compact,
+      );
       for (let index = 0; index < vortexCount; index += 1) {
         const tone = VORTEX_FRAME.tone[index];
         lineOffset = writeVertex(
@@ -791,7 +944,7 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
           VORTEX_FRAME.tailX[index],
           VORTEX_FRAME.tailY[index],
           tone,
-          tone > 0 ? 0.21 : 0.075,
+          tone > 0 ? 0.28 : 0.1,
           1,
         );
         lineOffset = writeVertex(
@@ -800,7 +953,7 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
           VORTEX_FRAME.x[index],
           VORTEX_FRAME.y[index],
           tone,
-          tone > 0 ? 0.21 : 0.075,
+          tone > 0 ? 0.28 : 0.1,
           1,
         );
       }
@@ -836,7 +989,23 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
           );
         }
       }
-      drawVertices(lineVertices, lineOffset, gl.LINES, false);
+      drawVertices(
+        lineVertices,
+        lineOffset,
+        gl.LINES,
+        lineBuffer,
+        lineVertexArray,
+        {
+          alphaScale: 1,
+          haloPass: false,
+          instanceCount: 1,
+          pointScale: 1,
+          roundPoints: false,
+          satelliteAlpha: 1,
+          spread: 0,
+          upload: true,
+        },
+      );
 
       let pointOffset = 0;
       for (let index = 0; index < vortexCount; index += 1) {
@@ -848,7 +1017,7 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
           VORTEX_FRAME.x[index],
           VORTEX_FRAME.y[index],
           tone,
-          tone > 0 ? 0.5 + depth * 0.32 : 0.24 + depth * 0.24,
+          tone > 0 ? 0.58 + depth * 0.28 : 0.3 + depth * 0.22,
           Math.max(
             1,
             (VORTEX_FRAME.radius[index] * 2 + (tone > 0 ? 1.1 : 0)) * devicePixelRatio,
@@ -869,13 +1038,50 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
           particles.x[index],
           particles.y[index],
           tone,
-          tone > 0 ? 0.52 + depthBand * 0.16 : 0.24 + depthBand * 0.14,
+          tone > 0 ? 0.6 + depthBand * 0.14 : 0.3 + depthBand * 0.13,
           Math.max(1, (radius * 2 + (tone > 0 ? 0.8 : 0)) * devicePixelRatio),
         );
       }
-      drawVertices(pointVertices, pointOffset, gl.POINTS, true);
-      gl.flush();
+      const instanceCount = pointInstanceCount(particles.compact, quality);
+      const instanceSpread = quality === "software"
+        ? 0
+        : particles.compact ? 3.6 : 4.8;
+      drawVertices(
+        pointVertices,
+        pointOffset,
+        gl.POINTS,
+        pointBuffer,
+        pointVertexArray,
+        {
+          alphaScale: 0.32,
+          haloPass: true,
+          instanceCount: 1,
+          pointScale: 3,
+          roundPoints: true,
+          satelliteAlpha: 1,
+          spread: 0,
+          upload: true,
+        },
+      );
+      drawVertices(
+        pointVertices,
+        pointOffset,
+        gl.POINTS,
+        pointBuffer,
+        pointVertexArray,
+        {
+          alphaScale: 1,
+          haloPass: false,
+          instanceCount,
+          pointScale: 1.15,
+          roundPoints: true,
+          satelliteAlpha: 0.56,
+          spread: instanceSpread,
+          upload: false,
+        },
+      );
     },
+    quality,
     resize: (pixelWidth, pixelHeight, dpr) => {
       devicePixelRatio = dpr;
       gl.viewport(0, 0, pixelWidth, pixelHeight);
@@ -883,9 +1089,24 @@ function createWebGLParticleRenderer(canvas: HTMLCanvasElement): WebGLParticleRe
   };
 }
 
-export function AboutParticleField() {
+type AboutParticleFieldProps = {
+  stage: AboutCompilerStage;
+  stageLabel: string;
+  stageOutput: string;
+};
+
+export function AboutParticleField({
+  stage,
+  stageLabel,
+  stageOutput,
+}: AboutParticleFieldProps) {
   const rootRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef(stage);
+
+  useEffect(() => {
+    stageRef.current = stage;
+  }, [stage]);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -898,6 +1119,7 @@ export function AboutParticleField() {
       : canvas.getContext("2d", { alpha: true, desynchronized: true });
     if (!webglRenderer && !canvas2d) return;
     root.dataset.renderer = webglRenderer ? "webgl2" : "canvas2d";
+    root.dataset.rendererQuality = webglRenderer?.quality ?? "fallback";
 
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const pointer: PointerField = {
@@ -954,12 +1176,19 @@ export function AboutParticleField() {
       if (dimensionsChanged || !particles) {
         cssWidth = nextWidth;
         cssHeight = nextHeight;
-        const compact = window.matchMedia("(pointer: coarse)").matches || cssWidth <= 600;
+        const compact = window.matchMedia("(pointer: coarse)").matches || window.innerWidth <= 600;
         frameInterval = compact ? 1000 / 45 : 0;
         particles = createParticleBuffer(cssWidth, cssHeight, compact);
         pointer.x = cssWidth * 0.54;
         pointer.y = cssHeight * 0.5;
         root.dataset.particleCount = String(particles.count);
+        const particleInstances = webglRenderer
+          ? pointInstanceCount(compact, webglRenderer.quality)
+          : 1;
+        root.dataset.particleInstances = String(particleInstances);
+        root.dataset.effectiveParticleCount = String(
+          (particles.count + vortexParticleCount(compact)) * particleInstances,
+        );
       }
       sizeDirty = false;
     };
@@ -983,7 +1212,15 @@ export function AboutParticleField() {
       if (advanceMs > 0) {
         const delta = clamp(advanceMs / (1000 / 60), 0.35, 2.1);
         visualTime += advanceMs;
-        updateParticles(particles, pointer, cssWidth, cssHeight, visualTime, delta);
+        updateParticles(
+          particles,
+          pointer,
+          cssWidth,
+          cssHeight,
+          visualTime,
+          delta,
+          stageRef.current,
+        );
       }
       if (webglRenderer) {
         webglRenderer.draw(particles, pointer, cssWidth, cssHeight, visualTime);
@@ -1153,16 +1390,23 @@ export function AboutParticleField() {
       data-pointer-active="false"
       data-ready="false"
       data-renderer="pending"
+      data-stage={stage}
       role="img"
-      aria-label="Unstructured context flowing through an evidence lens into testable output"
+      aria-label="Multimodal input moving through a system lens into observable behavior"
     >
       <div className="about-particle-fallback" aria-hidden="true" />
       <canvas ref={canvasRef} className="about-particle-canvas" aria-hidden="true" />
       <div className="about-field-overlay" aria-hidden="true">
-        <span className="about-field-label about-field-label--input">RAW CONTEXT</span>
-        <span className="about-field-label about-field-label--lens">EVIDENCE LENS</span>
-        <span className="about-field-label about-field-label--output">TESTABLE OUTPUT</span>
+        <span className="about-field-label about-field-label--input">MULTIMODAL INPUT</span>
+        <span className="about-field-label about-field-label--lens">SYSTEM LENS</span>
+        <span className="about-field-label about-field-label--output">OBSERVABLE BEHAVIOR</span>
+        <span className="about-field-stage">
+          {stageLabel} / OUT {stageOutput}
+        </span>
         <span className="about-field-state">POINTER FIELD / </span>
+        <span className="about-field-progress">
+          <span />
+        </span>
       </div>
     </figure>
   );

@@ -22,12 +22,22 @@ test("isolates the GPU-first About particle field and stops its frame work when 
     new URL("../app/components/AboutParticleField.tsx", import.meta.url),
     "utf8",
   );
+  const contextCompiler = await readFile(
+    new URL("../app/components/AboutContextCompiler.tsx", import.meta.url),
+    "utf8",
+  );
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(particleField, /^"use client";/);
-  assert.match(page, /<AboutParticleField \/>/);
+  assert.match(page, /<AboutContextCompiler \/>/);
   assert.doesNotMatch(page, /^"use client";/);
+  assert.match(contextCompiler, /^"use client";/);
+  assert.match(contextCompiler, /useState<AboutCompilerStage>\("frame"\)/);
+  assert.match(contextCompiler, /aria-pressed=\{isActive\}/);
+  assert.match(contextCompiler, /onPointerEnter=/);
+  assert.match(contextCompiler, /window\.innerWidth <= 600/);
+  assert.match(contextCompiler, /<AboutParticleField/);
   assert.match(particleField, /new IntersectionObserver/);
   assert.match(particleField, /currentVisibleRatio\(\) >= 0\.05/);
   assert.match(particleField, /new ResizeObserver/);
@@ -43,12 +53,24 @@ test("isolates the GPU-first About particle field and stops its frame work when 
   assert.match(particleField, /canvas\.getContext\("webgl2"/);
   assert.match(particleField, /powerPreference: "high-performance"/);
   assert.match(particleField, /gl\.drawArrays\(mode/);
+  assert.match(particleField, /gl\.drawArraysInstanced\(mode/);
+  assert.match(particleField, /gl\.bufferSubData\(/);
+  assert.match(particleField, /configureVertexStream\(lineVertexArray, lineBuffer/);
+  assert.match(particleField, /configureVertexStream\(pointVertexArray, pointBuffer/);
+  assert.doesNotMatch(particleField, /vertices\.subarray\(0, floatCount\)/);
   assert.match(particleField, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
-  assert.match(particleField, /const MAX_PARTICLES = 1360/);
-  assert.match(particleField, /const MAX_COMPACT_PARTICLES = 780/);
+  assert.match(particleField, /const MAX_PARTICLES = 2050/);
+  assert.match(particleField, /const MAX_COMPACT_PARTICLES = 1125/);
+  assert.match(particleField, /const COMPACT_POINT_INSTANCES = 4/);
+  assert.match(particleField, /const FULL_POINT_INSTANCES = 5/);
+  assert.match(particleField, /swiftshader\|llvmpipe\|software rasterizer/i);
+  assert.match(particleField, /rendererQuality/);
+  assert.match(particleField, /u_halo_pass/);
+  assert.match(particleField, /data\.effectiveParticleCount|dataset\.effectiveParticleCount/);
   assert.match(particleField, /const TRAIL_STEPS = 7/);
   assert.match(particleField, /const RAIL_POSITIONS = \[0\.22, 0\.405, 0\.595, 0\.78\]/);
   assert.match(particleField, /flowTargetY/);
+  assert.match(particleField, /STAGE_FOCUS_POSITIONS/);
   assert.match(particleField, /drawParticleVortex/);
   assert.match(particleField, /frameAccumulator \+= elapsedMs/);
   assert.match(particleField, /visualTime \+= advanceMs/);

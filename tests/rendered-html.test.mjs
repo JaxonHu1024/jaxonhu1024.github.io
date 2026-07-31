@@ -94,7 +94,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
   assert.match(
     html,
-    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-renderer="pending")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Unstructured context flowing through an evidence lens into testable output")[^>]*>/,
+    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-renderer="pending")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\bdata-stage="frame")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Multimodal input moving through a system lens into observable behavior")[^>]*>/,
   );
   assert.match(html, /class="about-particle-fallback" aria-hidden="true"/);
   assert.match(html, /<canvas class="about-particle-canvas" aria-hidden="true"><\/canvas>/);
@@ -174,7 +174,7 @@ test("renders every organization logo with its measured intrinsic dimensions", a
   }
 });
 
-test("introduces a new public-safe About section before Experience", async () => {
+test("renders a distinct public-safe About system before Experience", async () => {
   const response = await render();
   const html = await response.text();
   const aboutStart = html.indexOf('id="about"');
@@ -191,23 +191,27 @@ test("introduces a new public-safe About section before Experience", async () =>
     about,
     /<h2(?=[^>]*\bclass="about-statement")(?=[^>]*\bid="about-title")[^>]*>/,
   );
-  assert.match(about, /I TURN AMBIGUITY/);
-  assert.match(about, /INTO TESTABLE SYSTEMS\./);
-  assert.match(about, /I explore agents, generative AI, language and vision models/);
-  assert.match(about, /Evidence first · Constraints explicit/);
+  assert.match(about, /THE MODEL IS ONLY/);
+  assert.match(about, /THE BEGINNING\./);
+  assert.match(about, /working across agents, multimodal/);
+  assert.match(about, /Agents · Multimodal systems · Autonomous intelligence/);
+  assert.match(about, /Model capability matters only when the system can use it/);
+  assert.match(about, /Observable behavior · Explicit boundaries · Evidence attached/);
   assert.match(about, /class="about-particle-field"/);
   assert.match(about, /class="about-particle-canvas" aria-hidden="true"/);
   assert.match(about, /class="about-particle-fallback" aria-hidden="true"/);
-  assert.match(about, /RAW CONTEXT/);
-  assert.match(about, /EVIDENCE LENS/);
-  assert.match(about, /TESTABLE OUTPUT/);
-  assert.match(about, /aria-label="Working method"/);
-  for (const step of ["FRAME", "MODEL", "BUILD", "VERIFY"]) {
+  assert.match(about, /MULTIMODAL INPUT/);
+  assert.match(about, /SYSTEM LENS/);
+  assert.match(about, /OBSERVABLE BEHAVIOR/);
+  assert.match(about, /aria-label="System range"/);
+  for (const step of ["PERCEIVE", "REASON", "ACT", "VERIFY"]) {
     assert.match(about, new RegExp(`>${step}<`));
   }
-  for (const output of ["CONSTRAINT", "STRUCTURE", "SYSTEM", "EVIDENCE"]) {
+  for (const output of ["SIGNAL", "DECISION", "BEHAVIOR", "EVIDENCE"]) {
     assert.match(about, new RegExp(`OUT \/ (?:<!-- -->)?${output}`));
   }
+  assert.equal((about.match(/class="about-method-button"/g) ?? []).length, 4);
+  assert.equal((about.match(/aria-pressed="true"/g) ?? []).length, 1);
   assert.doesNotMatch(about, /ByteDance|Alibaba|Senior|Jaxon Hu|Hu Jiaxing|Nanyang|Southeast/i);
   assert.doesNotMatch(html, /VIEW EXPERIENCE/);
 });
@@ -377,7 +381,7 @@ test("orders About, Experience, Foundations, and Research with distinct layer in
     html.indexOf('class="section foundations grid-surface"')
       < html.indexOf('class="section research grid-surface"'),
   );
-  assert.match(html, /<b>01<\/b>\s*(?:<!-- -->)?\s*\/\/ IDENTITY LAYER/);
+  assert.match(html, /<b>01<\/b>\s*(?:<!-- -->)?\s*\/\/ PERSONAL SYSTEM/);
   assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ EXPERIENCE LAYER/);
   assert.match(html, /<b>03<\/b>\s*(?:<!-- -->)?\s*\/\/ FOUNDATION LAYER/);
   assert.match(html, /<b>04<\/b>\s*(?:<!-- -->)?\s*\/\/ RESEARCH LAYER/);
