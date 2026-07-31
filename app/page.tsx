@@ -43,7 +43,7 @@ const contactMessage = "For project collaborations, technical consulting, or car
 const aboutContext = [
   {
     label: "RANGE",
-    value: "Agents · Multimodal systems · Autonomous intelligence",
+    value: "Agents, multimodal systems, and autonomous intelligence",
   },
   {
     label: "INSTINCT",
@@ -51,7 +51,7 @@ const aboutContext = [
   },
   {
     label: "STANDARD",
-    value: "Observable behavior · Explicit boundaries · Evidence attached",
+    value: "Observable behavior, explicit boundaries, evidence attached",
   },
 ] as const;
 
@@ -101,7 +101,7 @@ export default function Home() {
 
           <div className="about-layout reveal">
             <div className="about-copy">
-              <p className="about-role"><span>PROFILE /</span> AI ALGORITHM ENGINEER</p>
+              <p className="about-role">AI ALGORITHM ENGINEER</p>
               <h2 className="about-statement" id="about-title">
                 <span>THE MODEL IS ONLY</span>
                 <span>THE BEGINNING.</span>
@@ -114,17 +114,18 @@ export default function Home() {
                   in the real world.
                 </p>
               </div>
-              <dl className="about-context" aria-label="Profile context">
-                {aboutContext.map((item) => (
-                  <div key={item.label}>
-                    <dt>{item.label}</dt>
-                    <dd>{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
             </div>
 
             <AboutContextCompiler />
+
+            <dl className="about-context" aria-label="Operating principles">
+              {aboutContext.map((item) => (
+                <div key={item.label}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
 
           <p className="section-footer reveal" aria-hidden="true">

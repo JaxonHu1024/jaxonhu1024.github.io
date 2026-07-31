@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
+import { useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import {
   AboutParticleField,
@@ -11,7 +11,6 @@ import {
 type OperatingStage = {
   detail: string;
   id: AboutCompilerStage;
-  index: string;
   label: string;
   output: string;
 };
@@ -19,28 +18,24 @@ type OperatingStage = {
 const operatingTrace: readonly OperatingStage[] = [
   {
     id: "frame",
-    index: "01",
     label: "PERCEIVE",
     detail: "Language and vision become one shared context.",
     output: "SIGNAL",
   },
   {
     id: "model",
-    index: "02",
     label: "REASON",
     detail: "Agents turn context into an inspectable decision.",
     output: "DECISION",
   },
   {
     id: "build",
-    index: "03",
     label: "ACT",
     detail: "Tools and autonomy close the loop in the real world.",
     output: "BEHAVIOR",
   },
   {
     id: "verify",
-    index: "04",
     label: "VERIFY",
     detail: "Evaluation keeps every claim attached to evidence.",
     output: "EVIDENCE",
@@ -49,24 +44,38 @@ const operatingTrace: readonly OperatingStage[] = [
 
 export function AboutContextCompiler() {
   const [activeStage, setActiveStage] = useState<AboutCompilerStage>("frame");
+  const stageButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const activeIndex = operatingTrace.findIndex((stage) => stage.id === activeStage);
   const active = operatingTrace[activeIndex] ?? operatingTrace[0];
-  const activateFromPointer = (
-    event: ReactPointerEvent<HTMLButtonElement>,
-    stage: AboutCompilerStage,
+  const activateStageAt = (index: number) => {
+    const nextIndex = (index + operatingTrace.length) % operatingTrace.length;
+    const nextStage = operatingTrace[nextIndex];
+    setActiveStage(nextStage.id);
+    stageButtonRefs.current[nextIndex]?.focus();
+  };
+  const handleStageKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    index: number,
   ) => {
-    if (
-      window.innerWidth <= 600
-      || event.pointerType !== "mouse"
-      || !window.matchMedia("(hover: hover) and (pointer: fine)").matches
-    ) {
-      return;
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowRight") {
+      nextIndex = index + 1;
+    } else if (event.key === "ArrowLeft") {
+      nextIndex = index - 1;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = operatingTrace.length - 1;
     }
-    setActiveStage(stage);
+
+    if (nextIndex === null) return;
+    event.preventDefault();
+    activateStageAt(nextIndex);
   };
 
   return (
-    <>
+    <div className="about-compiler">
       <AboutParticleField
         stage={active.id}
         stageLabel={active.label}
@@ -74,39 +83,60 @@ export function AboutContextCompiler() {
       />
 
       <div className="about-process" data-active-stage={active.id}>
-        <p className="about-process-heading" aria-hidden="true">
-          <span>SYSTEM RANGE</span>
-          <span>ACTIVE / {active.index} {active.label}</span>
-        </p>
-        <ol className="about-method" aria-label="System range">
+        <div
+          className="about-stage-tabs"
+          role="tablist"
+          aria-label="System transformation stages"
+          aria-orientation="horizontal"
+        >
+          {operatingTrace.map((stage, index) => {
+            const isActive = stage.id === active.id;
+
+            return (
+              <button
+                ref={(element) => {
+                  stageButtonRefs.current[index] = element;
+                }}
+                className="about-stage-tab"
+                type="button"
+                role="tab"
+                id={`about-stage-tab-${stage.id}`}
+                aria-controls={`about-stage-panel-${stage.id}`}
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                onClick={() => setActiveStage(stage.id)}
+                onKeyDown={(event) => handleStageKeyDown(event, index)}
+                key={stage.id}
+              >
+                <span>{stage.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="about-stage-panels" aria-live="polite" aria-atomic="true">
           {operatingTrace.map((stage) => {
             const isActive = stage.id === active.id;
 
             return (
-              <li key={stage.id} data-active={isActive ? "true" : "false"}>
-                <button
-                  className="about-method-button"
-                  type="button"
-                  aria-label={`${stage.label}. ${stage.detail} Output ${stage.output}.`}
-                  aria-pressed={isActive}
-                  onClick={() => setActiveStage(stage.id)}
-                  onFocus={() => setActiveStage(stage.id)}
-                  onPointerEnter={(event) => activateFromPointer(event, stage.id)}
-                >
-                  <span className="about-method-meta">
-                    <span className="about-method-index">{stage.index}</span>
-                    <span className="about-method-label">{stage.label}</span>
-                  </span>
-                  <span className="about-method-detail">{stage.detail}</span>
-                  <span className="about-method-output">
-                    OUT / {stage.output}
-                  </span>
-                </button>
-              </li>
+              <div
+                className="about-stage-panel"
+                role="tabpanel"
+                id={`about-stage-panel-${stage.id}`}
+                aria-labelledby={`about-stage-tab-${stage.id}`}
+                hidden={!isActive}
+                key={stage.id}
+              >
+                <p className="about-stage-detail">{stage.detail}</p>
+                <p className="about-stage-output">
+                  <span>OUTPUT</span>
+                  <strong>{stage.output}</strong>
+                </p>
+              </div>
             );
           })}
-        </ol>
+        </div>
       </div>
-    </>
+    </div>
   );
 }

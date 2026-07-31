@@ -11,13 +11,13 @@ const MAX_COMPACT_PARTICLES = 1125;
 const TRAIL_STEPS = 7;
 const RAIL_POSITIONS = [0.22, 0.405, 0.595, 0.78] as const;
 const LENS_BOUNDARIES = [-1.06, -0.8, 0.8, 1.06] as const;
-// Mirrors the site tokens: --text, --mint, --violet, and --coral.
-const PARTICLE_COLORS = ["#e9fff9", "#4ff7d5", "#8a72ff", "#ff6b57"] as const;
+// About uses one signal accent with two quieter tonal variants.
+const PARTICLE_COLORS = ["#e9fff9", "#4ff7d5", "#b7d7d0", "#8edfcf"] as const;
 const PARTICLE_SHADOWS = [
   "transparent",
-  "rgba(79,247,213,.72)",
-  "rgba(138,114,255,.68)",
-  "rgba(255,107,87,.62)",
+  "rgba(79,247,213,.58)",
+  "rgba(183,215,208,.36)",
+  "rgba(142,223,207,.42)",
 ] as const;
 const COMPACT_POINT_INSTANCES = 4;
 const FULL_POINT_INSTANCES = 5;
@@ -592,8 +592,8 @@ function drawParticleField(
 const PARTICLE_RGB = [
   [0.914, 1, 0.976],
   [0.31, 0.969, 0.835],
-  [0.541, 0.447, 1],
-  [1, 0.42, 0.341],
+  [0.718, 0.843, 0.816],
+  [0.557, 0.875, 0.812],
 ] as const;
 const WEBGL_VERTEX_STRIDE = 7;
 const MAX_WEBGL_LINE_VERTICES = (
@@ -1392,7 +1392,7 @@ export function AboutParticleField({
       data-renderer="pending"
       data-stage={stage}
       role="img"
-      aria-label="Multimodal input moving through a system lens into observable behavior"
+      aria-label={`Multimodal input moving through the system lens. ${stageLabel} produces ${stageOutput.toLowerCase()}.`}
     >
       <div className="about-particle-fallback" aria-hidden="true" />
       <canvas ref={canvasRef} className="about-particle-canvas" aria-hidden="true" />
@@ -1400,13 +1400,6 @@ export function AboutParticleField({
         <span className="about-field-label about-field-label--input">MULTIMODAL INPUT</span>
         <span className="about-field-label about-field-label--lens">SYSTEM LENS</span>
         <span className="about-field-label about-field-label--output">OBSERVABLE BEHAVIOR</span>
-        <span className="about-field-stage">
-          {stageLabel} / OUT {stageOutput}
-        </span>
-        <span className="about-field-state">POINTER FIELD / </span>
-        <span className="about-field-progress">
-          <span />
-        </span>
       </div>
     </figure>
   );

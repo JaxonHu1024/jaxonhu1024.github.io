@@ -94,7 +94,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
   assert.match(
     html,
-    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-renderer="pending")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\bdata-stage="frame")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Multimodal input moving through a system lens into observable behavior")[^>]*>/,
+    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-renderer="pending")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\bdata-stage="frame")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Multimodal input moving through the system lens\. PERCEIVE produces signal\.")[^>]*>/,
   );
   assert.match(html, /class="about-particle-fallback" aria-hidden="true"/);
   assert.match(html, /<canvas class="about-particle-canvas" aria-hidden="true"><\/canvas>/);
@@ -194,24 +194,64 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.match(about, /THE MODEL IS ONLY/);
   assert.match(about, /THE BEGINNING\./);
   assert.match(about, /working across agents, multimodal/);
-  assert.match(about, /Agents · Multimodal systems · Autonomous intelligence/);
+  assert.match(about, /Agents, multimodal systems, and autonomous intelligence/);
   assert.match(about, /Model capability matters only when the system can use it/);
-  assert.match(about, /Observable behavior · Explicit boundaries · Evidence attached/);
+  assert.match(about, /Observable behavior, explicit boundaries, evidence attached/);
   assert.match(about, /class="about-particle-field"/);
   assert.match(about, /class="about-particle-canvas" aria-hidden="true"/);
   assert.match(about, /class="about-particle-fallback" aria-hidden="true"/);
   assert.match(about, /MULTIMODAL INPUT/);
   assert.match(about, /SYSTEM LENS/);
   assert.match(about, /OBSERVABLE BEHAVIOR/);
-  assert.match(about, /aria-label="System range"/);
+  assert.match(
+    about,
+    /<div(?=[^>]*\bclass="about-stage-tabs")(?=[^>]*\brole="tablist")(?=[^>]*\baria-label="System transformation stages")(?=[^>]*\baria-orientation="horizontal")[^>]*>/,
+  );
   for (const step of ["PERCEIVE", "REASON", "ACT", "VERIFY"]) {
     assert.match(about, new RegExp(`>${step}<`));
   }
   for (const output of ["SIGNAL", "DECISION", "BEHAVIOR", "EVIDENCE"]) {
-    assert.match(about, new RegExp(`OUT \/ (?:<!-- -->)?${output}`));
+    assert.match(about, new RegExp(`<strong>${output}<\\/strong>`));
   }
-  assert.equal((about.match(/class="about-method-button"/g) ?? []).length, 4);
-  assert.equal((about.match(/aria-pressed="true"/g) ?? []).length, 1);
+  assert.equal((about.match(/class="about-stage-tab"/g) ?? []).length, 4);
+  assert.equal((about.match(/\brole="tab"/g) ?? []).length, 4);
+  assert.equal((about.match(/class="about-stage-panel"/g) ?? []).length, 4);
+  assert.equal((about.match(/\brole="tabpanel"/g) ?? []).length, 4);
+  assert.equal((about.match(/aria-selected="true"/g) ?? []).length, 1);
+  assert.equal((about.match(/aria-selected="false"/g) ?? []).length, 3);
+  assert.equal((about.match(/\bhidden=""/g) ?? []).length, 3);
+  assert.match(
+    about,
+    /<div(?=[^>]*\bclass="about-stage-panels")(?=[^>]*\baria-live="polite")(?=[^>]*\baria-atomic="true")[^>]*>/,
+  );
+  for (const [stage, selected, tabIndex] of [
+    ["frame", "true", "0"],
+    ["model", "false", "-1"],
+    ["build", "false", "-1"],
+    ["verify", "false", "-1"],
+  ]) {
+    assert.match(
+      about,
+      new RegExp(
+        `<button(?=[^>]*\\bclass="about-stage-tab")`
+          + `(?=[^>]*\\brole="tab")`
+          + `(?=[^>]*\\bid="about-stage-tab-${stage}")`
+          + `(?=[^>]*\\baria-controls="about-stage-panel-${stage}")`
+          + `(?=[^>]*\\baria-selected="${selected}")`
+          + `(?=[^>]*\\btabindex="${tabIndex}")[^>]*>`,
+      ),
+    );
+    assert.match(
+      about,
+      new RegExp(
+        `<div(?=[^>]*\\bclass="about-stage-panel")`
+          + `(?=[^>]*\\brole="tabpanel")`
+          + `(?=[^>]*\\bid="about-stage-panel-${stage}")`
+          + `(?=[^>]*\\baria-labelledby="about-stage-tab-${stage}")[^>]*>`,
+      ),
+    );
+  }
+  assert.doesNotMatch(about, /aria-pressed=|OUT \/|about-method-button/);
   assert.doesNotMatch(about, /ByteDance|Alibaba|Senior|Jaxon Hu|Hu Jiaxing|Nanyang|Southeast/i);
   assert.doesNotMatch(html, /VIEW EXPERIENCE/);
 });

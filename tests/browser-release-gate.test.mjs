@@ -633,6 +633,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         const coreSelectors = [
           "#hero-title",
           "#about-title",
+          ".about-field-label--lens",
           "#experience-title",
           "#foundations-title",
           "#research-title",
@@ -721,7 +722,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.notEqual(state.aboutField.fallbackBackground, "none");
       assert.ok(state.aboutField.width > 0);
       assert.ok(
-        state.aboutField.height >= 200 && state.aboutField.height <= 246,
+        state.aboutField.height >= 210 && state.aboutField.height <= 242,
         `${viewport.width}x${viewport.height} no-JS About fallback height was `
           + `${state.aboutField.height}px`,
       );
@@ -1487,9 +1488,12 @@ test("reduced-motion mobile keeps terminal, About particles, and contact ticker 
       const fallback = figure.querySelector(".about-particle-fallback");
       const figureRect = figure.getBoundingClientRect();
       const canvasRect = canvas?.getBoundingClientRect();
+      const figureStyle = getComputedStyle(figure);
       return {
         bitmapHeight: canvas?.height ?? 0,
         bitmapWidth: canvas?.width ?? 0,
+        borderBlockWidth: Number.parseFloat(figureStyle.borderTopWidth)
+          + Number.parseFloat(figureStyle.borderBottomWidth),
         canvasHeight: canvasRect?.height ?? 0,
         canvasOpacity: canvas ? getComputedStyle(canvas).opacity : null,
         canvasWidth: canvasRect?.width ?? 0,
@@ -1523,17 +1527,19 @@ test("reduced-motion mobile keeps terminal, About particles, and contact ticker 
       (aboutField.particleCount + 400) * expectedMobileInstances,
     );
     assert.ok(
-      aboutField.height >= 200 && aboutField.height <= 246,
+      aboutField.height >= 210 && aboutField.height <= 242,
       `reduced mobile About particle field height was ${aboutField.height}px`,
     );
     assert.ok(
       Math.abs(aboutField.canvasWidth - aboutField.width) <= 1
-        && Math.abs(aboutField.canvasHeight - aboutField.height) <= 1,
+        && Math.abs(
+          aboutField.canvasHeight - (aboutField.height - aboutField.borderBlockWidth),
+        ) <= 1,
       `reduced mobile About canvas did not cover its field: ${JSON.stringify(aboutField)}`,
     );
     assert.ok(
-      aboutField.bitmapWidth >= aboutField.canvasWidth
-        && aboutField.bitmapHeight >= aboutField.canvasHeight,
+      aboutField.bitmapWidth >= aboutField.canvasWidth - 1
+        && aboutField.bitmapHeight >= aboutField.canvasHeight - 1,
       `reduced mobile About bitmap was undersized: ${JSON.stringify(aboutField)}`,
     );
     const reducedProbe = await readCanvasProbe(page.locator(".about-particle-canvas"));
@@ -1688,7 +1694,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
   }
 });
 
-test("About operating trace drives compiler stages with accessible targets", { timeout: 20_000 }, async () => {
+test("About operating trace uses accessible tabs without hover-driven state", { timeout: 20_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1440, height: 900 },
   });
@@ -1696,11 +1702,24 @@ test("About operating trace drives compiler stages with accessible targets", { t
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     const field = page.locator(".about-particle-field");
-    const buttons = page.locator(".about-method-button");
+    const tablist = page.getByRole("tablist", { name: "System transformation stages" });
+    const buttons = tablist.getByRole("tab");
+    const panels = page.getByRole("tabpanel", { includeHidden: true });
     await field.scrollIntoViewIfNeeded();
     assert.equal(await buttons.count(), 4);
+    assert.equal(await panels.count(), 4);
+    assert.equal(await page.getByRole("tabpanel").count(), 1);
     assert.equal(await field.getAttribute("data-stage"), "frame");
-    assert.equal(await buttons.nth(0).getAttribute("aria-pressed"), "true");
+    assert.equal(await buttons.nth(0).getAttribute("aria-selected"), "true");
+    assert.equal(await buttons.nth(0).getAttribute("tabindex"), "0");
+    assert.match(
+      await page.getByRole("tabpanel").innerText(),
+      /Language and vision become one shared context\.[\s\S]*SIGNAL/,
+    );
+    assert.equal(
+      await field.getAttribute("aria-label"),
+      "Multimodal input moving through the system lens. PERCEIVE produces signal.",
+    );
 
     for (const button of await buttons.all()) {
       const box = await button.boundingBox();
@@ -1708,22 +1727,42 @@ test("About operating trace drives compiler stages with accessible targets", { t
     }
 
     await buttons.nth(1).hover();
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(
+      () => requestAnimationFrame(resolve),
+    )));
+    assert.equal(await field.getAttribute("data-stage"), "frame");
+    assert.equal(await buttons.nth(0).getAttribute("aria-selected"), "true");
+
+    await buttons.nth(1).click();
     await page.waitForFunction(() => (
       document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "model"
     ));
-    assert.equal(await buttons.nth(1).getAttribute("aria-pressed"), "true");
+    assert.equal(await buttons.nth(1).getAttribute("aria-selected"), "true");
+    assert.equal(await page.getByRole("tabpanel").getAttribute("aria-labelledby"), "about-stage-tab-model");
+    assert.equal(
+      await field.getAttribute("aria-label"),
+      "Multimodal input moving through the system lens. REASON produces decision.",
+    );
 
-    await buttons.nth(2).focus();
+    await buttons.nth(1).press("ArrowRight");
     await page.waitForFunction(() => (
       document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "build"
     ));
-    assert.equal(await buttons.nth(2).getAttribute("aria-pressed"), "true");
+    assert.equal(await buttons.nth(2).getAttribute("aria-selected"), "true");
+    assert.equal(await buttons.nth(2).getAttribute("tabindex"), "0");
 
-    await buttons.nth(3).click();
+    await buttons.nth(2).press("End");
     await page.waitForFunction(() => (
       document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "verify"
     ));
-    assert.equal(await buttons.nth(3).getAttribute("aria-pressed"), "true");
+    assert.equal(await buttons.nth(3).getAttribute("aria-selected"), "true");
+
+    await buttons.nth(3).press("Home");
+    await page.waitForFunction(() => (
+      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "frame"
+    ));
+    assert.equal(await buttons.nth(0).getAttribute("aria-selected"), "true");
+    assert.equal(await page.getByRole("tabpanel").count(), 1);
   } finally {
     await context.close();
   }
@@ -1737,30 +1776,29 @@ test("About operating trace drives compiler stages with accessible targets", { t
   try {
     await mobile.page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     const field = mobile.page.locator(".about-particle-field");
-    const buttons = mobile.page.locator(".about-method-button");
+    const buttons = mobile.page.getByRole("tab");
     await field.scrollIntoViewIfNeeded();
 
+    const boxes = [];
     for (const button of await buttons.all()) {
       const box = await button.boundingBox();
       assert.ok(box && box.height >= 44 && box.width >= 44);
+      boxes.push(box);
     }
-
-    assert.equal(
-      await buttons.nth(1).locator(".about-method-detail").evaluate(
-        (detail) => getComputedStyle(detail).display,
-      ),
-      "none",
-    );
+    assert.ok(Math.abs(boxes[0].y - boxes[1].y) <= 1);
+    assert.ok(Math.abs(boxes[2].y - boxes[3].y) <= 1);
+    assert.ok(Math.abs(boxes[0].x - boxes[2].x) <= 1);
+    assert.ok(Math.abs(boxes[1].x - boxes[3].x) <= 1);
+    assert.ok(boxes[2].y >= boxes[0].y + boxes[0].height - 1);
     await buttons.nth(1).tap();
     await mobile.page.waitForFunction(() => (
       document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "model"
     ));
-    assert.equal(await buttons.nth(1).getAttribute("aria-pressed"), "true");
-    assert.notEqual(
-      await buttons.nth(1).locator(".about-method-detail").evaluate(
-        (detail) => getComputedStyle(detail).display,
-      ),
-      "none",
+    assert.equal(await buttons.nth(1).getAttribute("aria-selected"), "true");
+    assert.equal(await mobile.page.getByRole("tabpanel").count(), 1);
+    assert.match(
+      await mobile.page.getByRole("tabpanel").innerText(),
+      /Agents turn context into an inspectable decision\.[\s\S]*DECISION/,
     );
   } finally {
     await mobile.context.close();
@@ -2612,6 +2650,16 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const toolchainColumn = document.querySelector(".toolchain-column");
         const educationRect = educationColumn?.getBoundingClientRect();
         const toolchainRect = toolchainColumn?.getBoundingClientRect();
+        const aboutShellRect = document.querySelector(".about-layout")?.getBoundingClientRect();
+        const aboutFieldRect = document.querySelector(".about-particle-field")?.getBoundingClientRect();
+        const aboutStatementRect = document.querySelector(".about-statement")?.getBoundingClientRect();
+        const aboutIntroductionRect = document.querySelector(".about-introduction")?.getBoundingClientRect();
+        const aboutContextRects = Array.from(
+          document.querySelectorAll(".about-context > div"),
+        ).map((element) => element.getBoundingClientRect());
+        const aboutTabRects = Array.from(
+          document.querySelectorAll(".about-stage-tab"),
+        ).map((element) => element.getBoundingClientRect());
         const shellSelectors = [
           ".site-header",
           ".hero-layout",
@@ -2663,7 +2711,28 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
 
         return {
           alignmentShells,
-          aboutSplit: window.innerWidth > 900 ? splitMetric(".about-layout") : null,
+          aboutPresentation: aboutShellRect && aboutFieldRect
+            ? {
+                context: aboutContextRects.map((rect) => ({
+                  height: rect.height,
+                  left: rect.left,
+                  top: rect.top,
+                  width: rect.width,
+                })),
+                fieldLeftDelta: aboutFieldRect.left - aboutShellRect.left,
+                fieldRightDelta: aboutShellRect.right - aboutFieldRect.right,
+                fieldWidth: aboutFieldRect.width,
+                introductionWidth: aboutIntroductionRect?.width ?? 0,
+                shellWidth: aboutShellRect.width,
+                statementWidth: aboutStatementRect?.width ?? 0,
+                tabs: aboutTabRects.map((rect) => ({
+                  height: rect.height,
+                  left: rect.left,
+                  top: rect.top,
+                  width: rect.width,
+                })),
+              }
+            : null,
           centerSplits: [
             window.innerWidth > 900 ? splitMetric(".hero-layout") : null,
             window.innerWidth > 1100 ? splitMetric(".foundations-grid") : null,
@@ -2754,22 +2823,59 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             + `${split.seam}px, shell center=${split.center}px`,
         );
       }
-      if (sectionRhythm.aboutSplit) {
-        const [visualColumn, rangeColumn] = sectionRhythm.aboutSplit.columns;
-        assert.equal(
-          sectionRhythm.aboutSplit.columns.length,
-          2,
-          `${viewport.width}x${viewport.height} About did not render two columns`,
+      assert.ok(
+        sectionRhythm.aboutPresentation,
+        `${viewport.width}x${viewport.height} About presentation was missing`,
+      );
+      if (viewport.width <= 600) {
+        assert.ok(
+          Math.abs(sectionRhythm.aboutPresentation.fieldWidth - viewport.width) <= 0.75
+            && Math.abs(
+              sectionRhythm.aboutPresentation.fieldLeftDelta
+                - sectionRhythm.aboutPresentation.fieldRightDelta,
+            ) <= 0.75,
+          `${viewport.width}x${viewport.height} About field did not bleed to both viewport edges: `
+            + JSON.stringify(sectionRhythm.aboutPresentation),
+        );
+      } else {
+        assert.ok(
+          Math.abs(sectionRhythm.aboutPresentation.fieldLeftDelta) <= 0.75
+            && Math.abs(sectionRhythm.aboutPresentation.fieldRightDelta) <= 0.75,
+          `${viewport.width}x${viewport.height} About field did not span its shell: `
+            + JSON.stringify(sectionRhythm.aboutPresentation),
+        );
+      }
+      assert.equal(sectionRhythm.aboutPresentation.context.length, 3);
+      assert.equal(sectionRhythm.aboutPresentation.tabs.length, 4);
+      if (viewport.width > 900) {
+        const [range, instinct, standard] = sectionRhythm.aboutPresentation.context;
+        assert.ok(
+          sectionRhythm.aboutPresentation.statementWidth
+            > sectionRhythm.aboutPresentation.introductionWidth,
+          `${viewport.width}x${viewport.height} About lost its editorial title hierarchy`,
         );
         assert.ok(
-          visualColumn / rangeColumn >= 1.9 && visualColumn / rangeColumn <= 2.4,
-          `${viewport.width}x${viewport.height} About lost its asymmetric split: `
-            + `${sectionRhythm.aboutSplit.columns.join(", ")}`,
+          Math.abs(range.width / instinct.width - 0.75) <= 0.03
+            && Math.abs(instinct.width / standard.width - 0.8) <= 0.03,
+          `${viewport.width}x${viewport.height} About principles lost the 3:4:5 rhythm: `
+            + JSON.stringify(sectionRhythm.aboutPresentation.context),
         );
-        assert.ok(
-          sectionRhythm.aboutSplit.seam > sectionRhythm.aboutSplit.center,
-          `${viewport.width}x${viewport.height} About seam was not offset to the right`,
-        );
+      } else if (viewport.width > 600) {
+        const [range, instinct, standard] = sectionRhythm.aboutPresentation.context;
+        assert.ok(Math.abs(range.width - instinct.width) <= 1);
+        assert.ok(standard.width >= range.width * 2 - 24);
+        assert.ok(standard.top > range.top);
+      } else {
+        const [range, instinct, standard] = sectionRhythm.aboutPresentation.context;
+        assert.ok(Math.abs(range.width - instinct.width) <= 1);
+        assert.ok(Math.abs(instinct.width - standard.width) <= 1);
+        assert.ok(range.top < instinct.top && instinct.top < standard.top);
+        const [tab0, tab1, tab2, tab3] = sectionRhythm.aboutPresentation.tabs;
+        assert.ok(Math.abs(tab0.top - tab1.top) <= 1);
+        assert.ok(Math.abs(tab2.top - tab3.top) <= 1);
+        assert.ok(Math.abs(tab0.left - tab2.left) <= 1);
+        assert.ok(Math.abs(tab1.left - tab3.left) <= 1);
+        assert.ok(tab2.top >= tab0.top + tab0.height - 1);
       }
       assert.equal(
         await page.locator(".hero-positioning").count(),
@@ -3227,12 +3333,15 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       assert.equal(aboutParticleLayout.canvasOpacity, "1");
       assert.equal(aboutParticleLayout.fallbackOpacity, "0");
       assert.notEqual(aboutParticleLayout.backgroundImage, "none");
-      assert.equal(aboutParticleLayout.borderWidth, 0);
+      assert.equal(aboutParticleLayout.borderWidth, 1);
       assert.equal(aboutParticleLayout.runningAnimations, 0);
       assert.equal(aboutParticleLayout.touchAction, "pan-y pinch-zoom");
       assert.ok(
         Math.abs(aboutParticleLayout.canvasWidth - aboutParticleLayout.figureWidth) <= 1
-          && Math.abs(aboutParticleLayout.canvasHeight - aboutParticleLayout.figureHeight) <= 1,
+          && Math.abs(
+            aboutParticleLayout.canvasHeight
+              - (aboutParticleLayout.figureHeight - aboutParticleLayout.borderWidth * 2),
+          ) <= 1,
         `${viewport.width}x${viewport.height} About canvas did not cover its field: `
           + JSON.stringify(aboutParticleLayout),
       );
@@ -3270,14 +3379,15 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       );
       if (viewport.width <= 600) {
         assert.ok(
-          aboutParticleLayout.figureHeight >= 200 && aboutParticleLayout.figureHeight <= 224,
+          aboutParticleLayout.figureHeight >= 210 && aboutParticleLayout.figureHeight <= 242,
           `${viewport.width}x${viewport.height} About particle field height=`
             + `${aboutParticleLayout.figureHeight}px`,
         );
       } else {
+        const expectedRatio = viewport.width <= 900 ? 2.25 : 2.8;
         assert.ok(
           Math.abs(
-            aboutParticleLayout.figureWidth / aboutParticleLayout.figureHeight - 1.9,
+            aboutParticleLayout.figureWidth / aboutParticleLayout.figureHeight - expectedRatio,
           ) <= 0.02,
           `${viewport.width}x${viewport.height} About particle ratio diverged: `
             + JSON.stringify(aboutParticleLayout),
@@ -3304,7 +3414,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
               ".about-introduction",
               ".about-particle-field",
               ".about-particle-canvas",
-              ".about-method",
+              ".about-stage-tabs",
+              ".about-stage-panel:not([hidden])",
+              ".about-field-label--lens",
             ],
           },
           {
@@ -3413,6 +3525,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           ".paper-link",
           ".contact-socials a",
           ".mobile-load-feedback__retry",
+          '[role="tab"]',
         ];
         return selectors.flatMap((selector) => (
           Array.from(document.querySelectorAll(selector)).flatMap((element) => {
