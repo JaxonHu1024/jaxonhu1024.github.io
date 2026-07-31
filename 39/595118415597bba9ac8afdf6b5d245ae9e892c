@@ -1,0 +1,23 @@
+app/globals.css
+  s_5e78e3f54251d6::t_9d3141a37b62e6 124-127,1902,1916
+tests/browser-release-gate.test.mjs
+  s_5e78e3f54251d6::t_2340d4064ce964 1925-1967,2464,2482-2484,2696-2701
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "39595118415597bba9ac8afdf6b5d245ae9e892c",
+  "prompts": {},
+  "sessions": {
+    "s_5e78e3f54251d6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fb6f2-9477-7960-8b76-cce2ce013955",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
