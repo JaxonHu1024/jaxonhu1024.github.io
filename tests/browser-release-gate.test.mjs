@@ -126,25 +126,6 @@ async function measurePageGeometry(page, selectors) {
   }, selectors);
 }
 
-async function readCanvasProbe(locator) {
-  return locator.evaluate((canvas) => {
-    const probe = document.createElement("canvas");
-    probe.width = 64;
-    probe.height = 40;
-    const context = probe.getContext("2d", { willReadFrequently: true });
-    context.drawImage(canvas, 0, 0, probe.width, probe.height);
-    const pixels = context.getImageData(0, 0, probe.width, probe.height).data;
-    let visiblePixels = 0;
-    for (let index = 3; index < pixels.length; index += 4) {
-      if (pixels[index] > 0) visiblePixels += 1;
-    }
-    return {
-      fingerprint: probe.toDataURL(),
-      visiblePixels,
-    };
-  });
-}
-
 async function installPerformanceObservers(page) {
   await page.addInitScript(() => {
     const supportedEntryTypes = new Set(PerformanceObserver.supportedEntryTypes);
@@ -626,14 +607,10 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         const navigation = document.querySelector("#primary-navigation");
         const terminal = document.querySelector(".hero-terminal");
         const feedback = document.querySelector('[data-testid="mobile-load-feedback"]');
-        const aboutField = document.querySelector(".about-particle-field");
-        const aboutCanvas = aboutField?.querySelector(".about-particle-canvas");
-        const aboutFallback = aboutField?.querySelector(".about-particle-fallback");
-        const aboutFieldRect = aboutField?.getBoundingClientRect();
         const coreSelectors = [
           "#hero-title",
           "#about-title",
-          ".about-field-label--lens",
+          "#about-loop-title",
           "#experience-title",
           "#foundations-title",
           "#research-title",
@@ -642,17 +619,24 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         ];
 
         return {
-          aboutField: aboutField && aboutCanvas && aboutFallback && aboutFieldRect
-            ? {
-                canvasOpacity: getComputedStyle(aboutCanvas).opacity,
-                fallbackBackground: getComputedStyle(aboutFallback).backgroundImage,
-                fallbackOpacity: getComputedStyle(aboutFallback).opacity,
-                height: aboutFieldRect.height,
-                motion: aboutField.getAttribute("data-motion"),
-                ready: aboutField.getAttribute("data-ready"),
-                width: aboutFieldRect.width,
-              }
-            : null,
+          about: {
+            contextLabels: Array.from(
+              document.querySelectorAll("#about .about-context dt"),
+            ).map((element) => element.textContent?.trim() ?? ""),
+            forbiddenCount: document.querySelectorAll(
+              "#about canvas, #about [class*='about-particle'], #about [role='tab'], "
+                + "#about [role='tablist'], #about [role='tabpanel']",
+            ).length,
+            loopSteps: Array.from(
+              document.querySelectorAll("#about .about-loop-step"),
+            ).map((element) => ({
+              label: element.querySelector(".about-loop-label")?.textContent?.trim() ?? "",
+              text: element.textContent?.replace(/\s+/g, " ").trim() ?? "",
+              visible: getComputedStyle(element).visibility !== "hidden"
+                && element.getBoundingClientRect().width > 0
+                && element.getBoundingClientRect().height > 0,
+            })),
+          },
           coreContent: coreSelectors.map((selector) => {
             const element = document.querySelector(selector);
             const box = element?.getBoundingClientRect();
@@ -714,18 +698,18 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       }
       assert.equal(state.documentOverflow, 0);
       assert.equal(state.feedbackDisplay, "none");
-      assert.ok(state.aboutField);
-      assert.equal(state.aboutField.motion, "initializing");
-      assert.equal(state.aboutField.ready, "false");
-      assert.equal(state.aboutField.canvasOpacity, "0");
-      assert.ok(Number.parseFloat(state.aboutField.fallbackOpacity) > 0);
-      assert.notEqual(state.aboutField.fallbackBackground, "none");
-      assert.ok(state.aboutField.width > 0);
-      assert.ok(
-        state.aboutField.height >= 210 && state.aboutField.height <= 242,
-        `${viewport.width}x${viewport.height} no-JS About fallback height was `
-          + `${state.aboutField.height}px`,
+      assert.equal(state.about.forbiddenCount, 0);
+      assert.deepEqual(
+        state.about.contextLabels,
+        ["CURRENT THREADS", "CORE BELIEF"],
       );
+      assert.deepEqual(
+        state.about.loopSteps.map(({ label }) => label),
+        ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
+      );
+      assert.equal(state.about.loopSteps.every(({ text, visible }) => (
+        visible && text.length > 0
+      )), true);
       assert.ok(state.navigation);
       assert.equal(state.navigation.clipPath, "none");
       assert.equal(state.navigation.opacity, "1");
@@ -846,199 +830,6 @@ test("page background state pauses every ambient CSS loop", { timeout: 10_000 },
       ),
       "running",
     );
-  } finally {
-    await context.close();
-  }
-});
-
-test("About particle field renders, pauses offscreen, and follows page visibility", { timeout: 20_000 }, async () => {
-  const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 1280, height: 800 },
-  });
-
-  try {
-    await page.addInitScript(() => {
-      let hidden = false;
-      Object.defineProperty(document, "hidden", {
-        configurable: true,
-        get: () => hidden,
-      });
-      window.__setDocumentHidden = (value) => {
-        hidden = value;
-        document.dispatchEvent(new Event("visibilitychange"));
-      };
-    });
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-
-    const field = page.locator(".about-particle-field");
-    const canvas = page.locator(".about-particle-canvas");
-    await page.waitForFunction(() => {
-      const element = document.querySelector(".about-particle-field");
-      return element?.getAttribute("data-ready") === "true"
-        && element.getAttribute("data-motion") === "paused";
-    }, null, { timeout: 3_000 });
-    const initialRect = await field.boundingBox();
-    assert.ok(initialRect);
-    const initialProbe = await readCanvasProbe(canvas);
-    assert.ok(initialProbe.visiblePixels > 0, "offscreen About fallback frame was blank");
-
-    await field.scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "running"
-    ), null, { timeout: 3_000 });
-    await page.waitForTimeout(220);
-    const runningProbe = await readCanvasProbe(canvas);
-    assert.notEqual(
-      runningProbe.fingerprint,
-      initialProbe.fingerprint,
-      "visible About particles did not advance",
-    );
-
-    await page.evaluate(() => window.__setDocumentHidden(true));
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "paused"
-    ));
-    const pausedProbe = await readCanvasProbe(canvas);
-    await page.waitForTimeout(220);
-    assert.equal(
-      (await readCanvasProbe(canvas)).fingerprint,
-      pausedProbe.fingerprint,
-      "hidden About particles kept advancing",
-    );
-
-    await page.evaluate(() => window.__setDocumentHidden(false));
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "running"
-    ));
-    await page.waitForTimeout(220);
-    assert.notEqual(
-      (await readCanvasProbe(canvas)).fingerprint,
-      pausedProbe.fingerprint,
-      "About particles did not resume after page visibility returned",
-    );
-
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "paused"
-    ), null, { timeout: 3_000 });
-    const finalRect = await field.boundingBox();
-    assert.ok(finalRect);
-    assert.ok(Math.abs(finalRect.width - initialRect.width) <= 1);
-    assert.ok(Math.abs(finalRect.height - initialRect.height) <= 1);
-  } finally {
-    await context.close();
-  }
-});
-
-test("About particle field prioritizes WebGL2 with a Canvas 2D fallback", { timeout: 10_000 }, async () => {
-  const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 1280, height: 800 },
-  });
-
-  try {
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-ready") === "true"
-    ), null, { timeout: 3_000 });
-
-    const rendererState = await page.locator(".about-particle-field").evaluate((field) => ({
-      effectiveParticleCount: Number(field.getAttribute("data-effective-particle-count")),
-      particleCount: Number(field.getAttribute("data-particle-count")),
-      particleInstances: Number(field.getAttribute("data-particle-instances")),
-      renderer: field.getAttribute("data-renderer"),
-      rendererQuality: field.getAttribute("data-renderer-quality"),
-    }));
-    const supportsWebGL2 = await page.evaluate(() => (
-      Boolean(document.createElement("canvas").getContext("webgl2"))
-    ));
-    assert.equal(rendererState.renderer, supportsWebGL2 ? "webgl2" : "canvas2d");
-    if (supportsWebGL2) {
-      if (rendererState.rendererQuality === "software") {
-        assert.equal(rendererState.particleInstances, 1);
-        assert.ok(rendererState.effectiveParticleCount > rendererState.particleCount);
-      } else {
-        assert.equal(rendererState.rendererQuality, "hardware");
-        assert.equal(rendererState.particleInstances, 5);
-        assert.ok(
-          rendererState.effectiveParticleCount >= 10_000,
-          `effective WebGL particle count was ${rendererState.effectiveParticleCount}`,
-        );
-      }
-    } else {
-      assert.equal(rendererState.particleInstances, 1);
-      assert.ok(rendererState.effectiveParticleCount > rendererState.particleCount);
-    }
-  } finally {
-    await context.close();
-  }
-});
-
-test("About particle field keeps a rendered Canvas 2D fallback without WebGL2", { timeout: 10_000 }, async () => {
-  const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 1280, height: 800 },
-  });
-
-  try {
-    await page.addInitScript(() => {
-      const nativeGetContext = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function getContext(type, ...options) {
-        if (type === "webgl2") return null;
-        return nativeGetContext.call(this, type, ...options);
-      };
-    });
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    await page.waitForFunction(() => {
-      const field = document.querySelector(".about-particle-field");
-      return field?.getAttribute("data-ready") === "true"
-        && field.getAttribute("data-renderer") === "canvas2d";
-    }, null, { timeout: 3_000 });
-
-    assert.ok(
-      (await readCanvasProbe(page.locator(".about-particle-canvas"))).visiblePixels > 0,
-      "Canvas 2D fallback rendered a blank About field",
-    );
-  } finally {
-    await context.close();
-  }
-});
-
-test("About particle motion reconciles from geometry when an observer exit is skipped", { timeout: 10_000 }, async () => {
-  const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 1280, height: 800 },
-  });
-
-  try {
-    await page.addInitScript(() => {
-      const NativeIntersectionObserver = window.IntersectionObserver;
-      window.IntersectionObserver = class extends NativeIntersectionObserver {
-        constructor(callback, options) {
-          super((entries, observer) => {
-            const forwardedEntries = entries.filter((entry) => !(
-              entry.target instanceof Element
-              && entry.target.matches(".about-particle-field")
-              && entry.intersectionRatio < 0.05
-              && entry.boundingClientRect.top < 0
-            ));
-            if (forwardedEntries.length > 0) callback(forwardedEntries, observer);
-          }, options);
-        }
-      };
-    });
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-
-    const field = page.locator(".about-particle-field");
-    await field.scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "running"
-    ), null, { timeout: 3_000 });
-    await page.locator("#contact").scrollIntoViewIfNeeded();
-
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "paused"
-    ), null, { timeout: 1_000 });
-    const fieldRect = await field.boundingBox();
-    assert.ok(fieldRect);
-    assert.ok(fieldRect.y + fieldRect.height < 0, `About field was not above the viewport: ${JSON.stringify(fieldRect)}`);
   } finally {
     await context.close();
   }
@@ -1371,7 +1162,7 @@ test("mobile terminal advances through one live log line", { timeout: 15_000 }, 
   }
 });
 
-test("reduced-motion mobile keeps terminal, About particles, and contact ticker complete but still", { timeout: 15_000 }, async () => {
+test("reduced-motion mobile keeps terminal, Context Ledger, and contact ticker complete but still", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     reducedMotion: "reduce",
     viewport: { width: 390, height: 844 },
@@ -1478,79 +1269,34 @@ test("reduced-motion mobile keeps terminal, About particles, and contact ticker 
     );
 
     await page.locator("#about").scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => {
-      const field = document.querySelector(".about-particle-field");
-      return field?.getAttribute("data-ready") === "true"
-        && field.getAttribute("data-motion") === "reduced";
-    });
-    const aboutField = await page.locator(".about-particle-field").evaluate((figure) => {
-      const canvas = figure.querySelector(".about-particle-canvas");
-      const fallback = figure.querySelector(".about-particle-fallback");
-      const figureRect = figure.getBoundingClientRect();
-      const canvasRect = canvas?.getBoundingClientRect();
-      const figureStyle = getComputedStyle(figure);
-      return {
-        bitmapHeight: canvas?.height ?? 0,
-        bitmapWidth: canvas?.width ?? 0,
-        borderBlockWidth: Number.parseFloat(figureStyle.borderTopWidth)
-          + Number.parseFloat(figureStyle.borderBottomWidth),
-        canvasHeight: canvasRect?.height ?? 0,
-        canvasOpacity: canvas ? getComputedStyle(canvas).opacity : null,
-        canvasWidth: canvasRect?.width ?? 0,
-        fallbackOpacity: fallback ? getComputedStyle(fallback).opacity : null,
-        height: figureRect.height,
-        effectiveParticleCount: Number(figure.getAttribute("data-effective-particle-count")),
-        motion: figure.getAttribute("data-motion"),
-        particleCount: Number(figure.getAttribute("data-particle-count")),
-        particleInstances: Number(figure.getAttribute("data-particle-instances")),
-        ready: figure.getAttribute("data-ready"),
-        renderer: figure.getAttribute("data-renderer"),
-        rendererQuality: figure.getAttribute("data-renderer-quality"),
-        runningAnimations: figure.getAnimations({ subtree: true })
-          .filter((animation) => animation.playState === "running").length,
-        width: figureRect.width,
-      };
-    });
-    assert.equal(aboutField.ready, "true");
-    assert.equal(aboutField.motion, "reduced");
-    assert.equal(aboutField.runningAnimations, 0);
-    assert.equal(aboutField.canvasOpacity, "1");
-    assert.equal(aboutField.fallbackOpacity, "0");
-    assert.ok(aboutField.particleCount >= 900 && aboutField.particleCount <= 1125);
-    const expectedMobileInstances = aboutField.renderer === "webgl2"
-      && aboutField.rendererQuality === "hardware"
-      ? 4
-      : 1;
-    assert.equal(aboutField.particleInstances, expectedMobileInstances);
-    assert.equal(
-      aboutField.effectiveParticleCount,
-      (aboutField.particleCount + 400) * expectedMobileInstances,
+    const about = await page.locator("#about").evaluate((section) => ({
+      contextLabels: Array.from(section.querySelectorAll(".about-context dt"))
+        .map((element) => element.textContent?.trim() ?? ""),
+      forbiddenCount: section.querySelectorAll(
+        "canvas, [class*='about-particle'], [role='tab'], [role='tablist'], [role='tabpanel']",
+      ).length,
+      runningAnimations: section.getAnimations({ subtree: true })
+        .filter((animation) => animation.playState === "running").length,
+      steps: Array.from(section.querySelectorAll(".about-loop-step")).map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          label: element.querySelector(".about-loop-label")?.textContent?.trim() ?? "",
+          visible: rect.width > 0
+            && rect.height > 0
+            && style.visibility !== "hidden"
+            && Number.parseFloat(style.opacity) > 0,
+        };
+      }),
+    }));
+    assert.equal(about.forbiddenCount, 0);
+    assert.equal(about.runningAnimations, 0);
+    assert.deepEqual(
+      about.steps.map(({ label }) => label),
+      ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
     );
-    assert.ok(
-      aboutField.height >= 210 && aboutField.height <= 242,
-      `reduced mobile About particle field height was ${aboutField.height}px`,
-    );
-    assert.ok(
-      Math.abs(aboutField.canvasWidth - aboutField.width) <= 1
-        && Math.abs(
-          aboutField.canvasHeight - (aboutField.height - aboutField.borderBlockWidth),
-        ) <= 1,
-      `reduced mobile About canvas did not cover its field: ${JSON.stringify(aboutField)}`,
-    );
-    assert.ok(
-      aboutField.bitmapWidth >= aboutField.canvasWidth - 1
-        && aboutField.bitmapHeight >= aboutField.canvasHeight - 1,
-      `reduced mobile About bitmap was undersized: ${JSON.stringify(aboutField)}`,
-    );
-    const reducedProbe = await readCanvasProbe(page.locator(".about-particle-canvas"));
-    assert.ok(reducedProbe.visiblePixels > 0, "reduced About particle field was blank");
-    await page.waitForTimeout(220);
-    assert.equal(
-      (await readCanvasProbe(page.locator(".about-particle-canvas"))).fingerprint,
-      reducedProbe.fingerprint,
-      "reduced About particle field kept advancing",
-    );
-
+    assert.equal(about.steps.every(({ visible }) => visible), true);
+    assert.deepEqual(about.contextLabels, ["CURRENT THREADS", "CORE BELIEF"]);
     await page.locator("#contact").scrollIntoViewIfNeeded();
     const contact = await page.locator("#contact").evaluate((section) => {
       const marqueeWindow = section.querySelector(".contact-marquee-window");
@@ -1597,12 +1343,9 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.evaluate(() => document.fonts.ready);
-    await page.waitForFunction(() => {
-      const aboutField = document.querySelector(".about-particle-field");
-      return document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "reduced"
-        && aboutField?.getAttribute("data-motion") === "reduced"
-        && aboutField.getAttribute("data-ready") === "true";
-    });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "reduced"
+    ));
 
     const state = await page.evaluate(() => {
       const reveal = Array.from(document.querySelectorAll(".reveal")).map((element) => {
@@ -1629,17 +1372,15 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
       ));
 
       return {
-        aboutParticle: {
-          canvasOpacity: getComputedStyle(
-            document.querySelector(".about-particle-canvas"),
-          ).opacity,
-          fallbackOpacity: getComputedStyle(
-            document.querySelector(".about-particle-fallback"),
-          ).opacity,
-          motion: document.querySelector(".about-particle-field")
-            ?.getAttribute("data-motion"),
-          ready: document.querySelector(".about-particle-field")
-            ?.getAttribute("data-ready"),
+        about: {
+          contextLabels: Array.from(document.querySelectorAll("#about .about-context dt"))
+            .map((element) => element.textContent?.trim() ?? ""),
+          forbiddenCount: document.querySelectorAll(
+            "#about canvas, #about [class*='about-particle'], #about [role='tab'], "
+              + "#about [role='tablist'], #about [role='tabpanel']",
+          ).length,
+          stepLabels: Array.from(document.querySelectorAll("#about .about-loop-label"))
+            .map((element) => element.textContent?.trim() ?? ""),
         },
         contactMarquee: {
           animationName: getComputedStyle(
@@ -1677,11 +1418,10 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     });
     assert.equal(state.scanAnimation, "none");
     assert.equal(state.pulseAnimation, "none");
-    assert.deepEqual(state.aboutParticle, {
-      canvasOpacity: "1",
-      fallbackOpacity: "0",
-      motion: "reduced",
-      ready: "true",
+    assert.deepEqual(state.about, {
+      contextLabels: ["CURRENT THREADS", "CORE BELIEF"],
+      forbiddenCount: 0,
+      stepLabels: ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
     });
     assert.deepEqual(state.researchMotion, ["reduced", "reduced"]);
     assert.deepEqual(
@@ -1694,197 +1434,72 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
   }
 });
 
-test("About operating trace uses accessible tabs without hover-driven state", { timeout: 20_000 }, async () => {
-  const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 1440, height: 900 },
-  });
+test("Context Ledger exposes one complete static reading order", { timeout: 15_000 }, async () => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ]) {
+    const { context, page } = await createReleasePageSession(browser, { viewport });
 
-  try {
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    const field = page.locator(".about-particle-field");
-    const tablist = page.getByRole("tablist", { name: "System transformation stages" });
-    const buttons = tablist.getByRole("tab");
-    const panels = page.getByRole("tabpanel", { includeHidden: true });
-    await field.scrollIntoViewIfNeeded();
-    assert.equal(await buttons.count(), 4);
-    assert.equal(await panels.count(), 4);
-    assert.equal(await page.getByRole("tabpanel").count(), 1);
-    assert.equal(await field.getAttribute("data-stage"), "frame");
-    assert.equal(await buttons.nth(0).getAttribute("aria-selected"), "true");
-    assert.equal(await buttons.nth(0).getAttribute("tabindex"), "0");
-    assert.match(
-      await page.getByRole("tabpanel").innerText(),
-      /Language and vision become one shared context\.[\s\S]*SIGNAL/,
-    );
-    assert.equal(
-      await field.getAttribute("aria-label"),
-      "Multimodal input moving through the system lens. PERCEIVE produces signal.",
-    );
+    try {
+      await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+      await page.locator("#about").scrollIntoViewIfNeeded();
 
-    for (const button of await buttons.all()) {
-      const box = await button.boundingBox();
-      assert.ok(box && box.height >= 44 && box.width >= 44);
-    }
+      const ledger = await page.locator("#about").evaluate((section) => {
+        const visible = (element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return rect.width > 0
+            && rect.height > 0
+            && style.display !== "none"
+            && style.visibility !== "hidden"
+            && Number.parseFloat(style.opacity) > 0;
+        };
 
-    await buttons.nth(1).hover();
-    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(
-      () => requestAnimationFrame(resolve),
-    )));
-    assert.equal(await field.getAttribute("data-stage"), "frame");
-    assert.equal(await buttons.nth(0).getAttribute("aria-selected"), "true");
-
-    await buttons.nth(1).click();
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "model"
-    ));
-    assert.equal(await buttons.nth(1).getAttribute("aria-selected"), "true");
-    assert.equal(await page.getByRole("tabpanel").getAttribute("aria-labelledby"), "about-stage-tab-model");
-    assert.equal(
-      await field.getAttribute("aria-label"),
-      "Multimodal input moving through the system lens. REASON produces decision.",
-    );
-
-    await buttons.nth(1).press("ArrowRight");
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "build"
-    ));
-    assert.equal(await buttons.nth(2).getAttribute("aria-selected"), "true");
-    assert.equal(await buttons.nth(2).getAttribute("tabindex"), "0");
-
-    await buttons.nth(2).press("End");
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "verify"
-    ));
-    assert.equal(await buttons.nth(3).getAttribute("aria-selected"), "true");
-
-    await buttons.nth(3).press("Home");
-    await page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "frame"
-    ));
-    assert.equal(await buttons.nth(0).getAttribute("aria-selected"), "true");
-    assert.equal(await page.getByRole("tabpanel").count(), 1);
-  } finally {
-    await context.close();
-  }
-
-  const mobile = await createReleasePageSession(browser, {
-    hasTouch: true,
-    isMobile: true,
-    viewport: { width: 390, height: 844 },
-  });
-
-  try {
-    await mobile.page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    const field = mobile.page.locator(".about-particle-field");
-    const buttons = mobile.page.getByRole("tab");
-    await field.scrollIntoViewIfNeeded();
-
-    const boxes = [];
-    for (const button of await buttons.all()) {
-      const box = await button.boundingBox();
-      assert.ok(box && box.height >= 44 && box.width >= 44);
-      boxes.push(box);
-    }
-    assert.ok(Math.abs(boxes[0].y - boxes[1].y) <= 1);
-    assert.ok(Math.abs(boxes[2].y - boxes[3].y) <= 1);
-    assert.ok(Math.abs(boxes[0].x - boxes[2].x) <= 1);
-    assert.ok(Math.abs(boxes[1].x - boxes[3].x) <= 1);
-    assert.ok(boxes[2].y >= boxes[0].y + boxes[0].height - 1);
-    await buttons.nth(1).tap();
-    await mobile.page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-stage") === "model"
-    ));
-    assert.equal(await buttons.nth(1).getAttribute("aria-selected"), "true");
-    assert.equal(await mobile.page.getByRole("tabpanel").count(), 1);
-    assert.match(
-      await mobile.page.getByRole("tabpanel").innerText(),
-      /Agents turn context into an inspectable decision\.[\s\S]*DECISION/,
-    );
-  } finally {
-    await mobile.context.close();
-  }
-});
-
-test("About particles respond to pointer and touch without blocking page gestures", { timeout: 20_000 }, async () => {
-  const desktop = await createReleasePageSession(browser, {
-    viewport: { width: 1280, height: 800 },
-  });
-
-  try {
-    await desktop.page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    const field = desktop.page.locator(".about-particle-field");
-    await field.scrollIntoViewIfNeeded();
-    await desktop.page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "running"
-    ), null, { timeout: 3_000 });
-    const fieldBox = await field.boundingBox();
-    assert.ok(fieldBox);
-    await desktop.page.mouse.move(
-      fieldBox.x + fieldBox.width * 0.52,
-      fieldBox.y + fieldBox.height * 0.48,
-    );
-    await desktop.page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")
-        ?.getAttribute("data-pointer-active") === "true"
-    ));
-    await desktop.page.mouse.move(1, 1);
-    await desktop.page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")
-        ?.getAttribute("data-pointer-active") === "false"
-    ));
-  } finally {
-    await desktop.context.close();
-  }
-
-  const mobile = await createReleasePageSession(browser, {
-    hasTouch: true,
-    isMobile: true,
-    viewport: { width: 430, height: 932 },
-  });
-
-  try {
-    await mobile.page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    const field = mobile.page.locator(".about-particle-field");
-    await field.scrollIntoViewIfNeeded();
-    await mobile.page.waitForFunction(() => (
-      document.querySelector(".about-particle-field")?.getAttribute("data-motion") === "running"
-    ), null, { timeout: 3_000 });
-    const mobileState = await field.evaluate((element) => ({
-      particleCount: Number(element.getAttribute("data-particle-count")),
-      touchAction: getComputedStyle(element).touchAction,
-    }));
-    assert.equal(mobileState.touchAction, "pan-y pinch-zoom");
-    assert.ok(
-      mobileState.particleCount >= 900 && mobileState.particleCount <= 1125,
-      `mobile particle count was ${mobileState.particleCount}`,
-    );
-
-    await mobile.page.evaluate(() => {
-      const fieldElement = document.querySelector(".about-particle-field");
-      window.__aboutPointerOldValues = [];
-      const observer = new MutationObserver((records) => {
-        records.forEach((record) => window.__aboutPointerOldValues.push(record.oldValue));
+        return {
+          context: Array.from(section.querySelectorAll(".about-context > div")).map((entry) => ({
+            label: entry.querySelector("dt")?.textContent?.trim() ?? "",
+            text: entry.querySelector("dd")?.textContent?.trim() ?? "",
+            visible: visible(entry),
+          })),
+          forbiddenCount: section.querySelectorAll(
+            "canvas, [class*='about-particle'], [role='tab'], [role='tablist'], "
+              + "[role='tabpanel'], [aria-selected], button",
+          ).length,
+          labelledBy: section.querySelector(".about-working-loop")
+            ?.getAttribute("aria-labelledby"),
+          loopTitle: section.querySelector("#about-loop-title")?.textContent?.trim() ?? "",
+          steps: Array.from(section.querySelectorAll(".about-loop-step")).map((step) => ({
+            detail: step.querySelector(".about-loop-detail")?.textContent?.trim() ?? "",
+            index: step.querySelector(".about-loop-index")?.textContent?.trim() ?? "",
+            label: step.querySelector(".about-loop-label")?.textContent?.trim() ?? "",
+            outcome: step.querySelector(".about-loop-outcome strong")?.textContent?.trim() ?? "",
+            visible: visible(step),
+          })),
+        };
       });
-      observer.observe(fieldElement, {
-        attributeFilter: ["data-pointer-active"],
-        attributeOldValue: true,
-      });
-      window.__aboutPointerObserver = observer;
-    });
-    const fieldBox = await field.boundingBox();
-    assert.ok(fieldBox);
-    await mobile.page.touchscreen.tap(
-      fieldBox.x + fieldBox.width * 0.5,
-      fieldBox.y + fieldBox.height * 0.5,
-    );
-    await mobile.page.waitForFunction(() => (
-      window.__aboutPointerOldValues.includes("true")
-      && document.querySelector(".about-particle-field")
-        ?.getAttribute("data-pointer-active") === "false"
-    ));
-    await mobile.page.evaluate(() => window.__aboutPointerObserver.disconnect());
-  } finally {
-    await mobile.context.close();
+
+      assert.equal(ledger.labelledBy, "about-loop-title");
+      assert.equal(ledger.loopTitle, "HOW I TURN CAPABILITY INTO PRACTICE.");
+      assert.equal(ledger.forbiddenCount, 0);
+      assert.deepEqual(
+        ledger.steps.map(({ index, label, outcome }) => ({ index, label, outcome })),
+        [
+          { index: "01", label: "FRAME", outcome: "BOUNDARY" },
+          { index: "02", label: "CONNECT", outcome: "SYSTEM" },
+          { index: "03", label: "OBSERVE", outcome: "CLARITY" },
+          { index: "04", label: "VERIFY", outcome: "EVIDENCE" },
+        ],
+      );
+      assert.equal(ledger.steps.every(({ detail, visible }) => detail.length > 0 && visible), true);
+      assert.deepEqual(
+        ledger.context.map(({ label }) => label),
+        ["CURRENT THREADS", "CORE BELIEF"],
+      );
+      assert.equal(ledger.context.every(({ text, visible }) => text.length > 0 && visible), true);
+    } finally {
+      await context.close();
+    }
   }
 });
 
@@ -2651,15 +2266,14 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const educationRect = educationColumn?.getBoundingClientRect();
         const toolchainRect = toolchainColumn?.getBoundingClientRect();
         const aboutShellRect = document.querySelector(".about-layout")?.getBoundingClientRect();
-        const aboutFieldRect = document.querySelector(".about-particle-field")?.getBoundingClientRect();
+        const aboutLoopRect = document.querySelector(".about-working-loop")?.getBoundingClientRect();
         const aboutStatementRect = document.querySelector(".about-statement")?.getBoundingClientRect();
         const aboutIntroductionRect = document.querySelector(".about-introduction")?.getBoundingClientRect();
         const aboutContextRects = Array.from(
           document.querySelectorAll(".about-context > div"),
         ).map((element) => element.getBoundingClientRect());
-        const aboutTabRects = Array.from(
-          document.querySelectorAll(".about-stage-tab"),
-        ).map((element) => element.getBoundingClientRect());
+        const aboutStepElements = Array.from(document.querySelectorAll(".about-loop-step"));
+        const aboutStepRects = aboutStepElements.map((element) => element.getBoundingClientRect());
         const shellSelectors = [
           ".site-header",
           ".hero-layout",
@@ -2711,23 +2325,37 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
 
         return {
           alignmentShells,
-          aboutPresentation: aboutShellRect && aboutFieldRect
+          aboutPresentation: aboutShellRect && aboutLoopRect
             ? {
                 context: aboutContextRects.map((rect) => ({
                   height: rect.height,
                   left: rect.left,
+                  right: rect.right,
                   top: rect.top,
                   width: rect.width,
                 })),
-                fieldLeftDelta: aboutFieldRect.left - aboutShellRect.left,
-                fieldRightDelta: aboutShellRect.right - aboutFieldRect.right,
-                fieldWidth: aboutFieldRect.width,
+                forbiddenCount: document.querySelectorAll(
+                  "#about canvas, #about [class*='about-particle'], #about [role='tab'], "
+                    + "#about [role='tablist'], #about [role='tabpanel']",
+                ).length,
                 introductionWidth: aboutIntroductionRect?.width ?? 0,
+                loopLeftDelta: aboutLoopRect.left - aboutShellRect.left,
+                loopRightDelta: aboutShellRect.right - aboutLoopRect.right,
+                loopWidth: aboutLoopRect.width,
                 shellWidth: aboutShellRect.width,
                 statementWidth: aboutStatementRect?.width ?? 0,
-                tabs: aboutTabRects.map((rect) => ({
+                steps: aboutStepRects.map((rect, index) => ({
+                  contentClipped: Array.from(
+                    aboutStepElements[index].querySelectorAll(
+                      ".about-loop-index, .about-loop-label, .about-loop-detail, .about-loop-outcome",
+                    ),
+                  ).some((element) => (
+                    element.scrollWidth > element.clientWidth + 1
+                    || element.scrollHeight > element.clientHeight + 1
+                  )),
                   height: rect.height,
                   left: rect.left,
+                  right: rect.right,
                   top: rect.top,
                   width: rect.width,
                 })),
@@ -2827,55 +2455,63 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         sectionRhythm.aboutPresentation,
         `${viewport.width}x${viewport.height} About presentation was missing`,
       );
-      if (viewport.width <= 600) {
-        assert.ok(
-          Math.abs(sectionRhythm.aboutPresentation.fieldWidth - viewport.width) <= 0.75
-            && Math.abs(
-              sectionRhythm.aboutPresentation.fieldLeftDelta
-                - sectionRhythm.aboutPresentation.fieldRightDelta,
-            ) <= 0.75,
-          `${viewport.width}x${viewport.height} About field did not bleed to both viewport edges: `
-            + JSON.stringify(sectionRhythm.aboutPresentation),
-        );
-      } else {
-        assert.ok(
-          Math.abs(sectionRhythm.aboutPresentation.fieldLeftDelta) <= 0.75
-            && Math.abs(sectionRhythm.aboutPresentation.fieldRightDelta) <= 0.75,
-          `${viewport.width}x${viewport.height} About field did not span its shell: `
-            + JSON.stringify(sectionRhythm.aboutPresentation),
-        );
-      }
-      assert.equal(sectionRhythm.aboutPresentation.context.length, 3);
-      assert.equal(sectionRhythm.aboutPresentation.tabs.length, 4);
-      if (viewport.width > 900) {
-        const [range, instinct, standard] = sectionRhythm.aboutPresentation.context;
+      assert.equal(sectionRhythm.aboutPresentation.forbiddenCount, 0);
+      assert.ok(
+        Math.abs(sectionRhythm.aboutPresentation.loopLeftDelta) <= 0.75
+          && Math.abs(sectionRhythm.aboutPresentation.loopRightDelta) <= 0.75
+          && Math.abs(
+            sectionRhythm.aboutPresentation.loopWidth
+              - sectionRhythm.aboutPresentation.shellWidth,
+          ) <= 1,
+        `${viewport.width}x${viewport.height} About working loop did not span its shell: `
+          + JSON.stringify(sectionRhythm.aboutPresentation),
+      );
+      assert.equal(sectionRhythm.aboutPresentation.context.length, 2);
+      assert.equal(sectionRhythm.aboutPresentation.steps.length, 4);
+      assert.equal(
+        sectionRhythm.aboutPresentation.steps.every(({ contentClipped }) => !contentClipped),
+        true,
+        `${viewport.width}x${viewport.height} clipped Context Ledger content: `
+          + JSON.stringify(sectionRhythm.aboutPresentation.steps),
+      );
+      if (viewport.width >= 1280) {
         assert.ok(
           sectionRhythm.aboutPresentation.statementWidth
             > sectionRhythm.aboutPresentation.introductionWidth,
           `${viewport.width}x${viewport.height} About lost its editorial title hierarchy`,
         );
-        assert.ok(
-          Math.abs(range.width / instinct.width - 0.75) <= 0.03
-            && Math.abs(instinct.width / standard.width - 0.8) <= 0.03,
-          `${viewport.width}x${viewport.height} About principles lost the 3:4:5 rhythm: `
-            + JSON.stringify(sectionRhythm.aboutPresentation.context),
-        );
+        const [step0, step1, step2, step3] = sectionRhythm.aboutPresentation.steps;
+        assert.ok(Math.max(step0.top, step1.top, step2.top, step3.top)
+          - Math.min(step0.top, step1.top, step2.top, step3.top) <= 1);
+        assert.ok(Math.max(step0.width, step1.width, step2.width, step3.width)
+          - Math.min(step0.width, step1.width, step2.width, step3.width) <= 1);
+        assert.ok(step0.left < step1.left && step1.left < step2.left && step2.left < step3.left);
       } else if (viewport.width > 600) {
-        const [range, instinct, standard] = sectionRhythm.aboutPresentation.context;
-        assert.ok(Math.abs(range.width - instinct.width) <= 1);
-        assert.ok(standard.width >= range.width * 2 - 24);
-        assert.ok(standard.top > range.top);
+        const [step0, step1, step2, step3] = sectionRhythm.aboutPresentation.steps;
+        assert.ok(Math.abs(step0.top - step1.top) <= 1);
+        assert.ok(Math.abs(step2.top - step3.top) <= 1);
+        assert.ok(Math.abs(step0.left - step2.left) <= 1);
+        assert.ok(Math.abs(step1.left - step3.left) <= 1);
+        assert.ok(step2.top >= step0.top + step0.height - 1);
       } else {
-        const [range, instinct, standard] = sectionRhythm.aboutPresentation.context;
-        assert.ok(Math.abs(range.width - instinct.width) <= 1);
-        assert.ok(Math.abs(instinct.width - standard.width) <= 1);
-        assert.ok(range.top < instinct.top && instinct.top < standard.top);
-        const [tab0, tab1, tab2, tab3] = sectionRhythm.aboutPresentation.tabs;
-        assert.ok(Math.abs(tab0.top - tab1.top) <= 1);
-        assert.ok(Math.abs(tab2.top - tab3.top) <= 1);
-        assert.ok(Math.abs(tab0.left - tab2.left) <= 1);
-        assert.ok(Math.abs(tab1.left - tab3.left) <= 1);
-        assert.ok(tab2.top >= tab0.top + tab0.height - 1);
+        const steps = sectionRhythm.aboutPresentation.steps;
+        assert.ok(Math.max(...steps.map(({ left }) => left))
+          - Math.min(...steps.map(({ left }) => left)) <= 1);
+        assert.ok(Math.max(...steps.map(({ width }) => width))
+          - Math.min(...steps.map(({ width }) => width)) <= 1);
+        for (let index = 1; index < steps.length; index += 1) {
+          assert.ok(steps[index].top >= steps[index - 1].top + steps[index - 1].height - 1);
+        }
+      }
+      const [context0, context1] = sectionRhythm.aboutPresentation.context;
+      if (viewport.width > 600) {
+        assert.ok(Math.abs(context0.top - context1.top) <= 1);
+        assert.ok(Math.abs(context0.width - context1.width) <= 1);
+        assert.ok(context0.left < context1.left);
+      } else {
+        assert.ok(Math.abs(context0.left - context1.left) <= 1);
+        assert.ok(Math.abs(context0.width - context1.width) <= 1);
+        assert.ok(context1.top >= context0.top + context0.height - 1);
       }
       assert.equal(
         await page.locator(".hero-positioning").count(),
@@ -3146,24 +2782,20 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             if (!revealSettled) return false;
 
             if (sectionId === "about") {
-              const field = section.querySelector(".about-particle-field");
-              const rect = field?.getBoundingClientRect();
-              if (!field || !rect || field.getAttribute("data-ready") !== "true") return false;
-              const visibleHeight = Math.max(
-                0,
-                Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0),
-              );
-              const visibleWidth = Math.max(
-                0,
-                Math.min(rect.right, innerWidth) - Math.max(rect.left, 0),
-              );
-              const visibleRatio = rect.width > 0 && rect.height > 0
-                ? (visibleWidth * visibleHeight) / (rect.width * rect.height)
-                : 0;
-              const expectedMotion = !document.hidden && visibleRatio >= 0.05
-                ? "running"
-                : "paused";
-              return field.getAttribute("data-motion") === expectedMotion;
+              const steps = Array.from(section.querySelectorAll(".about-loop-step"));
+              return steps.length === 4
+                && steps.every((step) => {
+                  const rect = step.getBoundingClientRect();
+                  const style = getComputedStyle(step);
+                  return rect.width > 0
+                    && rect.height > 0
+                    && style.visibility !== "hidden"
+                    && Number.parseFloat(style.opacity) > 0;
+                })
+                && section.querySelectorAll(
+                  "canvas, [class*='about-particle'], [role='tab'], "
+                    + "[role='tablist'], [role='tabpanel']",
+                ).length === 0;
             }
             if (sectionId === "experience") {
               return (
@@ -3207,14 +2839,14 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
               ? new DOMMatrixReadOnly(revealStyle.transform)
               : null;
             return {
-              aboutParticle: section?.querySelector(".about-particle-field")
+              aboutLedger: sectionId === "about"
                 ? {
-                    motion: section.querySelector(".about-particle-field")
-                      ?.getAttribute("data-motion"),
-                    pointerActive: section.querySelector(".about-particle-field")
-                      ?.getAttribute("data-pointer-active"),
-                    ready: section.querySelector(".about-particle-field")
-                      ?.getAttribute("data-ready"),
+                    contextCount: section.querySelectorAll(".about-context > div").length,
+                    forbiddenCount: section.querySelectorAll(
+                      "canvas, [class*='about-particle'], [role='tab'], "
+                        + "[role='tablist'], [role='tabpanel']",
+                    ).length,
+                    stepCount: section.querySelectorAll(".about-loop-step").length,
                   }
                 : null,
               canvasMotion: Array.from(
@@ -3266,134 +2898,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         }
       }
 
-      await page.waitForFunction(() => {
-        const figure = document.querySelector(".about-particle-field");
-        if (!figure) return false;
-        const rect = figure.getBoundingClientRect();
-        const visibleHeight = Math.max(
-          0,
-          Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0),
-        );
-        const visibleWidth = Math.max(
-          0,
-          Math.min(rect.right, innerWidth) - Math.max(rect.left, 0),
-        );
-        const visibleRatio = rect.width > 0 && rect.height > 0
-          ? (visibleWidth * visibleHeight) / (rect.width * rect.height)
-          : 0;
-        const expectedMotion = !document.hidden && visibleRatio >= 0.05
-          ? "running"
-          : "paused";
-        return figure.getAttribute("data-motion") === expectedMotion;
-      }, null, { timeout: 3_000 });
-
-      const aboutParticleLayout = await page.locator(".about-particle-field").evaluate((figure) => {
-        const canvas = figure.querySelector(".about-particle-canvas");
-        const fallback = figure.querySelector(".about-particle-fallback");
-        const figureRect = figure.getBoundingClientRect();
-        const canvasRect = canvas?.getBoundingClientRect();
-        const figureStyle = getComputedStyle(figure);
-        const visibleHeight = Math.max(
-          0,
-          Math.min(figureRect.bottom, innerHeight) - Math.max(figureRect.top, 0),
-        );
-        const visibleWidth = Math.max(
-          0,
-          Math.min(figureRect.right, innerWidth) - Math.max(figureRect.left, 0),
-        );
-        const visibleRatio = figureRect.width > 0 && figureRect.height > 0
-          ? (visibleWidth * visibleHeight) / (figureRect.width * figureRect.height)
-          : 0;
-        return {
-          bitmapHeight: canvas?.height ?? 0,
-          bitmapWidth: canvas?.width ?? 0,
-          backgroundImage: figureStyle.backgroundImage,
-          borderWidth: Number.parseFloat(figureStyle.borderTopWidth),
-          canvasHeight: canvasRect?.height ?? 0,
-          canvasOpacity: canvas ? getComputedStyle(canvas).opacity : null,
-          canvasWidth: canvasRect?.width ?? 0,
-          fallbackOpacity: fallback ? getComputedStyle(fallback).opacity : null,
-          figureHeight: figureRect.height,
-          figureWidth: figureRect.width,
-          expectedMotion: !document.hidden && visibleRatio >= 0.05 ? "running" : "paused",
-          effectiveParticleCount: Number(figure.getAttribute("data-effective-particle-count")),
-          motion: figure.getAttribute("data-motion"),
-          particleCount: Number(figure.getAttribute("data-particle-count")),
-          particleInstances: Number(figure.getAttribute("data-particle-instances")),
-          ready: figure.getAttribute("data-ready"),
-          renderer: figure.getAttribute("data-renderer"),
-          rendererQuality: figure.getAttribute("data-renderer-quality"),
-          runningAnimations: figure.getAnimations({ subtree: true })
-            .filter((animation) => animation.playState === "running").length,
-          touchAction: figureStyle.touchAction,
-        };
-      });
-      assert.equal(aboutParticleLayout.ready, "true");
-      assert.equal(aboutParticleLayout.motion, aboutParticleLayout.expectedMotion);
-      assert.equal(aboutParticleLayout.canvasOpacity, "1");
-      assert.equal(aboutParticleLayout.fallbackOpacity, "0");
-      assert.notEqual(aboutParticleLayout.backgroundImage, "none");
-      assert.equal(aboutParticleLayout.borderWidth, 1);
-      assert.equal(aboutParticleLayout.runningAnimations, 0);
-      assert.equal(aboutParticleLayout.touchAction, "pan-y pinch-zoom");
-      assert.ok(
-        Math.abs(aboutParticleLayout.canvasWidth - aboutParticleLayout.figureWidth) <= 1
-          && Math.abs(
-            aboutParticleLayout.canvasHeight
-              - (aboutParticleLayout.figureHeight - aboutParticleLayout.borderWidth * 2),
-          ) <= 1,
-        `${viewport.width}x${viewport.height} About canvas did not cover its field: `
-          + JSON.stringify(aboutParticleLayout),
-      );
-      assert.ok(
-        aboutParticleLayout.bitmapWidth >= aboutParticleLayout.canvasWidth - 1
-          && aboutParticleLayout.bitmapHeight >= aboutParticleLayout.canvasHeight - 1
-          && aboutParticleLayout.bitmapWidth <= aboutParticleLayout.canvasWidth * 2 + 2
-          && aboutParticleLayout.bitmapHeight <= aboutParticleLayout.canvasHeight * 2 + 2,
-        `${viewport.width}x${viewport.height} About bitmap exceeded its DPR budget: `
-          + JSON.stringify(aboutParticleLayout),
-      );
-      const compactParticleField = viewport.width <= 600;
-      assert.ok(
-        compactParticleField
-          ? aboutParticleLayout.particleCount >= 900
-            && aboutParticleLayout.particleCount <= 1125
-          : aboutParticleLayout.particleCount >= 1550
-            && aboutParticleLayout.particleCount <= 2050,
-        `${viewport.width}x${viewport.height} About particle count was `
-          + `${aboutParticleLayout.particleCount}`,
-      );
-      const expectedInstances = aboutParticleLayout.renderer === "webgl2"
-        && aboutParticleLayout.rendererQuality === "hardware"
-        ? compactParticleField ? 4 : 5
-        : 1;
-      const expectedVortexParticles = compactParticleField ? 400 : 550;
-      assert.equal(aboutParticleLayout.particleInstances, expectedInstances);
-      assert.equal(
-        aboutParticleLayout.effectiveParticleCount,
-        (aboutParticleLayout.particleCount + expectedVortexParticles) * expectedInstances,
-      );
-      assert.ok(
-        (await readCanvasProbe(page.locator(".about-particle-canvas"))).visiblePixels > 0,
-        `${viewport.width}x${viewport.height} About particle canvas was blank`,
-      );
-      if (viewport.width <= 600) {
-        assert.ok(
-          aboutParticleLayout.figureHeight >= 210 && aboutParticleLayout.figureHeight <= 242,
-          `${viewport.width}x${viewport.height} About particle field height=`
-            + `${aboutParticleLayout.figureHeight}px`,
-        );
-      } else {
-        const expectedRatio = viewport.width <= 900 ? 2.25 : 2.8;
-        assert.ok(
-          Math.abs(
-            aboutParticleLayout.figureWidth / aboutParticleLayout.figureHeight - expectedRatio,
-          ) <= 0.02,
-          `${viewport.width}x${viewport.height} About particle ratio diverged: `
-            + JSON.stringify(aboutParticleLayout),
-        );
-      }
-
       const sectionChecks = await page.evaluate(() => {
         const definitions = [
           {
@@ -3412,11 +2916,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
               ".about-role",
               ".about-statement",
               ".about-introduction",
-              ".about-particle-field",
-              ".about-particle-canvas",
-              ".about-stage-tabs",
-              ".about-stage-panel:not([hidden])",
-              ".about-field-label--lens",
+              "#about-loop-title",
+              ".about-loop-list",
+              ".about-loop-step",
+              ".about-loop-detail",
+              ".about-loop-outcome",
+              ".about-context > div",
             ],
           },
           {
@@ -3525,7 +3030,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           ".paper-link",
           ".contact-socials a",
           ".mobile-load-feedback__retry",
-          '[role="tab"]',
         ];
         return selectors.flatMap((selector) => (
           Array.from(document.querySelectorAll(selector)).flatMap((element) => {

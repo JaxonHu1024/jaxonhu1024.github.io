@@ -17,88 +17,26 @@ test("wires the hero CTA to About through cancellable navigation without client-
   assert.doesNotMatch(page, /^"use client";/);
 });
 
-test("isolates the GPU-first About particle field and stops its frame work when inactive", async () => {
-  const particleField = await readFile(
-    new URL("../app/components/AboutParticleField.tsx", import.meta.url),
-    "utf8",
-  );
-  const contextCompiler = await readFile(
-    new URL("../app/components/AboutContextCompiler.tsx", import.meta.url),
-    "utf8",
-  );
-  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+test("keeps the Context Ledger server-rendered without a particle or tab runtime", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
-  assert.match(particleField, /^"use client";/);
-  assert.match(page, /<AboutContextCompiler \/>/);
   assert.doesNotMatch(page, /^"use client";/);
-  assert.match(contextCompiler, /^"use client";/);
-  assert.match(contextCompiler, /useState<AboutCompilerStage>\("frame"\)/);
-  assert.match(contextCompiler, /role="tablist"/);
-  assert.match(contextCompiler, /role="tab"/);
-  assert.match(contextCompiler, /role="tabpanel"/);
-  assert.match(contextCompiler, /aria-selected=\{isActive\}/);
-  assert.match(contextCompiler, /tabIndex=\{isActive \? 0 : -1\}/);
-  assert.match(contextCompiler, /aria-controls=\{`about-stage-panel-\$\{stage\.id\}`\}/);
-  assert.match(contextCompiler, /aria-labelledby=\{`about-stage-tab-\$\{stage\.id\}`\}/);
-  assert.match(contextCompiler, /hidden=\{!isActive\}/);
-  assert.match(contextCompiler, /aria-live="polite"/);
-  assert.match(contextCompiler, /aria-atomic="true"/);
-  assert.match(contextCompiler, /event\.key === "ArrowRight"/);
-  assert.match(contextCompiler, /event\.key === "ArrowLeft"/);
-  assert.match(contextCompiler, /event\.key === "Home"/);
-  assert.match(contextCompiler, /event\.key === "End"/);
-  assert.doesNotMatch(contextCompiler, /aria-pressed=|onPointerEnter=|onMouseEnter=/);
-  assert.match(contextCompiler, /<AboutParticleField/);
-  assert.match(particleField, /new IntersectionObserver/);
-  assert.match(particleField, /currentVisibleRatio\(\) >= 0\.05/);
-  assert.match(particleField, /new ResizeObserver/);
-  assert.match(particleField, /document\.addEventListener\("visibilitychange"/);
-  assert.match(
-    particleField,
-    /window\.addEventListener\("scroll", scheduleVisibilityReconciliation, \{ passive: true \}\)/,
-  );
-  assert.match(particleField, /window\.requestAnimationFrame/);
-  assert.match(particleField, /window\.cancelAnimationFrame/);
-  assert.match(particleField, /prefers-reduced-motion: reduce/);
-  assert.match(particleField, /createWebGLParticleRenderer/);
-  assert.match(particleField, /canvas\.getContext\("webgl2"/);
-  assert.match(particleField, /powerPreference: "high-performance"/);
-  assert.match(particleField, /gl\.drawArrays\(mode/);
-  assert.match(particleField, /gl\.drawArraysInstanced\(mode/);
-  assert.match(particleField, /gl\.bufferSubData\(/);
-  assert.match(particleField, /configureVertexStream\(lineVertexArray, lineBuffer/);
-  assert.match(particleField, /configureVertexStream\(pointVertexArray, pointBuffer/);
-  assert.doesNotMatch(particleField, /vertices\.subarray\(0, floatCount\)/);
-  assert.match(particleField, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
-  assert.match(particleField, /const MAX_PARTICLES = 2050/);
-  assert.match(particleField, /const MAX_COMPACT_PARTICLES = 1125/);
-  assert.match(particleField, /const COMPACT_POINT_INSTANCES = 4/);
-  assert.match(particleField, /const FULL_POINT_INSTANCES = 5/);
-  assert.match(particleField, /swiftshader\|llvmpipe\|software rasterizer/i);
-  assert.match(particleField, /rendererQuality/);
-  assert.match(particleField, /u_halo_pass/);
-  assert.match(particleField, /data\.effectiveParticleCount|dataset\.effectiveParticleCount/);
-  assert.match(particleField, /const TRAIL_STEPS = 7/);
-  assert.match(particleField, /const RAIL_POSITIONS = \[0\.22, 0\.405, 0\.595, 0\.78\]/);
-  assert.match(particleField, /flowTargetY/);
-  assert.match(particleField, /STAGE_FOCUS_POSITIONS/);
-  assert.match(particleField, /drawParticleVortex/);
-  assert.match(particleField, /frameAccumulator \+= elapsedMs/);
-  assert.match(particleField, /visualTime \+= advanceMs/);
-  assert.doesNotMatch(particleField, /visualTime = time/);
-  assert.match(particleField, /#b7d7d0/);
-  assert.match(particleField, /#8edfcf/);
-  assert.doesNotMatch(particleField, /#8a72ff|#ff6b57/);
-  assert.doesNotMatch(particleField, /createRadialGradient|setLineDash/);
-  assert.match(particleField, /Float32Array/);
-  assert.match(particleField, /resizeObserver\.disconnect\(\)/);
-  assert.match(particleField, /visibilityObserver\.disconnect\(\)/);
-  assert.match(particleField, /removeEventListener\("pointermove"/);
-  assert.match(particleField, /removeEventListener\("visibilitychange"/);
-  assert.match(particleField, /removeEventListener\("scroll", scheduleVisibilityReconciliation\)/);
-  assert.doesNotMatch(particleField, /\buseState\b|setInterval/);
-  assert.match(css, /\.about-particle-field\s*\{[^}]*touch-action:\s*pan-y/s);
+  assert.doesNotMatch(page, /AboutContextCompiler|AboutParticleField|about-particle|<canvas\b/);
+  assert.match(page, /<div className="about-layout reveal">/);
+  assert.match(page, /<header className="about-copy">/);
+  assert.match(page, /<section className="about-working-loop" aria-labelledby="about-loop-title">/);
+  assert.match(page, /<ol className="about-loop-list">/);
+  assert.match(page, /className="about-loop-step"/);
+  assert.match(page, /className="about-context" aria-label="Current context"/);
+  assert.equal((page.match(/label: "(?:FRAME|CONNECT|OBSERVE|VERIFY)"/g) ?? []).length, 4);
+  assert.equal((page.match(/label: "(?:CURRENT THREADS|CORE BELIEF)"/g) ?? []).length, 2);
+
+  for (const component of ["AboutContextCompiler.tsx", "AboutParticleField.tsx"]) {
+    await assert.rejects(
+      readFile(new URL(`../app/components/${component}`, import.meta.url), "utf8"),
+      { code: "ENOENT" },
+    );
+  }
 });
 
 test("keeps ambient motion compositor-friendly and cheap while offscreen", async () => {

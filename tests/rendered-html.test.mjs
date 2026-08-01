@@ -92,13 +92,10 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   );
   assert.doesNotMatch(html, /trace-out|>➤</);
   assert.doesNotMatch(html, /hujiaxingseu@163\.com/);
-  assert.match(
+  assert.doesNotMatch(
     html,
-    /<figure(?=[^>]*\bclass="about-particle-field")(?=[^>]*\bdata-motion="initializing")(?=[^>]*\bdata-ready="false")(?=[^>]*\bdata-renderer="pending")(?=[^>]*\bdata-pointer-active="false")(?=[^>]*\bdata-stage="frame")(?=[^>]*\brole="img")(?=[^>]*\baria-label="Multimodal input moving through the system lens\. PERCEIVE produces signal\.")[^>]*>/,
+    /AboutContextCompiler|about-particle|<canvas\b[^>]*class="[^"]*about-|\brole="tab(?:list|panel)?"/,
   );
-  assert.match(html, /class="about-particle-fallback" aria-hidden="true"/);
-  assert.match(html, /<canvas class="about-particle-canvas" aria-hidden="true"><\/canvas>/);
-  assert.match(html, /class="about-field-overlay" aria-hidden="true"/);
   assert.doesNotMatch(
     html,
     /about-data-weave\.webp|about-weave|about-intelligence-field|about-signal-|about-fingerprint/,
@@ -187,71 +184,59 @@ test("renders a distinct public-safe About system before Experience", async () =
   const about = html.slice(aboutStart, experienceStart);
   assert.match(about, /JAXON\.CONTEXT/);
   assert.match(about, /AI ALGORITHM ENGINEER/);
+  assert.match(about, /<div class="about-layout reveal">/);
+  assert.match(about, /<header class="about-copy">/);
   assert.match(
     about,
     /<h2(?=[^>]*\bclass="about-statement")(?=[^>]*\bid="about-title")[^>]*>/,
   );
-  assert.match(about, /THE MODEL IS ONLY/);
-  assert.match(about, /THE BEGINNING\./);
-  assert.match(about, /working across agents, multimodal/);
-  assert.match(about, /Agents, multimodal systems, and autonomous intelligence/);
-  assert.match(about, /Model capability matters only when the system can use it/);
-  assert.match(about, /Observable behavior, explicit boundaries, evidence attached/);
-  assert.match(about, /class="about-particle-field"/);
-  assert.match(about, /class="about-particle-canvas" aria-hidden="true"/);
-  assert.match(about, /class="about-particle-fallback" aria-hidden="true"/);
-  assert.match(about, /MULTIMODAL INPUT/);
-  assert.match(about, /SYSTEM LENS/);
-  assert.match(about, /OBSERVABLE BEHAVIOR/);
+  assert.match(about, /FROM MODEL CAPABILITY/);
+  assert.match(about, /TO SYSTEM BEHAVIOR\./);
+  assert.match(about, /I(?:&#x27;|')m Jaxon/);
   assert.match(
     about,
-    /<div(?=[^>]*\bclass="about-stage-tabs")(?=[^>]*\brole="tablist")(?=[^>]*\baria-label="System transformation stages")(?=[^>]*\baria-orientation="horizontal")[^>]*>/,
+    /<section(?=[^>]*\bclass="about-working-loop")(?=[^>]*\baria-labelledby="about-loop-title")[^>]*>/,
   );
-  for (const step of ["PERCEIVE", "REASON", "ACT", "VERIFY"]) {
-    assert.match(about, new RegExp(`>${step}<`));
-  }
-  for (const output of ["SIGNAL", "DECISION", "BEHAVIOR", "EVIDENCE"]) {
-    assert.match(about, new RegExp(`<strong>${output}<\\/strong>`));
-  }
-  assert.equal((about.match(/class="about-stage-tab"/g) ?? []).length, 4);
-  assert.equal((about.match(/\brole="tab"/g) ?? []).length, 4);
-  assert.equal((about.match(/class="about-stage-panel"/g) ?? []).length, 4);
-  assert.equal((about.match(/\brole="tabpanel"/g) ?? []).length, 4);
-  assert.equal((about.match(/aria-selected="true"/g) ?? []).length, 1);
-  assert.equal((about.match(/aria-selected="false"/g) ?? []).length, 3);
-  assert.equal((about.match(/\bhidden=""/g) ?? []).length, 3);
   assert.match(
     about,
-    /<div(?=[^>]*\bclass="about-stage-panels")(?=[^>]*\baria-live="polite")(?=[^>]*\baria-atomic="true")[^>]*>/,
+    /<h3(?=[^>]*\bid="about-loop-title")[^>]*>HOW I TURN CAPABILITY INTO PRACTICE\.<\/h3>/,
   );
-  for (const [stage, selected, tabIndex] of [
-    ["frame", "true", "0"],
-    ["model", "false", "-1"],
-    ["build", "false", "-1"],
-    ["verify", "false", "-1"],
+  assert.match(about, /<ol class="about-loop-list">/);
+  for (const [index, label, detail, outcome] of [
+    ["01", "FRAME", "Define the task, boundary, and proof before building.", "BOUNDARY"],
+    ["02", "CONNECT", "Join models, tools, and context into one usable system.", "SYSTEM"],
+    ["03", "OBSERVE", "Make decisions, state, and failure modes visible.", "CLARITY"],
+    ["04", "VERIFY", "Attach every important claim to reproducible evidence.", "EVIDENCE"],
   ]) {
     assert.match(
       about,
       new RegExp(
-        `<button(?=[^>]*\\bclass="about-stage-tab")`
-          + `(?=[^>]*\\brole="tab")`
-          + `(?=[^>]*\\bid="about-stage-tab-${stage}")`
-          + `(?=[^>]*\\baria-controls="about-stage-panel-${stage}")`
-          + `(?=[^>]*\\baria-selected="${selected}")`
-          + `(?=[^>]*\\btabindex="${tabIndex}")[^>]*>`,
-      ),
-    );
-    assert.match(
-      about,
-      new RegExp(
-        `<div(?=[^>]*\\bclass="about-stage-panel")`
-          + `(?=[^>]*\\brole="tabpanel")`
-          + `(?=[^>]*\\bid="about-stage-panel-${stage}")`
-          + `(?=[^>]*\\baria-labelledby="about-stage-tab-${stage}")[^>]*>`,
+        `<li class="about-loop-step">[\\s\\S]*?`
+          + `<span class="about-loop-index">${index}<\\/span>[\\s\\S]*?`
+          + `<span class="about-loop-label">${label}<\\/span>[\\s\\S]*?`
+          + `<p class="about-loop-detail">${detail.replaceAll(".", "\\.")}<\\/p>[\\s\\S]*?`
+          + `<strong>${outcome}<\\/strong>[\\s\\S]*?<\\/li>`,
       ),
     );
   }
-  assert.doesNotMatch(about, /aria-pressed=|OUT \/|about-method-button/);
+  assert.equal((about.match(/class="about-loop-step"/g) ?? []).length, 4);
+  assert.equal((about.match(/class="about-loop-index"/g) ?? []).length, 4);
+  assert.equal((about.match(/class="about-loop-label"/g) ?? []).length, 4);
+  assert.equal((about.match(/class="about-loop-detail"/g) ?? []).length, 4);
+  assert.equal((about.match(/class="about-loop-outcome"/g) ?? []).length, 4);
+  assert.match(about, /<dl class="about-context" aria-label="Current context">/);
+  assert.equal((about.match(/<dt>/g) ?? []).length, 2);
+  for (const [label, value] of [
+    ["CURRENT THREADS", "Agents, multimodal systems, and autonomous intelligence."],
+    ["CORE BELIEF", "A model matters only when the surrounding system can use it well."],
+  ]) {
+    assert.match(about, new RegExp(`<dt>${label}<\\/dt>[\\s\\S]*?<dd>${value.replaceAll(".", "\\.")}<\\/dd>`));
+  }
+  assert.match(about, /01[\s\S]*\/\/ OPERATING CONTEXT/);
+  assert.doesNotMatch(
+    about,
+    /AboutContextCompiler|about-particle|<canvas\b|\brole="tab(?:list|panel)?"|about-stage-|aria-selected=/,
+  );
   assert.doesNotMatch(about, /ByteDance|Alibaba|Senior|Jaxon Hu|Hu Jiaxing|Nanyang|Southeast/i);
   assert.doesNotMatch(html, /VIEW EXPERIENCE/);
 });
@@ -421,7 +406,7 @@ test("orders About, Experience, Foundations, and Research with distinct layer in
     html.indexOf('class="section foundations grid-surface"')
       < html.indexOf('class="section research grid-surface"'),
   );
-  assert.match(html, /<b>01<\/b>\s*(?:<!-- -->)?\s*\/\/ PERSONAL SYSTEM/);
+  assert.match(html, /<b>01<\/b>\s*(?:<!-- -->)?\s*\/\/ OPERATING CONTEXT/);
   assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ EXPERIENCE LAYER/);
   assert.match(html, /<b>03<\/b>\s*(?:<!-- -->)?\s*\/\/ FOUNDATION LAYER/);
   assert.match(html, /<b>04<\/b>\s*(?:<!-- -->)?\s*\/\/ RESEARCH LAYER/);

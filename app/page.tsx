@@ -1,5 +1,4 @@
 import { Navigation } from "./components/Navigation";
-import { AboutContextCompiler } from "./components/AboutContextCompiler";
 import { HeroTerminal } from "./components/HeroTerminal";
 import { ResearchVisual } from "./components/ResearchVisual";
 
@@ -42,16 +41,39 @@ const contactMessage = "For project collaborations, technical consulting, or car
 
 const aboutContext = [
   {
-    label: "RANGE",
-    value: "Agents, multimodal systems, and autonomous intelligence",
+    label: "CURRENT THREADS",
+    value: "Agents, multimodal systems, and autonomous intelligence.",
   },
   {
-    label: "INSTINCT",
-    value: "Model capability matters only when the system can use it",
+    label: "CORE BELIEF",
+    value: "A model matters only when the surrounding system can use it well.",
+  },
+] as const;
+
+const aboutWorkingLoop = [
+  {
+    index: "01",
+    label: "FRAME",
+    detail: "Define the task, boundary, and proof before building.",
+    outcome: "BOUNDARY",
   },
   {
-    label: "STANDARD",
-    value: "Observable behavior, explicit boundaries, evidence attached",
+    index: "02",
+    label: "CONNECT",
+    detail: "Join models, tools, and context into one usable system.",
+    outcome: "SYSTEM",
+  },
+  {
+    index: "03",
+    label: "OBSERVE",
+    detail: "Make decisions, state, and failure modes visible.",
+    outcome: "CLARITY",
+  },
+  {
+    index: "04",
+    label: "VERIFY",
+    detail: "Attach every important claim to reproducible evidence.",
+    outcome: "EVIDENCE",
   },
 ] as const;
 
@@ -100,25 +122,49 @@ export default function Home() {
           </p>
 
           <div className="about-layout reveal">
-            <div className="about-copy">
-              <p className="about-role">AI ALGORITHM ENGINEER</p>
+            <header className="about-copy">
+              <p className="about-role">
+                <span>AI ALGORITHM ENGINEER</span>
+                <span aria-hidden="true">PROFILE / 01</span>
+              </p>
               <h2 className="about-statement" id="about-title">
-                <span>THE MODEL IS ONLY</span>
-                <span>THE BEGINNING.</span>
+                <span>FROM MODEL CAPABILITY</span>
+                <span>TO SYSTEM BEHAVIOR.</span>
               </h2>
-              <div className="about-introduction">
+              <p className="about-introduction">
+                I&apos;m Jaxon. I work where models meet tools, decisions, and the real
+                world, turning promising capability into systems that can be inspected,
+                tested, and improved.
+              </p>
+            </header>
+
+            <section className="about-working-loop" aria-labelledby="about-loop-title">
+              <header className="about-loop-header">
                 <p>
-                  I&apos;m Jaxon, an AI algorithm engineer working across agents, multimodal
-                  models, and autonomous systems. I care about the difficult step after a
-                  model looks promising: making its behavior legible, testable, and useful
-                  in the real world.
+                  <span>WORKING LOOP</span>
+                  <span>04 PHASES / ONE SYSTEM</span>
                 </p>
-              </div>
-            </div>
+                <h3 id="about-loop-title">HOW I TURN CAPABILITY INTO PRACTICE.</h3>
+              </header>
 
-            <AboutContextCompiler />
+              <ol className="about-loop-list">
+                {aboutWorkingLoop.map((stage) => (
+                  <li className="about-loop-step" key={stage.index}>
+                    <p className="about-loop-heading">
+                      <span className="about-loop-index">{stage.index}</span>
+                      <span className="about-loop-label">{stage.label}</span>
+                    </p>
+                    <p className="about-loop-detail">{stage.detail}</p>
+                    <p className="about-loop-outcome">
+                      <span>YIELDS</span>
+                      <strong>{stage.outcome}</strong>
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </section>
 
-            <dl className="about-context" aria-label="Operating principles">
+            <dl className="about-context" aria-label="Current context">
               {aboutContext.map((item) => (
                 <div key={item.label}>
                   <dt>{item.label}</dt>
@@ -129,7 +175,7 @@ export default function Home() {
           </div>
 
           <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>01</b> {"// PERSONAL SYSTEM"}</span>
+            <span className="section-footer-index"><b>01</b> {"// OPERATING CONTEXT"}</span>
             <span className="section-footer-rule" />
           </p>
         </section>
