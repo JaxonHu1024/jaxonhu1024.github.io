@@ -1,0 +1,25 @@
+app/layout.tsx
+  s_91a9c738395201::t_f13952e7dc3c59 40
+tests/github-pages-export.test.mjs
+  s_91a9c738395201::t_f376ada162086a 19,22,27-28
+tests/rendered-html.test.mjs
+  s_91a9c738395201::t_7230013fbf3ce3 38,40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "db92ee883f95ccce1802747dbb52444a61343e16",
+  "prompts": {},
+  "sessions": {
+    "s_91a9c738395201": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc233-e58d-7b40-b248-e2d93ca2162a",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
