@@ -1,0 +1,29 @@
+app/components/Navigation.tsx
+  s_91a9c738395201::t_a0b242ada31a22 275-277
+app/components/PixelatedCanvas.tsx
+  s_91a9c738395201::t_3559f6d2a29aac 152,161,164,627-630,643-644,654-675,685,711,713-715,717,731,734,736-738,740
+app/layout.tsx
+  s_91a9c738395201::t_58eb6264f77842 5,64
+app/page.tsx
+  s_91a9c738395201::t_aa611be611ad03 42-45,51,57,63,69,90-95,113-114,119-122,128
+tests/rendered-html.test.mjs
+  s_91a9c738395201::t_df3c6bb7770e28 55-63,210-213,218,224-227,250,252,256-257,415-418,420-426
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "aef65341a9cffec98ba47a9ce2718cb7151dc044",
+  "prompts": {},
+  "sessions": {
+    "s_91a9c738395201": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc233-e58d-7b40-b248-e2d93ca2162a",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
