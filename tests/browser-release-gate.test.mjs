@@ -744,7 +744,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
   }
 });
 
-test("page background state pauses every ambient CSS loop", { timeout: 10_000 }, async () => {
+test("page background state pauses ambient loops and scroll-trace work", { timeout: 10_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
@@ -766,39 +766,74 @@ test("page background state pauses every ambient CSS loop", { timeout: 10_000 },
     await page.locator("#experience").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => (
       document.querySelector("#experience")?.getAttribute("data-section-visible") === "true"
+      && document.querySelector(".experience-log")?.hasAttribute("data-trace-progress")
     ));
 
     const experienceRunning = await page.evaluate(() => ({
-      scan: getComputedStyle(document.querySelector(".experience-scan-cursor")).animationPlayState,
+      cursorWillChange: getComputedStyle(
+        document.querySelector(".experience-scan-cursor"),
+      ).willChange,
+      fillWillChange: getComputedStyle(
+        document.querySelector(".experience-scan-fill"),
+      ).willChange,
+      progress: Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress")),
       pulse: getComputedStyle(document.querySelector(".timeline-node"), "::before").animationPlayState,
+      traceMotion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
     }));
-    assert.deepEqual(experienceRunning, {
-      scan: "running",
-      pulse: "running",
-    });
+    assert.equal(experienceRunning.pulse, "running");
+    assert.equal(experienceRunning.traceMotion, "responsive");
+    assert.deepEqual(
+      [experienceRunning.fillWillChange, experienceRunning.cursorWillChange],
+      ["transform", "transform"],
+    );
+    assert.ok(experienceRunning.progress >= 0 && experienceRunning.progress <= 1);
 
     await page.evaluate(() => window.__setDocumentHidden(true));
     await page.waitForFunction(() => document.documentElement.dataset.pageActive === "false");
+    await page.evaluate(() => window.scrollBy(0, 40));
+    await page.waitForTimeout(80);
 
     const paused = await page.evaluate(() => ({
-      scan: getComputedStyle(document.querySelector(".experience-scan-cursor")).animationPlayState,
+      cursorWillChange: getComputedStyle(
+        document.querySelector(".experience-scan-cursor"),
+      ).willChange,
+      fillWillChange: getComputedStyle(
+        document.querySelector(".experience-scan-fill"),
+      ).willChange,
+      progress: Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress")),
       pulse: getComputedStyle(document.querySelector(".timeline-node"), "::before").animationPlayState,
     }));
-    assert.deepEqual(paused, {
-      scan: "paused",
-      pulse: "paused",
-    });
+    assert.equal(paused.pulse, "paused");
+    assert.equal(paused.progress, experienceRunning.progress);
+    assert.deepEqual(
+      [paused.fillWillChange, paused.cursorWillChange],
+      ["auto", "auto"],
+    );
 
     await page.evaluate(() => window.__setDocumentHidden(false));
     await page.waitForFunction(() => document.documentElement.dataset.pageActive === "true");
+    await page.waitForFunction((previousProgress) => (
+      Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress"))
+        !== previousProgress
+    ), experienceRunning.progress);
     const resumed = await page.evaluate(() => ({
-      scan: getComputedStyle(document.querySelector(".experience-scan-cursor")).animationPlayState,
+      cursorWillChange: getComputedStyle(
+        document.querySelector(".experience-scan-cursor"),
+      ).willChange,
+      fillWillChange: getComputedStyle(
+        document.querySelector(".experience-scan-fill"),
+      ).willChange,
+      progress: Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress")),
       pulse: getComputedStyle(document.querySelector(".timeline-node"), "::before").animationPlayState,
+      traceMotion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
     }));
-    assert.deepEqual(resumed, {
-      scan: "running",
-      pulse: "running",
-    });
+    assert.equal(resumed.pulse, "running");
+    assert.equal(resumed.traceMotion, "responsive");
+    assert.deepEqual(
+      [resumed.fillWillChange, resumed.cursorWillChange],
+      ["transform", "transform"],
+    );
+    assert.notEqual(resumed.progress, experienceRunning.progress);
 
     await page.locator("#contact").evaluate((element) => {
       element.scrollIntoView({ block: "center" });
@@ -830,6 +865,167 @@ test("page background state pauses every ambient CSS loop", { timeout: 10_000 },
       ),
       "running",
     );
+  } finally {
+    await context.close();
+  }
+});
+
+test("phase-one visual primitives follow pointer, reading progress, and keyboard focus", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1440, height: 900 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+
+    await page.locator("#about").scrollIntoViewIfNeeded();
+    const spotlightStep = page.locator(".about-loop-step").nth(1);
+    await spotlightStep.hover({ position: { x: 72, y: 88 } });
+    await page.waitForFunction(() => {
+      const active = document.querySelector(".about-loop-step[data-spotlight-active='true']");
+      return active
+        && Number.parseFloat(getComputedStyle(active, "::after").opacity) > 0.5;
+    });
+    const spotlight = await spotlightStep.evaluate((element) => ({
+      activeCount: document.querySelectorAll(
+        ".about-loop-step[data-spotlight-active='true']",
+      ).length,
+      opacity: Number.parseFloat(getComputedStyle(element, "::after").opacity),
+      x: Number.parseFloat(element.style.getPropertyValue("--about-spotlight-x")),
+      y: Number.parseFloat(element.style.getPropertyValue("--about-spotlight-y")),
+    }));
+    assert.equal(spotlight.activeCount, 1);
+    assert.ok(spotlight.opacity > 0.5);
+    assert.ok(Number.isFinite(spotlight.x) && Number.isFinite(spotlight.y));
+
+    await page.mouse.move(2, 2);
+    await page.waitForFunction(() => (
+      document.querySelectorAll(".about-loop-step[data-spotlight-active='true']").length === 0
+    ));
+
+    await page.locator("#experience").evaluate((element) => {
+      element.scrollIntoView({ block: "start" });
+    });
+    await page.waitForFunction(() => (
+      document.querySelector(".experience-log")?.hasAttribute("data-trace-progress")
+    ));
+    const progressBefore = Number(
+      await page.locator(".experience-log").getAttribute("data-trace-progress"),
+    );
+    await page.evaluate(() => window.scrollBy(0, 120));
+    await page.waitForFunction((before) => (
+      Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress"))
+        > before
+    ), progressBefore);
+    const trace = await page.locator(".experience-log").evaluate((element) => {
+      const track = element.querySelector(".experience-scan-track");
+      const fill = element.querySelector(".experience-scan-fill");
+      const cursor = element.querySelector(".experience-scan-cursor");
+      const node = element.querySelector(".timeline-node");
+      const trackRect = track.getBoundingClientRect();
+      const nodeRect = node.getBoundingClientRect();
+      const progress = Number(element.dataset.traceProgress);
+      const cursorHeight = cursor.offsetHeight;
+      const trackHeight = track.clientHeight;
+      const range = trackHeight - cursorHeight;
+      const expectedCursorY = Math.min(
+        range,
+        Math.max(0, progress * trackHeight - cursorHeight / 2),
+      );
+      return {
+        axisDelta: Math.abs(
+          trackRect.left + trackRect.width / 2 - (nodeRect.left + nodeRect.width / 2),
+        ),
+        cursorY: new DOMMatrixReadOnly(getComputedStyle(cursor).transform).f,
+        fillScaleY: new DOMMatrixReadOnly(getComputedStyle(fill).transform).d,
+        motion: document.querySelector("#experience")?.dataset.traceMotion,
+        progress,
+        range,
+        expectedCursorY,
+      };
+    });
+    assert.equal(trace.motion, "responsive");
+    assert.ok(trace.progress > progressBefore && trace.progress <= 1);
+    assert.ok(Math.abs(trace.fillScaleY - trace.progress) <= 0.01);
+    assert.ok(Math.abs(trace.cursorY - trace.expectedCursorY) <= 1);
+    assert.ok(trace.axisDelta <= 1);
+
+    const contact = page.locator("#contact");
+    await contact.scrollIntoViewIfNeeded();
+    await contact.focus();
+    await page.keyboard.press("Tab");
+    const email = page.locator(".contact-socials a").first();
+    await page.waitForFunction(() => {
+      const link = document.querySelector(".contact-socials a");
+      return document.activeElement === link
+        && Number.parseFloat(getComputedStyle(link, "::before").opacity) > 0.5;
+    });
+    await email.evaluate(async (element) => {
+      await Promise.allSettled(
+        element.getAnimations({ subtree: true }).map((animation) => animation.finished),
+      );
+    });
+    const focusState = await email.evaluate((element) => ({
+      afterOpacity: Number.parseFloat(getComputedStyle(element, "::after").opacity),
+      arrowX: new DOMMatrixReadOnly(
+        getComputedStyle(element.querySelector(".endpoint-arrow")).transform,
+      ).e,
+      beforeOpacity: Number.parseFloat(getComputedStyle(element, "::before").opacity),
+      iconColor: getComputedStyle(element.querySelector(".endpoint-icon")).color,
+      iconY: new DOMMatrixReadOnly(
+        getComputedStyle(element.querySelector(".endpoint-icon")).transform,
+      ).f,
+      linkColor: getComputedStyle(element).color,
+      outlineStyle: getComputedStyle(element).outlineStyle,
+      outlineWidth: getComputedStyle(element).outlineWidth,
+      pointerEventsAfter: getComputedStyle(element, "::after").pointerEvents,
+      pointerEventsBefore: getComputedStyle(element, "::before").pointerEvents,
+    }));
+    assert.ok(focusState.beforeOpacity > 0.5 && focusState.afterOpacity > 0.5);
+    assert.deepEqual(
+      [focusState.pointerEventsBefore, focusState.pointerEventsAfter],
+      ["none", "none"],
+    );
+    assert.deepEqual(
+      [focusState.outlineStyle, focusState.outlineWidth],
+      ["solid", "2px"],
+    );
+    assert.equal(focusState.iconColor, focusState.linkColor);
+    assert.ok(Math.abs(focusState.iconY + 1) <= 0.1);
+    assert.ok(Math.abs(focusState.arrowX - 3) <= 0.1);
+
+    await email.evaluate((element) => element.blur());
+    await email.hover();
+    await email.evaluate(async (element) => {
+      await Promise.allSettled(
+        element.getAnimations({ subtree: true }).map((animation) => animation.finished),
+      );
+      element.addEventListener("click", (event) => event.preventDefault(), { once: true });
+    });
+    const hoverState = await email.evaluate((element) => ({
+      arrowX: new DOMMatrixReadOnly(
+        getComputedStyle(element.querySelector(".endpoint-arrow")).transform,
+      ).e,
+      background: getComputedStyle(element).backgroundColor,
+    }));
+    await page.mouse.down();
+    await page.waitForFunction(() => document.querySelector(".contact-socials a")?.matches(":active"));
+    await email.evaluate(async (element) => {
+      await Promise.allSettled(
+        element.getAnimations({ subtree: true }).map((animation) => animation.finished),
+      );
+    });
+    const pressedState = await email.evaluate((element) => ({
+      arrowX: new DOMMatrixReadOnly(
+        getComputedStyle(element.querySelector(".endpoint-arrow")).transform,
+      ).e,
+      background: getComputedStyle(element).backgroundColor,
+    }));
+    assert.ok(Math.abs(hoverState.arrowX - 3) <= 0.1);
+    assert.ok(Math.abs(pressedState.arrowX - 1) <= 0.1);
+    assert.notEqual(pressedState.background, hoverState.background);
+    await page.mouse.up();
   } finally {
     await context.close();
   }
@@ -1390,6 +1586,23 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
             document.querySelector(".contact-marquee-track"),
           ).transform,
         },
+        experienceTrace: {
+          cursorOpacity: getComputedStyle(
+            document.querySelector(".experience-scan-cursor"),
+          ).opacity,
+          cursorWillChange: getComputedStyle(
+            document.querySelector(".experience-scan-cursor"),
+          ).willChange,
+          fillTransform: getComputedStyle(
+            document.querySelector(".experience-scan-fill"),
+          ).transform,
+          fillWillChange: getComputedStyle(
+            document.querySelector(".experience-scan-fill"),
+          ).willChange,
+          motion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
+          progress: document.querySelector(".experience-log")
+            ?.getAttribute("data-trace-progress"),
+        },
         pulseAnimation: getComputedStyle(
           document.querySelector(".timeline-node"),
           "::before",
@@ -1415,6 +1628,14 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     assert.deepEqual(state.contactMarquee, {
       animationName: "none",
       transform: "none",
+    });
+    assert.deepEqual(state.experienceTrace, {
+      cursorOpacity: "0",
+      cursorWillChange: "auto",
+      fillTransform: "matrix(1, 0, 0, 1, 0, 0)",
+      fillWillChange: "auto",
+      motion: "reduced",
+      progress: "1.0000",
     });
     assert.equal(state.scanAnimation, "none");
     assert.equal(state.pulseAnimation, "none");
@@ -2798,10 +3019,14 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 ).length === 0;
             }
             if (sectionId === "experience") {
+              const progress = Number(
+                section.querySelector(".experience-log")?.getAttribute("data-trace-progress"),
+              );
               return (
-                getComputedStyle(
-                  section.querySelector(".experience-scan-cursor"),
-                ).animationPlayState === "running"
+                section.getAttribute("data-trace-motion") === "responsive"
+                && Number.isFinite(progress)
+                && progress >= 0
+                && progress <= 1
                 && getComputedStyle(
                   section.querySelector(".timeline-node"),
                   "::before",
@@ -2871,10 +3096,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 : null,
               revealOpacity: revealStyle?.opacity ?? null,
               revealTranslateY: revealTransform?.m42 ?? null,
-              scan: section?.querySelector(".experience-scan-cursor")
-                ? getComputedStyle(
-                    section.querySelector(".experience-scan-cursor"),
-                  ).animationPlayState
+              trace: section?.querySelector(".experience-log")
+                ? {
+                    motion: section.getAttribute("data-trace-motion"),
+                    progress: section.querySelector(".experience-log")
+                      ?.getAttribute("data-trace-progress"),
+                  }
                 : null,
               sectionVisible: section?.dataset.sectionVisible ?? null,
               summary: section?.querySelector(".contact-marquee-summary")

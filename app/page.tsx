@@ -147,7 +147,7 @@ export default function Home() {
                 <h3 id="about-loop-title">HOW I TURN CAPABILITY INTO PRACTICE.</h3>
               </header>
 
-              <ol className="about-loop-list">
+              <ol className="about-loop-list" data-about-spotlight="">
                 {aboutWorkingLoop.map((stage) => (
                   <li className="about-loop-step" key={stage.index}>
                     <p className="about-loop-heading">
@@ -193,6 +193,7 @@ export default function Home() {
           </h2>
           <div className="experience-log reveal">
             <span className="experience-scan-track" aria-hidden="true">
+              <span className="experience-scan-fill" />
               <span className="experience-scan-cursor" />
             </span>
             <article className="experience-row is-current">

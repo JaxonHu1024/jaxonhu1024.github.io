@@ -201,7 +201,10 @@ test("renders a distinct public-safe About system before Experience", async () =
     about,
     /<h3(?=[^>]*\bid="about-loop-title")[^>]*>HOW I TURN CAPABILITY INTO PRACTICE\.<\/h3>/,
   );
-  assert.match(about, /<ol class="about-loop-list">/);
+  assert.match(
+    about,
+    /<ol(?=[^>]*\bclass="about-loop-list")(?=[^>]*\bdata-about-spotlight="")[^>]*>/,
+  );
   for (const [index, label, detail, outcome] of [
     ["01", "FRAME", "Define the task, boundary, and proof before building.", "BOUNDARY"],
     ["02", "CONNECT", "Join models, tools, and context into one usable system.", "SYSTEM"],
