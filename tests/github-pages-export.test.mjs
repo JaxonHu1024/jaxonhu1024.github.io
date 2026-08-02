@@ -16,13 +16,16 @@ async function exists(path) {
 }
 
 test("exports a complete static GitHub Pages artifact", async () => {
-  for (const file of ["index.html", "404.html", "favicon.svg", "og.png"]) {
+  for (const file of ["index.html", "404.html", "favicon.svg"]) {
     assert.equal(await exists(resolve(output, file)), true, `${file} should exist`);
   }
+  assert.equal(await exists(resolve(output, "og.png")), false, "og.png should not be published");
 
   const html = await readFile(resolve(output, "index.html"), "utf8");
   const notFoundHtml = await readFile(resolve(output, "404.html"), "utf8");
   assert.match(html, /<title>Jaxon \| AI Engineer<\/title>/);
+  assert.match(html, /name="twitter:card" content="summary"/);
+  assert.doesNotMatch(html, /og\.png|summary_large_image/);
   assert.match(html, /Road-Network-Based/);
   assert.match(html, /ResFi:/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));

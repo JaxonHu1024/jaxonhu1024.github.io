@@ -35,8 +35,9 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
     /AI Engineer specializing in AI agents, AIGC, VLMs, LLMs, and autonomous driving\./,
   );
   assert.match(html, /property="og:title" content="Jaxon \| AI Engineer"/);
+  assert.match(html, /name="twitter:card" content="summary"/);
   assert.match(html, /name="twitter:title" content="Jaxon \| AI Engineer"/);
-  assert.match(html, /property="og:image:alt" content="Jaxon \| AI Engineer"/);
+  assert.doesNotMatch(html, /og:image|twitter:image|og\.png|summary_large_image/);
   assert.match(html, /<meta name="theme-color" content="#05070B"\/>/);
   assert.match(
     html,

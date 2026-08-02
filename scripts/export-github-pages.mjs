@@ -54,7 +54,6 @@ await cp(resolve(clientDirectory, "assets"), resolve(outputDirectory, "assets"),
   recursive: true,
 });
 await cp(resolve(root, "public/favicon.svg"), resolve(outputDirectory, "favicon.svg"));
-await cp(resolve(root, "public/og.png"), resolve(outputDirectory, "og.png"));
 
 const html = await render("/");
 const notFoundHtml = await render("/404", { allowNotFound: true });
