@@ -74,88 +74,6 @@ function usePageMotionActivity() {
   }, []);
 }
 
-function useAboutSpotlight() {
-  useEffect(() => {
-    const list = document.querySelector<HTMLElement>("[data-about-spotlight]");
-    if (!list) return;
-
-    const pointerQuery = window.matchMedia("(hover: hover) and (pointer: fine)");
-    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let activeStep: HTMLElement | null = null;
-    let frame = 0;
-    let pendingPoint: { step: HTMLElement; x: number; y: number } | null = null;
-
-    const clearSpotlight = () => {
-      if (frame !== 0) {
-        cancelAnimationFrame(frame);
-        frame = 0;
-      }
-      pendingPoint = null;
-      if (!activeStep) return;
-      delete activeStep.dataset.spotlightActive;
-      activeStep.style.removeProperty("--about-spotlight-x");
-      activeStep.style.removeProperty("--about-spotlight-y");
-      activeStep = null;
-    };
-
-    const paintSpotlight = () => {
-      frame = 0;
-      const point = pendingPoint;
-      pendingPoint = null;
-      if (!point || !point.step.isConnected || !list.contains(point.step)) return;
-
-      const rect = point.step.getBoundingClientRect();
-      if (activeStep && activeStep !== point.step) {
-        delete activeStep.dataset.spotlightActive;
-        activeStep.style.removeProperty("--about-spotlight-x");
-        activeStep.style.removeProperty("--about-spotlight-y");
-      }
-
-      activeStep = point.step;
-      activeStep.dataset.spotlightActive = "true";
-      activeStep.style.setProperty("--about-spotlight-x", `${point.x - rect.left}px`);
-      activeStep.style.setProperty("--about-spotlight-y", `${point.y - rect.top}px`);
-    };
-
-    const handlePointerMove = (event: PointerEvent) => {
-      if (!pointerQuery.matches || motionQuery.matches || document.hidden) {
-        clearSpotlight();
-        return;
-      }
-
-      const origin = event.target;
-      if (!(origin instanceof Element)) return;
-      const step = origin.closest<HTMLElement>(".about-loop-step");
-      if (!step || !list.contains(step)) {
-        clearSpotlight();
-        return;
-      }
-
-      pendingPoint = { step, x: event.clientX, y: event.clientY };
-      if (frame === 0) frame = requestAnimationFrame(paintSpotlight);
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) clearSpotlight();
-    };
-
-    list.addEventListener("pointermove", handlePointerMove, { passive: true });
-    list.addEventListener("pointerleave", clearSpotlight, { passive: true });
-    pointerQuery.addEventListener("change", clearSpotlight);
-    motionQuery.addEventListener("change", clearSpotlight);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      clearSpotlight();
-      list.removeEventListener("pointermove", handlePointerMove);
-      list.removeEventListener("pointerleave", clearSpotlight);
-      pointerQuery.removeEventListener("change", clearSpotlight);
-      motionQuery.removeEventListener("change", clearSpotlight);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
-}
-
 function useExperienceTrace() {
   useEffect(() => {
     const section = document.querySelector<HTMLElement>("#experience");
@@ -271,7 +189,6 @@ export function HeroInteractionController() {
   useHeroExperienceNavigation();
   useSectionMotionVisibility();
   usePageMotionActivity();
-  useAboutSpotlight();
   useExperienceTrace();
   return null;
 }

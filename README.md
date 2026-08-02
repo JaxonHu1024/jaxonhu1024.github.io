@@ -1,11 +1,11 @@
-# JAXON — Neo-Terminal Portfolio
+# JAXON — Signal Typography Portfolio
 
 **English** · [简体中文](./README_zh.md)
 
-> `›_ COMPILING INTELLIGENCE FOR THE REAL WORLD`
+> Turning model capability into real-world systems.
 
 Source for [jaxonhu1024.github.io](https://jaxonhu1024.github.io) — a single-page,
-cyber-terminal personal portfolio. The site is server-rendered, exported to a
+signal-driven personal portfolio. The site is server-rendered, exported to a
 fully static bundle, and deployed to GitHub Pages by CI. Generated artifacts are
 intentionally never committed; everything ships from source.
 
@@ -86,11 +86,11 @@ Every push to `main` runs [`.github/workflows/deploy-pages.yml`](./.github/workf
 
 ```
 app/                 Page source, React components, and styling
-├─ components/        Navigation, HeroTerminal, ResearchVisual
+├─ components/        Navigation, HeroSignalGraphic, ResearchVisual
 ├─ lib/               Cancellable-scroll helper
 ├─ layout.tsx         Root layout + dynamic metadata
 ├─ page.tsx           Single-page portfolio content
-└─ globals.css        Neo-terminal design system
+└─ globals.css        Dark signal design system
 public/               Source-controlled images and metadata assets
 scripts/              Deterministic static-export tooling
 tests/                Rendered-output and export-integrity tests

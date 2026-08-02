@@ -605,7 +605,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
 
       const state = await page.evaluate(() => {
         const navigation = document.querySelector("#primary-navigation");
-        const terminal = document.querySelector(".hero-terminal");
+        const signal = document.querySelector(".hero-signal-graphic");
         const feedback = document.querySelector('[data-testid="mobile-load-feedback"]');
         const coreSelectors = [
           "#hero-title",
@@ -675,13 +675,13 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                 visibility: getComputedStyle(navigation).visibility,
               }
             : null,
-          terminal: terminal
+          signal: signal
             ? {
-                phase: terminal.getAttribute("data-phase"),
-                text: terminal.textContent,
-                visible: getComputedStyle(terminal).visibility !== "hidden",
+                mainPathCount: signal.querySelectorAll(".hero-signal-path--main").length,
+                visible: getComputedStyle(signal).visibility !== "hidden",
               }
             : null,
+          terminalCount: document.querySelectorAll(".hero-terminal").length,
         };
       });
 
@@ -701,7 +701,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.about.forbiddenCount, 0);
       assert.deepEqual(
         state.about.contextLabels,
-        ["CURRENT THREADS", "CORE BELIEF"],
+        ["Current threads", "Core belief"],
       );
       assert.deepEqual(
         state.about.loopSteps.map(({ label }) => label),
@@ -729,11 +729,9 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
           `${viewport.width}x${viewport.height} ${target.href} was clipped`,
         );
       }
-      assert.equal(state.terminal?.phase, "ready");
-      assert.equal(state.terminal?.visible, true);
-      assert.match(state.terminal?.text ?? "", /agentctl compile --prod/);
-      assert.doesNotMatch(state.terminal?.text ?? "", /jaxon/i);
-      assert.match(state.terminal?.text ?? "", /BUILD READY/);
+      assert.equal(state.signal?.visible, true);
+      assert.equal(state.signal?.mainPathCount, 1);
+      assert.equal(state.terminalCount, 0);
 
       await page.locator('a[href="#research"]').click();
       await page.waitForFunction(() => location.hash === "#research");
@@ -870,7 +868,7 @@ test("page background state pauses ambient loops and scroll-trace work", { timeo
   }
 });
 
-test("phase-one visual primitives follow pointer, reading progress, and keyboard focus", { timeout: 15_000 }, async () => {
+test("experience trace and keyboard focus remain responsive", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1440, height: 900 },
   });
@@ -878,31 +876,6 @@ test("phase-one visual primitives follow pointer, reading progress, and keyboard
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.evaluate(() => document.fonts.ready);
-
-    await page.locator("#about").scrollIntoViewIfNeeded();
-    const spotlightStep = page.locator(".about-loop-step").nth(1);
-    await spotlightStep.hover({ position: { x: 72, y: 88 } });
-    await page.waitForFunction(() => {
-      const active = document.querySelector(".about-loop-step[data-spotlight-active='true']");
-      return active
-        && Number.parseFloat(getComputedStyle(active, "::after").opacity) > 0.5;
-    });
-    const spotlight = await spotlightStep.evaluate((element) => ({
-      activeCount: document.querySelectorAll(
-        ".about-loop-step[data-spotlight-active='true']",
-      ).length,
-      opacity: Number.parseFloat(getComputedStyle(element, "::after").opacity),
-      x: Number.parseFloat(element.style.getPropertyValue("--about-spotlight-x")),
-      y: Number.parseFloat(element.style.getPropertyValue("--about-spotlight-y")),
-    }));
-    assert.equal(spotlight.activeCount, 1);
-    assert.ok(spotlight.opacity > 0.5);
-    assert.ok(Number.isFinite(spotlight.x) && Number.isFinite(spotlight.y));
-
-    await page.mouse.move(2, 2);
-    await page.waitForFunction(() => (
-      document.querySelectorAll(".about-loop-step[data-spotlight-active='true']").length === 0
-    ));
 
     await page.locator("#experience").evaluate((element) => {
       element.scrollIntoView({ block: "start" });
@@ -1097,7 +1070,7 @@ test("research canvas reports its viewport and page motion lifecycle", { timeout
   }
 });
 
-test("hero motion pauses offscreen and resumes from a clean boot", { timeout: 20_000 }, async () => {
+test("hero signal pauses offscreen and remains terminal-free", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
@@ -1105,260 +1078,50 @@ test("hero motion pauses offscreen and resumes from a clean boot", { timeout: 20
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "running"
-      && document.querySelector(".hero-media")?.getAttribute("data-hero-visible") === "true"
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
     ), null, { timeout: 3_000 });
+
+    assert.equal(await page.locator(".hero-terminal").count(), 0);
+    assert.equal(await page.locator(".hero-signal-path--main").count(), 1);
+    assert.equal(await page.locator(".hero-signal-path--branch").count(), 2);
+
+    const running = await page.locator(".hero-signal-graphic").evaluate((signal) => ({
+      nodeAnimations: signal.querySelector(".hero-signal-node")
+        ?.getAnimations().map((animation) => animation.playState) ?? [],
+      visible: getComputedStyle(signal).visibility !== "hidden",
+    }));
+    assert.equal(running.visible, true);
+    assert.ok(
+      running.nodeAnimations.includes("running"),
+      `signal node animation was not running: ${JSON.stringify(running.nodeAnimations)}`,
+    );
 
     await page.locator("#contact").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => (
-      document.querySelector(".hero-media")?.getAttribute("data-hero-visible") === "false"
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "false"
     ), null, { timeout: 3_000 });
-    await page.waitForTimeout(100);
-
-    const pausedBefore = await page.evaluate(() => {
-      const terminal = document.querySelector(".hero-terminal");
-      const percent = document.querySelector(".hero-terminal-percent");
-      const caret = document.querySelector(".hero-terminal-caret");
-      const progress = document.querySelector(".hero-terminal-progress-fill");
-      const animations = terminal.getAnimations({ subtree: true });
-
-      return {
-        animationDetails: animations.map((animation) => ({
-          animationName: animation.animationName ?? null,
-          playState: animation.playState,
-          targetClass: animation.effect?.target?.className ?? null,
-          transitionProperty: animation.transitionProperty ?? null,
-          type: animation.constructor.name,
-        })),
-        caretPlayState: getComputedStyle(caret).animationPlayState,
-        percent: percent.textContent,
-        phase: terminal.dataset.phase,
-        progressTransitionDuration: getComputedStyle(progress).transitionDuration,
-      };
-    });
-    await page.waitForTimeout(1_000);
-    const pausedAfter = await page.evaluate(() => ({
-      percent: document.querySelector(".hero-terminal-percent").textContent,
-      phase: document.querySelector(".hero-terminal").dataset.phase,
-    }));
-
-    assert.equal(pausedBefore.caretPlayState, "paused");
-    assert.equal(pausedBefore.progressTransitionDuration, "0s");
+    const paused = await page.locator(".hero-signal-graphic").evaluate((signal) => (
+      signal.getAnimations({ subtree: true }).map((animation) => animation.playState)
+    ));
     assert.equal(
-      pausedBefore.animationDetails.some(({ playState }) => playState === "running"),
+      paused.some((state) => state === "running"),
       false,
-      `offscreen animations were ${JSON.stringify(pausedBefore.animationDetails)}`,
+      `offscreen signal animations were ${JSON.stringify(paused)}`,
     );
-    assert.deepEqual(pausedAfter, {
-      percent: pausedBefore.percent,
-      phase: pausedBefore.phase,
-    });
 
     await page.locator("#hero").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => (
-      document.querySelector(".hero-media")?.getAttribute("data-hero-visible") === "true"
-      && document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "typing"
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
     ), null, { timeout: 3_000 });
+    const resumed = await page.locator(".hero-signal-node").first().evaluate((node) => (
+      node.getAnimations().map((animation) => animation.playState)
+    ));
+    assert.ok(resumed.includes("running"));
   } finally {
     await context.close();
   }
 });
-
-test("terminal loop runs one CLI command, holds ready, and resets cleanly", { timeout: 20_000 }, async () => {
-  const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 1280, height: 800 },
-  });
-
-  try {
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "typing"
-    ), null, { timeout: 3_000 });
-    const typing = await page.locator(".hero-terminal").evaluate((terminal) => ({
-      command: terminal.querySelector(".hero-terminal-command-text")?.textContent,
-      percent: terminal.querySelector(".hero-terminal-percent")?.textContent,
-      topologyPresent: Boolean(terminal.querySelector(".hero-topology-map")),
-      readyVisible: terminal.querySelector(".hero-terminal-ready")
-        ?.classList.contains("is-visible") ?? false,
-      visibleSteps: terminal.querySelectorAll(".hero-terminal-line.is-visible").length,
-      windowControls: terminal.querySelectorAll(".hero-terminal-window-control").length,
-    }));
-    assert.deepEqual(typing, {
-      command: "agentctl compile --prod",
-      percent: "0",
-      topologyPresent: true,
-      readyVisible: false,
-      visibleSteps: 0,
-      windowControls: 0,
-    });
-
-    await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "running"
-      && document.querySelector(".hero-terminal-percent")?.textContent === "11"
-    ), null, { timeout: 2_000 });
-    assert.equal(
-      await page.locator(".hero-terminal-line.is-visible").count(),
-      1,
-      "the first progress update did not reveal exactly one CLI line",
-    );
-    await page.waitForFunction(() => {
-      const line = document.querySelector(".hero-terminal-line.is-visible");
-      if (!line) return false;
-      const style = getComputedStyle(line);
-      return style.visibility === "visible" && Number(style.opacity) > 0.9;
-    }, null, { timeout: 800 });
-    const progressBefore = await page.locator(".hero-terminal-progress-fill").evaluate((fill) => {
-      const style = getComputedStyle(fill);
-      return {
-        animationDuration: style.animationDuration,
-        animationName: style.animationName,
-        animationTimingFunction: style.animationTimingFunction,
-        scale: new DOMMatrixReadOnly(style.transform).a,
-        visibleSteps: fill.closest(".hero-terminal")?.getAttribute("data-visible-steps"),
-      };
-    });
-    await page.waitForTimeout(160);
-    const progressAfter = await page.locator(".hero-terminal-progress-fill").evaluate((fill) => {
-      const style = getComputedStyle(fill);
-      return {
-        scale: new DOMMatrixReadOnly(style.transform).a,
-        visibleSteps: fill.closest(".hero-terminal")?.getAttribute("data-visible-steps"),
-      };
-    });
-    assert.equal(progressBefore.animationName, "hero-terminal-progress");
-    assert.equal(progressBefore.animationDuration, "4.8s");
-    assert.notEqual(progressBefore.animationTimingFunction, "linear");
-    assert.equal(progressBefore.visibleSteps, "1");
-    assert.equal(progressAfter.visibleSteps, "1");
-    assert.ok(
-      progressAfter.scale > progressBefore.scale,
-      `progress did not advance continuously (${progressBefore.scale} -> ${progressAfter.scale})`,
-    );
-
-    await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "ready"
-      && document.querySelector(".hero-terminal-percent")?.textContent === "100"
-    ), null, { timeout: 7_000 });
-    await page.waitForFunction(() => {
-      const terminal = document.querySelector(".hero-terminal");
-      const readyLine = terminal?.querySelector(".hero-terminal-ready");
-      const lines = terminal?.querySelectorAll(".hero-terminal-line") ?? [];
-      if (!readyLine || lines.length !== 5) return false;
-      const readyStyle = getComputedStyle(readyLine);
-      return readyStyle.visibility === "visible"
-        && Number(readyStyle.opacity) > 0.9
-        && Array.from(lines).every((line) => {
-          const style = getComputedStyle(line);
-          return style.visibility === "visible" && Number(style.opacity) > 0.9;
-        });
-    }, null, { timeout: 1_000 });
-    const ready = await page.locator(".hero-terminal").evaluate((terminal) => {
-      const readyLine = terminal.querySelector(".hero-terminal-ready");
-      const progressFill = terminal.querySelector(".hero-terminal-progress-fill");
-      return {
-        backgroundImage: getComputedStyle(progressFill).backgroundImage,
-        readyText: readyLine?.textContent?.trim() ?? "",
-        readyVisible: readyLine?.classList.contains("is-visible") ?? false,
-        visibleSteps: terminal.querySelectorAll(".hero-terminal-line.is-visible").length,
-      };
-    });
-    assert.equal(ready.visibleSteps, 5);
-    assert.equal(ready.readyText, "◆ BUILD READY");
-    assert.equal(ready.readyVisible, true);
-    assert.match(ready.backgroundImage, /linear-gradient/i);
-    assert.match(ready.backgroundImage, /rgb\(79,\s*247,\s*213\)/i);
-    assert.match(ready.backgroundImage, /rgb\(138,\s*114,\s*255\)/i);
-    assert.match(ready.backgroundImage, /rgb\(255,\s*107,\s*87\)/i);
-
-    await page.waitForTimeout(1_200);
-    assert.equal(
-      await page.locator(".hero-terminal").getAttribute("data-phase"),
-      "ready",
-      "the completed CLI did not remain still long enough to read",
-    );
-
-    await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "resetting"
-    ), null, { timeout: 2_500 });
-    const resetting = await page.locator(".hero-terminal-progress-fill").evaluate((fill) => {
-      const style = getComputedStyle(fill);
-      return {
-        animationDuration: style.animationDuration,
-        animationName: style.animationName,
-        transformOriginX: Number.parseFloat(style.transformOrigin),
-        width: fill.clientWidth,
-      };
-    });
-    assert.equal(resetting.animationName, "hero-terminal-reset");
-    assert.equal(resetting.animationDuration, "0.7s");
-    assert.ok(
-      resetting.transformOriginX >= resetting.width - 1,
-      `reset did not retract from the right edge: ${JSON.stringify(resetting)}`,
-    );
-    await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-phase") === "typing"
-      && document.querySelectorAll(".hero-terminal-line.is-visible").length === 0
-      && document.querySelector(".hero-terminal-percent")?.textContent === "0"
-    ), null, { timeout: 1_500 });
-  } finally {
-    await context.close();
-  }
-});
-
-test("mobile terminal advances through one live log line", { timeout: 15_000 }, async () => {
-  const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 390, height: 844 },
-  });
-
-  const readLiveLog = () => page.locator(".hero-terminal").evaluate((terminal) => {
-    const liveLog = terminal.querySelector(".hero-terminal-mobile-live-log");
-    return {
-      display: getComputedStyle(liveLog).display,
-      key: liveLog?.getAttribute("data-log-key") ?? "",
-      lineCount: terminal.querySelectorAll(".hero-terminal-mobile-live-log").length,
-      parts: Array.from(liveLog?.children ?? [])
-        .map((part) => part.textContent?.trim() ?? ""),
-    };
-  });
-  const expectedParts = new Map([
-    ["command", ["›_", "agentctl compile --prod", ""]],
-    ["step-1", ["01", "runtime", "online"]],
-    ["step-2", ["02", "models", "bound"]],
-    ["step-3", ["03", "policy", "verified"]],
-    ["step-4", ["04", "graph", "optimized"]],
-    ["step-5", ["05", "artifact", "shipped"]],
-    ["resetting", ["↻", "field", "recycling"]],
-  ]);
-
-  try {
-    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    await page.waitForFunction(() => {
-      const terminal = document.querySelector(".hero-terminal");
-      const liveLog = terminal?.querySelector(".hero-terminal-mobile-live-log");
-      return terminal?.getAttribute("data-motion") === "running"
-        && getComputedStyle(liveLog).display === "grid";
-    }, null, { timeout: 3_000 });
-
-    const first = await readLiveLog();
-    assert.equal(first.display, "grid");
-    assert.equal(first.lineCount, 1);
-    assert.deepEqual(first.parts, expectedParts.get(first.key));
-
-    await page.waitForFunction((previousKey) => (
-      document.querySelector(".hero-terminal-mobile-live-log")
-        ?.getAttribute("data-log-key") !== previousKey
-    ), first.key, { timeout: 4_500 });
-
-    const next = await readLiveLog();
-    assert.equal(next.lineCount, 1);
-    assert.notEqual(next.key, first.key);
-    assert.deepEqual(next.parts, expectedParts.get(next.key));
-  } finally {
-    await context.close();
-  }
-});
-
-test("reduced-motion mobile keeps terminal, Context Ledger, and contact ticker complete but still", { timeout: 15_000 }, async () => {
+test("reduced-motion mobile keeps signal, Context path, and contact ticker complete but still", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     reducedMotion: "reduce",
     viewport: { width: 390, height: 844 },
@@ -1367,102 +1130,21 @@ test("reduced-motion mobile keeps terminal, Context Ledger, and contact ticker c
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "reduced"
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
     ), null, { timeout: 3_000 });
 
-    const terminal = await page.locator(".hero-terminal").evaluate((element) => {
-      const map = element.querySelector(".hero-topology-map");
-      const mapRect = map?.getBoundingClientRect();
-      const liveLog = element.querySelector(".hero-terminal-mobile-live-log");
-      const readyLine = element.querySelector(".hero-terminal-ready");
-
-      return {
-        barFontSize: Number.parseFloat(getComputedStyle(
-          element.querySelector(".hero-terminal-bar"),
-        ).fontSize),
-        captionFontSize: Number.parseFloat(getComputedStyle(
-          element.querySelector(".hero-topology-caption"),
-        ).fontSize),
-        clientHeight: element.clientHeight,
-        clientWidth: element.clientWidth,
-        commandDisplay: getComputedStyle(
-          element.querySelector(".hero-terminal-command"),
-        ).display,
-        desktopLogDisplay: getComputedStyle(
-          element.querySelector(".hero-terminal-log"),
-        ).display,
-        liveDisplay: getComputedStyle(liveLog).display,
-        liveLineCount: element.querySelectorAll(".hero-terminal-mobile-live-log").length,
-        liveParts: Array.from(liveLog?.children ?? [])
-          .map((part) => part.textContent?.trim() ?? ""),
-        mapDisplay: getComputedStyle(map).display,
-        mapHeight: mapRect?.height ?? 0,
-        mapWidth: mapRect?.width ?? 0,
-        percent: element.querySelector(".hero-terminal-percent")?.textContent,
-        progressText: element.querySelector(".hero-terminal-progress-copy")?.textContent?.trim(),
-        readyDisplay: getComputedStyle(readyLine).display,
-        readyText: readyLine?.textContent?.trim() ?? "",
-        readyVisible: readyLine?.classList.contains("is-visible") ?? false,
-        runningAnimations: element.getAnimations({ subtree: true })
-          .filter((animation) => animation.playState === "running")
-          .map((animation) => ({
-            targetClass: animation.effect?.target?.className ?? null,
-            transitionProperty: animation.transitionProperty ?? null,
-            type: animation.constructor.name,
-          })),
-        scrollHeight: element.scrollHeight,
-        signalLabelFontSize: Number.parseFloat(getComputedStyle(
-          map.querySelector(".hero-signal-label"),
-        ).fontSize),
-        signalLabels: [
-          ...Array.from(map.querySelectorAll(".hero-signal-label")),
-          map.querySelector(".hero-activation-title"),
-          map.querySelector(".hero-signal-output-label"),
-        ].map((label) => label?.textContent?.trim() ?? ""),
-      };
+    const signal = await page.locator(".hero-signal-graphic").evaluate((element) => ({
+      mainPathCount: element.querySelectorAll(".hero-signal-path--main").length,
+      runningAnimations: element.getAnimations({ subtree: true })
+        .filter((animation) => animation.playState === "running").length,
+      visible: getComputedStyle(element).visibility !== "hidden",
+    }));
+    assert.deepEqual(signal, {
+      mainPathCount: 1,
+      runningAnimations: 0,
+      visible: true,
     });
-
-    assert.equal(terminal.liveLineCount, 1);
-    assert.equal(terminal.liveDisplay, "grid");
-    assert.deepEqual(terminal.liveParts, ["05", "artifact", "shipped"]);
-    assert.equal(terminal.commandDisplay, "none");
-    assert.equal(terminal.desktopLogDisplay, "none");
-    assert.equal(terminal.percent, "100");
-    assert.equal(terminal.progressText, "FIELD STABLE");
-    assert.equal(terminal.readyText, "◆ BUILD READY");
-    assert.equal(terminal.readyVisible, true);
-    assert.equal(terminal.readyDisplay, "none");
-    assert.equal(terminal.mapDisplay, "block");
-    assert.deepEqual(
-      terminal.signalLabels,
-      ["LANG", "VISION", "CONTEXT", "LATENT FIELD", "OUT"],
-    );
-    assert.ok(
-      terminal.mapWidth >= terminal.clientWidth * 0.85,
-      `signal field did not use the available width: ${JSON.stringify(terminal)}`,
-    );
-    assert.ok(
-      terminal.mapHeight >= 120,
-      `signal field was too short to read: ${JSON.stringify(terminal)}`,
-    );
-    assert.ok(terminal.barFontSize >= 10, `mobile terminal bar text was ${terminal.barFontSize}px`);
-    assert.ok(
-      terminal.captionFontSize >= 10,
-      `mobile topology caption was ${terminal.captionFontSize}px`,
-    );
-    assert.ok(
-      terminal.signalLabelFontSize >= 11,
-      `mobile signal labels were ${terminal.signalLabelFontSize}px`,
-    );
-    assert.deepEqual(
-      terminal.runningAnimations,
-      [],
-      `reduced terminal retained motion: ${JSON.stringify(terminal.runningAnimations)}`,
-    );
-    assert.ok(
-      terminal.scrollHeight <= terminal.clientHeight + 1,
-      `reduced terminal content was clipped: ${terminal.scrollHeight}px > ${terminal.clientHeight}px`,
-    );
+    assert.equal(await page.locator(".hero-terminal").count(), 0);
 
     await page.locator("#about").scrollIntoViewIfNeeded();
     const about = await page.locator("#about").evaluate((section) => ({
@@ -1492,7 +1174,7 @@ test("reduced-motion mobile keeps terminal, Context Ledger, and contact ticker c
       ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
     );
     assert.equal(about.steps.every(({ visible }) => visible), true);
-    assert.deepEqual(about.contextLabels, ["CURRENT THREADS", "CORE BELIEF"]);
+    assert.deepEqual(about.contextLabels, ["Current threads", "Core belief"]);
     await page.locator("#contact").scrollIntoViewIfNeeded();
     const contact = await page.locator("#contact").evaluate((section) => {
       const marqueeWindow = section.querySelector(".contact-marquee-window");
@@ -1540,7 +1222,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.evaluate(() => document.fonts.ready);
     await page.waitForFunction(() => (
-      document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "reduced"
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
     ));
 
     const state = await page.evaluate(() => {
@@ -1557,7 +1239,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
         };
       });
       const runningAnimations = Array.from(
-        document.querySelectorAll("[data-motion-layer]"),
+        document.querySelectorAll("[data-motion-layer], .hero-signal-graphic"),
       ).flatMap((element) => (
         element.getAnimations({ subtree: true })
           .filter((animation) => animation.playState === "running")
@@ -1640,7 +1322,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     assert.equal(state.scanAnimation, "none");
     assert.equal(state.pulseAnimation, "none");
     assert.deepEqual(state.about, {
-      contextLabels: ["CURRENT THREADS", "CORE BELIEF"],
+      contextLabels: ["Current threads", "Core belief"],
       forbiddenCount: 0,
       stepLabels: ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
     });
@@ -1655,7 +1337,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
   }
 });
 
-test("Context Ledger exposes one complete static reading order", { timeout: 15_000 }, async () => {
+test("Context path exposes one complete static reading order", { timeout: 15_000 }, async () => {
   for (const viewport of [
     { width: 390, height: 844 },
     { width: 1440, height: 900 },
@@ -1701,7 +1383,7 @@ test("Context Ledger exposes one complete static reading order", { timeout: 15_0
       });
 
       assert.equal(ledger.labelledBy, "about-loop-title");
-      assert.equal(ledger.loopTitle, "HOW I TURN CAPABILITY INTO PRACTICE.");
+      assert.equal(ledger.loopTitle, "How I turn capability into practice.");
       assert.equal(ledger.forbiddenCount, 0);
       assert.deepEqual(
         ledger.steps.map(({ index, label, outcome }) => ({ index, label, outcome })),
@@ -1715,7 +1397,7 @@ test("Context Ledger exposes one complete static reading order", { timeout: 15_0
       assert.equal(ledger.steps.every(({ detail, visible }) => detail.length > 0 && visible), true);
       assert.deepEqual(
         ledger.context.map(({ label }) => label),
-        ["CURRENT THREADS", "CORE BELIEF"],
+        ["Current threads", "Core belief"],
       );
       assert.equal(ledger.context.every(({ text, visible }) => text.length > 0 && visible), true);
     } finally {
@@ -1745,6 +1427,7 @@ test("touch-only users return to the resting control style after tapping", { tim
     const activeHoverSelectors = await page.evaluate(() => {
       const matched = [];
       const targetSelectors = [
+        ".signal-button:hover",
         ".terminal-button:hover",
         ".contact-socials a:hover",
       ];
@@ -2084,14 +1767,14 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
       await page.evaluate(() => document.fonts.ready);
       await page.waitForFunction(() => (
         document.documentElement.dataset.pageActive === "true"
-        && document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "running"
+        && document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
       ));
 
       const geometry = await measurePageGeometry(page, {
         cta: ".hero-cta",
         message: ".hero-message",
         name: ".hero-name",
-        terminal: ".hero-media",
+        signal: ".hero-signal-graphic",
       });
       const responsiveDetails = await page.evaluate(() => {
         const ctaLabel = document.querySelector(".hero-cta > span:first-child");
@@ -2110,14 +1793,6 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
           document.querySelectorAll("#primary-navigation a"),
         ).filter((label) => label.scrollWidth > label.clientWidth + 1)
           .map((label) => label.textContent?.trim() ?? "") : [];
-        const terminalVisibleLogCount = Array.from(
-          document.querySelectorAll(".hero-terminal-line"),
-        ).filter((line) => getComputedStyle(line).display !== "none").length;
-        const terminalStepCount = document.querySelectorAll(".hero-terminal-line").length;
-        const clippedTerminalLabels = Array.from(
-          document.querySelectorAll(".hero-terminal-text"),
-        ).filter((label) => label.scrollWidth > label.clientWidth + 1)
-          .map((label) => label.textContent?.trim() ?? "");
         const experienceLogoMetrics = Array.from(
           document.querySelectorAll(".experience-entry-heading, .experience-group-heading"),
         ).map((heading) => {
@@ -2159,7 +1834,6 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         return {
           clippedContactLabels,
           clippedNavigationLabels,
-          clippedTerminalLabels,
           contactMarqueeVisible: (() => {
             const rect = contactMarquee?.getBoundingClientRect();
             return Boolean(
@@ -2184,28 +1858,24 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
             ? toolchainRect.top - educationRect.bottom
             : null,
           heroCtaLineCount: ctaLabel ? ctaRange.getClientRects().length : 0,
-          terminalStepCount,
-          terminalVisibleLogCount,
+          signalPathCount: document.querySelectorAll(".hero-signal-path").length,
+          terminalCount: document.querySelectorAll(".hero-terminal").length,
         };
       });
       const {
-        cta,
         message,
         name,
-        terminal,
+        signal,
       } = geometry.boxes;
       const metrics = {
         clientWidth: geometry.clientWidth,
         ...responsiveDetails,
         intersections: {
           nameMessage: intersectionArea(name, message),
-          nameTerminal: intersectionArea(name, terminal),
-          messageTerminal: intersectionArea(message, terminal),
-          terminalCta: intersectionArea(terminal, cta),
         },
         name,
         scrollWidth: geometry.scrollWidth,
-        terminal,
+        signal,
       };
 
       assert.equal(
@@ -2238,38 +1908,14 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         viewport.width <= 760 ? 1 : viewport.width < 1280 ? 2 : 4,
         `${viewport.width}px used ${metrics.contactColumnCount} contact columns`,
       );
-      assert.equal(
-        metrics.terminalStepCount,
-        5,
-        `${viewport.width}px rendered ${metrics.terminalStepCount} CLI steps`,
-      );
-      assert.equal(
-        metrics.terminalVisibleLogCount,
-        5,
-        `${viewport.width}px hid CLI output rows`,
-      );
-      assert.deepEqual(
-        metrics.clippedTerminalLabels,
-        [],
-        `${viewport.width}px clipped CLI output: ${metrics.clippedTerminalLabels.join(", ")}`,
-      );
+      assert.equal(metrics.signalPathCount, 3);
+      assert.equal(metrics.terminalCount, 0);
+      assert.ok(metrics.signal.width > 0 && metrics.signal.height > 0);
       assert.equal(
         metrics.heroCtaLineCount,
         1,
         `${viewport.width}px wrapped the hero CTA across ${metrics.heroCtaLineCount} lines`,
       );
-      if (viewport.width <= 900) {
-        const statementMediaGap = terminal.top - message.bottom;
-        const mediaCtaGap = cta.top - terminal.bottom;
-        assert.ok(
-          statementMediaGap >= 24 && statementMediaGap <= 64,
-          `${viewport.width}px hero statement/media gap=${statementMediaGap}px`,
-        );
-        assert.ok(
-          mediaCtaGap >= 24 && mediaCtaGap <= 64,
-          `${viewport.width}px hero media/CTA gap=${mediaCtaGap}px`,
-        );
-      }
       if (viewport.width <= 760) {
         assert.ok(
           metrics.foundationsColumnGap >= 48 && metrics.foundationsColumnGap <= 72,
@@ -2317,7 +1963,7 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
     const left = samples.get(leftWidth);
     const right = samples.get(rightWidth);
 
-    for (const element of ["name", "terminal"]) {
+    for (const element of ["name", "signal"]) {
       for (const metric of ["top", "width", "height"]) {
         assert.ok(
           Math.abs(left[element][metric] - right[element][metric]) <= 4,
@@ -2326,12 +1972,7 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         );
       }
     }
-    assert.equal(
-      left.terminalVisibleLogCount,
-      right.terminalVisibleLogCount,
-      `${leftWidth}/${rightWidth}px terminal log count jumped from `
-        + `${left.terminalVisibleLogCount} to ${right.terminalVisibleLogCount}`,
-    );
+    assert.equal(left.signalPathCount, right.signalPathCount);
   }
 });
 
@@ -2388,22 +2029,20 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       ), null, { timeout: 5_000 });
       await page.waitForFunction(() => (
         document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
-        && document.querySelector(".hero-media")?.getAttribute("data-hero-visible") === "true"
-        && document.querySelector(".hero-terminal")?.getAttribute("data-motion") === "running"
       ), null, { timeout: 3_000 });
 
       const geometry = await measurePageGeometry(page, {
         header: ".site-header",
         heroCta: ".hero-cta",
-        heroMedia: ".hero-media",
         heroName: ".hero-name",
+        heroSignal: ".hero-signal-graphic",
         heroStatement: ".hero-statement",
       });
       const {
         header,
         heroCta,
-        heroMedia,
         heroName,
+        heroSignal,
         heroStatement,
       } = geometry.boxes;
       const initialLayout = {
@@ -2411,40 +2050,24 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         header,
         hero: {
           ctaHeight: heroCta?.height ?? 0,
-          mediaCtaIntersection: intersectionArea(heroMedia, heroCta),
-          mediaNameIntersection: intersectionArea(heroMedia, heroName),
-          mediaStatementIntersection: intersectionArea(heroMedia, heroStatement),
+          nameStatementIntersection: intersectionArea(heroName, heroStatement),
         },
         scrollWidth: geometry.scrollWidth,
       };
-      const terminalLayout = await page.locator(".hero-terminal").evaluate((terminal) => ({
-        clientHeight: terminal.clientHeight,
-        clippedLabels: Array.from(terminal.querySelectorAll(".hero-terminal-text"))
-          .filter((label) => label.scrollWidth > label.clientWidth + 1)
-          .map((label) => label.textContent?.trim() ?? ""),
-        hiddenSteps: Array.from(terminal.querySelectorAll(".hero-terminal-line"))
-          .filter((line) => getComputedStyle(line).display === "none")
-          .length,
-        scrollHeight: terminal.scrollHeight,
-        stepCount: terminal.querySelectorAll(".hero-terminal-line").length,
+      const signalLayout = await page.locator(".hero-signal-graphic").evaluate((signal) => ({
+        branchCount: signal.querySelectorAll(".hero-signal-path--branch").length,
+        mainCount: signal.querySelectorAll(".hero-signal-path--main").length,
+        terminalCount: document.querySelectorAll(".hero-terminal").length,
+        visible: getComputedStyle(signal).visibility !== "hidden",
       }));
       const heroFlow = await page.evaluate(() => {
         const cta = document.querySelector(".hero-cta");
         const ctaLabel = cta?.querySelector(":scope > span:first-child");
-        const media = document.querySelector(".hero-media");
-        const statement = document.querySelector(".hero-message");
         const ctaRange = document.createRange();
         if (ctaLabel) ctaRange.selectNodeContents(ctaLabel);
-        const ctaRect = cta?.getBoundingClientRect();
-        const mediaRect = media?.getBoundingClientRect();
-        const statementRect = statement?.getBoundingClientRect();
 
         return {
           ctaLineCount: ctaLabel ? ctaRange.getClientRects().length : 0,
-          mediaCtaGap: ctaRect && mediaRect ? ctaRect.top - mediaRect.bottom : null,
-          statementMediaGap: mediaRect && statementRect
-            ? mediaRect.top - statementRect.bottom
-            : null,
         };
       });
       const contactPresentation = await page.evaluate(() => {
@@ -2498,9 +2121,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const shellSelectors = [
           ".site-header",
           ".hero-layout",
-          ".about > .section-kicker",
           ".about-layout",
-          ".about > .section-footer",
           ".experience > .section-kicker",
           ".experience-log",
           ".experience > .section-footer",
@@ -2583,7 +2204,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
               }
             : null,
           centerSplits: [
-            window.innerWidth > 900 ? splitMetric(".hero-layout") : null,
             window.innerWidth > 1100 ? splitMetric(".foundations-grid") : null,
             window.innerWidth > 760 ? splitMetric(".research-packet") : null,
           ].filter((metric) => metric !== null),
@@ -2642,7 +2262,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       );
       assert.equal(
         sectionRhythm.alignmentShells.length,
-        15,
+        13,
         `${viewport.width}x${viewport.height} did not render every alignment shell`,
       );
       for (const edge of ["left", "center", "right"]) {
@@ -2692,7 +2312,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       assert.equal(
         sectionRhythm.aboutPresentation.steps.every(({ contentClipped }) => !contentClipped),
         true,
-        `${viewport.width}x${viewport.height} clipped Context Ledger content: `
+        `${viewport.width}x${viewport.height} clipped Context path content: `
           + JSON.stringify(sectionRhythm.aboutPresentation.steps),
       );
       if (viewport.width >= 1280) {
@@ -2707,13 +2327,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         assert.ok(Math.max(step0.width, step1.width, step2.width, step3.width)
           - Math.min(step0.width, step1.width, step2.width, step3.width) <= 1);
         assert.ok(step0.left < step1.left && step1.left < step2.left && step2.left < step3.left);
-      } else if (viewport.width > 600) {
-        const [step0, step1, step2, step3] = sectionRhythm.aboutPresentation.steps;
-        assert.ok(Math.abs(step0.top - step1.top) <= 1);
-        assert.ok(Math.abs(step2.top - step3.top) <= 1);
-        assert.ok(Math.abs(step0.left - step2.left) <= 1);
-        assert.ok(Math.abs(step1.left - step3.left) <= 1);
-        assert.ok(step2.top >= step0.top + step0.height - 1);
       } else {
         const steps = sectionRhythm.aboutPresentation.steps;
         assert.ok(Math.max(...steps.map(({ left }) => left))
@@ -2725,7 +2338,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         }
       }
       const [context0, context1] = sectionRhythm.aboutPresentation.context;
-      if (viewport.width > 600) {
+      if (viewport.width > 600 && viewport.width <= 900) {
         assert.ok(Math.abs(context0.top - context1.top) <= 1);
         assert.ok(Math.abs(context0.width - context1.width) <= 1);
         assert.ok(context0.left < context1.left);
@@ -2739,13 +2352,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         0,
         `${viewport.width}x${viewport.height} retained the removed hero positioning line`,
       );
-      if (viewport.width >= 1280) {
-        const terminalRightGap = viewport.width - heroMedia.right;
-        assert.ok(
-          terminalRightGap >= 44,
-          `${viewport.width}x${viewport.height} terminal right gap=${terminalRightGap}px`,
-        );
-      }
+      assert.ok(heroSignal.width > 0 && heroSignal.height > 0);
       assert.ok(
         initialLayout.hero.ctaHeight >= 44,
         `${viewport.width}x${viewport.height} hero CTA height=${initialLayout.hero.ctaHeight}px`,
@@ -2756,17 +2363,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         `${viewport.width}x${viewport.height} wrapped the hero CTA across `
           + `${heroFlow.ctaLineCount} lines`,
       );
-      if (viewport.width <= 900) {
-        assert.ok(
-          heroFlow.statementMediaGap >= 24 && heroFlow.statementMediaGap <= 64,
-          `${viewport.width}x${viewport.height} hero statement/media gap=`
-            + `${heroFlow.statementMediaGap}px`,
-        );
-        assert.ok(
-          heroFlow.mediaCtaGap >= 24 && heroFlow.mediaCtaGap <= 64,
-          `${viewport.width}x${viewport.height} hero media/CTA gap=${heroFlow.mediaCtaGap}px`,
-        );
-      }
       assert.equal(
         contactPresentation.summaryVisible,
         false,
@@ -2833,26 +2429,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           `${viewport.width}x${viewport.height} education node/rail offset=${offset}px`,
         );
       }
-      assert.equal(
-        terminalLayout.stepCount,
-        5,
-        `${viewport.width}x${viewport.height} rendered ${terminalLayout.stepCount} CLI steps`,
-      );
-      assert.equal(
-        terminalLayout.hiddenSteps,
-        0,
-        `${viewport.width}x${viewport.height} hid CLI output rows`,
-      );
-      assert.deepEqual(
-        terminalLayout.clippedLabels,
-        [],
-        `${viewport.width}x${viewport.height} clipped CLI output: ${terminalLayout.clippedLabels.join(", ")}`,
-      );
-      assert.ok(
-        terminalLayout.scrollHeight <= terminalLayout.clientHeight + 1,
-        `${viewport.width}x${viewport.height} terminal content was clipped: `
-          + `${terminalLayout.scrollHeight}px > ${terminalLayout.clientHeight}px`,
-      );
+      assert.deepEqual(signalLayout, {
+        branchCount: 2,
+        mainCount: 1,
+        terminalCount: 0,
+        visible: true,
+      });
       for (const [pair, area] of Object.entries(initialLayout.hero)) {
         if (pair === "ctaHeight") continue;
         assert.ok(
@@ -3133,14 +2715,13 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
               ".hero-name",
               ".hero-statement",
               ".hero-cta",
-              ".hero-terminal",
             ],
           },
           {
             id: "about",
             selectors: [
               "#about-title",
-              ".about-role",
+              ".about-kicker",
               ".about-statement",
               ".about-introduction",
               "#about-loop-title",

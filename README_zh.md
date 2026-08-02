@@ -1,11 +1,11 @@
-# JAXON — 赛博终端个人主页
+# JAXON — 信号排版个人主页
 
 [English](./README.md) · **简体中文**
 
-> `›_ COMPILING INTELLIGENCE FOR THE REAL WORLD`
+> 将模型能力转化为真实世界中的可用系统。
 
 [jaxonhu1024.github.io](https://jaxonhu1024.github.io) 的完整源码——一个单页、
-赛博终端风格的个人作品集。站点经服务端渲染后导出为纯静态产物，并由 CI 自动部署到
+以信号排版为核心的个人作品集。站点经服务端渲染后导出为纯静态产物，并由 CI 自动部署到
 GitHub Pages。生成的产物刻意不纳入版本管理，一切都从源码构建。
 
 ## 技术栈
@@ -83,11 +83,11 @@ npm run export:github-pages
 
 ```
 app/                 页面源码、React 组件与样式
-├─ components/        Navigation、HeroTerminal、ResearchVisual
+├─ components/        Navigation、HeroSignalGraphic、ResearchVisual
 ├─ lib/               可打断滚动的辅助函数
 ├─ layout.tsx         根布局 + 动态元数据
 ├─ page.tsx           单页作品集内容
-└─ globals.css        赛博终端设计系统
+└─ globals.css        深色信号视觉系统
 public/               纳入版本管理的图片与元数据资源
 scripts/              确定性的静态导出工具
 tests/                渲染产物与导出完整性测试

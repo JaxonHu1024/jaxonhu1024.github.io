@@ -1,5 +1,5 @@
 import { Navigation } from "./components/Navigation";
-import { HeroTerminal } from "./components/HeroTerminal";
+import { HeroSignalGraphic } from "./components/HeroSignalGraphic";
 import { ResearchVisual } from "./components/ResearchVisual";
 
 const currentExperience = {
@@ -41,11 +41,11 @@ const contactMessage = "For project collaborations, technical consulting, or car
 
 const aboutContext = [
   {
-    label: "CURRENT THREADS",
+    label: "Current threads",
     value: "Agents, multimodal systems, and autonomous intelligence.",
   },
   {
-    label: "CORE BELIEF",
+    label: "Core belief",
     value: "A model matters only when the surrounding system can use it well.",
   },
 ] as const;
@@ -85,51 +85,48 @@ export default function Home() {
       </a>
       <Navigation />
       <main id="content">
-        <section className="section hero grid-surface" id="hero" aria-labelledby="hero-title" tabIndex={-1}>
-          <div className="hero-frame" aria-hidden="true" />
+        <section className="section hero" id="hero" aria-labelledby="hero-title" tabIndex={-1}>
           <div className="hero-layout">
-            <h1 className="hero-name" id="hero-title">
-              JAXON
-            </h1>
-            <div className="hero-copy">
+            <header className="hero-copy">
+              <p className="hero-role">AI ALGORITHM ENGINEER</p>
+              <h1 className="hero-name" id="hero-title">
+                JAXON
+              </h1>
               <div className="hero-message">
-                <p className="hero-statement">
-                  <span>COMPILING INTELLIGENCE</span>
-                  <span>FOR THE REAL WORLD_</span>
+                <p className="hero-statement">Turning model capability into real-world systems.</p>
+                <p className="hero-support">
+                  Models, tools, and decisions connected with evidence.
                 </p>
               </div>
-              <a className="terminal-button hero-cta" href="#about">
-                <span>ABOUT ME</span>
-                <span className="button-arrow" aria-hidden="true">›</span>
-              </a>
-            </div>
-            <div className="hero-media" aria-hidden="true">
-              <HeroTerminal />
+              <div className="hero-actions">
+                <a className="signal-button hero-cta" href="#about">
+                  <span>Explore context</span>
+                  <span className="signal-button-arrow" aria-hidden="true">↘</span>
+                </a>
+                <a className="hero-secondary-link" href="#research">
+                  View research
+                  <span aria-hidden="true">→</span>
+                </a>
+              </div>
+            </header>
+            <div className="hero-signal-graphic" aria-hidden="true">
+              <HeroSignalGraphic />
             </div>
           </div>
         </section>
 
         <section
-          className="section about grid-surface"
+          className="section about"
           id="about"
           aria-labelledby="about-title"
           tabIndex={-1}
         >
-          <p className="section-kicker reveal" aria-hidden="true">
-            <span>JAXON.CONTEXT</span>
-            <span className="kicker-rule" aria-hidden="true" />
-            <span className="square-end" aria-hidden="true" />
-          </p>
-
           <div className="about-layout reveal">
             <header className="about-copy">
-              <p className="about-role">
-                <span>AI ALGORITHM ENGINEER</span>
-                <span aria-hidden="true">PROFILE / 01</span>
-              </p>
+              <p className="about-kicker">JAXON.CONTEXT</p>
               <h2 className="about-statement" id="about-title">
-                <span>FROM MODEL CAPABILITY</span>
-                <span>TO SYSTEM BEHAVIOR.</span>
+                <span>From model capability</span>
+                <span>to system behavior.</span>
               </h2>
               <p className="about-introduction">
                 I&apos;m Jaxon. I work where models meet tools, decisions, and the real
@@ -138,19 +135,26 @@ export default function Home() {
               </p>
             </header>
 
+            <dl className="about-context" aria-label="Current context">
+              {aboutContext.map((item) => (
+                <div key={item.label}>
+                  <dt>{item.label}</dt>
+                  <dd>{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+
             <section className="about-working-loop" aria-labelledby="about-loop-title">
               <header className="about-loop-header">
-                <p>
-                  <span>WORKING LOOP</span>
-                  <span>04 PHASES / ONE SYSTEM</span>
-                </p>
-                <h3 id="about-loop-title">HOW I TURN CAPABILITY INTO PRACTICE.</h3>
+                <p>Working loop</p>
+                <h3 id="about-loop-title">How I turn capability into practice.</h3>
               </header>
 
-              <ol className="about-loop-list" data-about-spotlight="">
+              <ol className="about-loop-list">
                 {aboutWorkingLoop.map((stage) => (
                   <li className="about-loop-step" key={stage.index}>
                     <p className="about-loop-heading">
+                      <span className="about-loop-node" aria-hidden="true" />
                       <span className="about-loop-index">{stage.index}</span>
                       <span className="about-loop-label">{stage.label}</span>
                     </p>
@@ -164,20 +168,10 @@ export default function Home() {
               </ol>
             </section>
 
-            <dl className="about-context" aria-label="Current context">
-              {aboutContext.map((item) => (
-                <div key={item.label}>
-                  <dt>{item.label}</dt>
-                  <dd>{item.value}</dd>
-                </div>
-              ))}
-            </dl>
+            <div className="about-experience-bridge" aria-hidden="true">
+              <span />
+            </div>
           </div>
-
-          <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>01</b> {"// OPERATING CONTEXT"}</span>
-            <span className="section-footer-rule" />
-          </p>
         </section>
 
         <section
