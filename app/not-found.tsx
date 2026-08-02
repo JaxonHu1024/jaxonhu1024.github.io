@@ -9,9 +9,9 @@ export default function NotFound() {
         <p className="not-found-copy">
           The requested coordinate is outside this system.
         </p>
-        <Link className="terminal-button not-found-link" href="/">
+        <Link className="not-found-link" href="/">
           <span>RETURN HOME</span>
-          <span className="button-arrow" aria-hidden="true">›</span>
+          <span className="not-found-link-arrow" aria-hidden="true">→</span>
         </Link>
       </div>
       <p className="not-found-signature" aria-hidden="true">JAXON / RECOVERY CHANNEL</p>

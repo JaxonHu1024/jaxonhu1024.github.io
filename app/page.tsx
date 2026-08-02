@@ -356,9 +356,9 @@ export default function Home() {
                   </h3>
                   <p className="paper-venue">{paper.venue}</p>
                   <time className="paper-meta" dateTime={paper.year}>{paper.year}</time>
-                  <a className="terminal-button paper-link" href={paper.href} target="_blank" rel="noreferrer">
+                  <a className="paper-link" href={paper.href} target="_blank" rel="noreferrer">
                     <span>VIEW PAPER</span>
-                    <span className="button-arrow" aria-hidden="true">↗</span>
+                    <span className="paper-link-arrow" aria-hidden="true">↗</span>
                   </a>
                 </div>
                 <div className={`paper-visual is-${paper.visual}`}>

@@ -56,6 +56,8 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /Turning model capability into real-world systems\./);
   assert.match(html, /Models, tools, and decisions connected with evidence\./);
   assert.doesNotMatch(html, /hero-terminal|agentctl compile|BUILD READY/);
+  assert.doesNotMatch(html, /terminal-button|class="button-arrow"/);
+  assert.equal((html.match(/class="paper-link"/g) ?? []).length, 2);
   assert.doesNotMatch(html, /hero-positioning/);
   assert.doesNotMatch(
     html,
@@ -124,7 +126,11 @@ test("renders a branded not-found route instead of the homepage", async () => {
   assert.match(html, /404 \/ SIGNAL LOST/);
   assert.match(html, /ROUTE NOT FOUND_/);
   assert.match(html, /The requested coordinate is outside this system\./);
-  assert.match(html, /href="\/"[^>]*><span>RETURN HOME<\/span>/);
+  assert.match(
+    html,
+    /<a(?=[^>]*\bhref="\/")(?=[^>]*\bclass="not-found-link")[^>]*><span>RETURN HOME<\/span>/,
+  );
+  assert.doesNotMatch(html, /terminal-button|class="button-arrow"/);
   assert.doesNotMatch(html, /EXPERIENCE\.LOG|PUBLICATION 01/);
 });
 
@@ -478,7 +484,7 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
 
   for (const [selector, token] of [
     [".site-header", "--surface-header"],
-    [".terminal-button", "--color-accent"],
+    [".paper-link", "--color-accent"],
     [".hero-signal-path--main", "--color-accent"],
     [".section-footer-index", "--color-foreground-weak"],
     [".contact-socials a", "--color-foreground"],

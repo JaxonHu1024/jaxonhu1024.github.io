@@ -1432,7 +1432,7 @@ test("touch-only users return to the resting control style after tapping", { tim
       const matched = [];
       const targetSelectors = [
         ".signal-button:hover",
-        ".terminal-button:hover",
+        ".paper-link:hover",
         ".contact-socials a:hover",
       ];
       const walk = (rules, active) => {
@@ -2061,6 +2061,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       const signalLayout = await page.locator(".hero-signal-graphic").evaluate((signal) => ({
         branchCount: signal.querySelectorAll(".hero-signal-path--branch").length,
         mainCount: signal.querySelectorAll(".hero-signal-path--main").length,
+        terminalButtonCount: document.querySelectorAll(".terminal-button").length,
         terminalCount: document.querySelectorAll(".hero-terminal").length,
         visible: getComputedStyle(signal).visibility !== "hidden",
       }));
@@ -2113,6 +2114,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const toolchainColumn = document.querySelector(".toolchain-column");
         const educationRect = educationColumn?.getBoundingClientRect();
         const toolchainRect = toolchainColumn?.getBoundingClientRect();
+        const aboutSectionRect = document.querySelector("#about")?.getBoundingClientRect();
         const aboutShellRect = document.querySelector(".about-layout")?.getBoundingClientRect();
         const aboutLoopRect = document.querySelector(".about-working-loop")?.getBoundingClientRect();
         const aboutStatementRect = document.querySelector(".about-statement")?.getBoundingClientRect();
@@ -2188,6 +2190,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 loopLeftDelta: aboutLoopRect.left - aboutShellRect.left,
                 loopRightDelta: aboutShellRect.right - aboutLoopRect.right,
                 loopWidth: aboutLoopRect.width,
+                sectionHeight: aboutSectionRect?.height ?? 0,
                 shellWidth: aboutShellRect.width,
                 statementWidth: aboutStatementRect?.width ?? 0,
                 steps: aboutStepRects.map((rect, index) => ({
@@ -2313,6 +2316,14 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       );
       assert.equal(sectionRhythm.aboutPresentation.context.length, 2);
       assert.equal(sectionRhythm.aboutPresentation.steps.length, 4);
+      if (viewport.width <= 430) {
+        assert.ok(
+          sectionRhythm.aboutPresentation.sectionHeight >= 1_040
+            && sectionRhythm.aboutPresentation.sectionHeight <= 1_200,
+          `${viewport.width}x${viewport.height} About height=`
+            + `${sectionRhythm.aboutPresentation.sectionHeight}px; expected 1040-1200px`,
+        );
+      }
       assert.equal(
         sectionRhythm.aboutPresentation.steps.every(({ contentClipped }) => !contentClipped),
         true,
@@ -2436,6 +2447,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       assert.deepEqual(signalLayout, {
         branchCount: 2,
         mainCount: 1,
+        terminalButtonCount: 0,
         terminalCount: 0,
         visible: true,
       });

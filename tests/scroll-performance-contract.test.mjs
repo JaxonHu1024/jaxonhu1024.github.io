@@ -116,3 +116,14 @@ test("renders a dependency-free signal graphic and removes the CLI implementatio
     { code: "ENOENT" },
   );
 });
+
+test("keeps public links free of the removed terminal visual grammar", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const notFound = await readFile(new URL("../app/not-found.tsx", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+
+  assert.doesNotMatch(`${page}\n${notFound}`, /terminal-button|className="button-arrow"/);
+  assert.doesNotMatch(css, /--terminal|\.terminal-button/);
+  assert.match(page, /className="paper-link"[^>]*target="_blank"/);
+  assert.match(notFound, /className="not-found-link" href="\/"/);
+});
