@@ -733,7 +733,11 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.signal?.mainPathCount, 1);
       assert.equal(state.terminalCount, 0);
 
-      await page.locator('a[href="#research"]').click();
+      const researchNavigationLink = page.locator(
+        '#primary-navigation a[href="#research"]',
+      );
+      assert.equal(await researchNavigationLink.count(), 1);
+      await researchNavigationLink.click();
       await page.waitForFunction(() => location.hash === "#research");
       assert.equal(await page.locator("#research-title").isVisible(), true);
     } finally {
@@ -2573,7 +2577,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         try {
           await page.waitForFunction((sectionId) => {
             const section = document.getElementById(sectionId);
-            const reveal = section?.querySelector(".section-kicker.reveal");
+            const reveal = section?.querySelector(
+              sectionId === "about" ? ".about-layout.reveal" : ".section-kicker.reveal",
+            );
             if (!section || !reveal || section.dataset.sectionVisible !== "true") {
               return false;
             }
@@ -2640,7 +2646,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         } catch (error) {
           const state = await page.evaluate((sectionId) => {
             const section = document.getElementById(sectionId);
-            const reveal = section?.querySelector(".section-kicker.reveal");
+            const reveal = section?.querySelector(
+              sectionId === "about" ? ".about-layout.reveal" : ".section-kicker.reveal",
+            );
             const revealStyle = reveal ? getComputedStyle(reveal) : null;
             const revealTransform = revealStyle
               ? new DOMMatrixReadOnly(revealStyle.transform)
