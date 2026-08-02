@@ -247,8 +247,6 @@ export function Navigation() {
     return () => window.cancelAnimationFrame(frame);
   }, [menuOpen]);
 
-  const activeIndex = links.findIndex(([id]) => active === id);
-
   return (
     <header ref={headerRef} className={`site-header${menuOpen ? " is-menu-open" : ""}`}>
       <a
@@ -264,7 +262,6 @@ export function Navigation() {
         className="nav-scroll"
         id="primary-navigation"
         aria-label="Primary navigation"
-        data-active-index={activeIndex}
       >
         {links.map(([id, label], index) => (
           <a
@@ -275,10 +272,11 @@ export function Navigation() {
             onClick={(event) => navigateToSection(event, id)}
             key={id}
           >
-            {label}
+            <span className="nav-link-cursor" aria-hidden="true">[</span>
+            <span className="nav-link-label">{label}</span>
+            <span className="nav-link-cursor" aria-hidden="true">]</span>
           </a>
         ))}
-        <span className="nav-active-indicator" aria-hidden="true" />
       </nav>
       <span className="system-mark system-mark-static" aria-hidden="true">
         <span className="system-mark-dots"><i /><i /><i /><i /></span>

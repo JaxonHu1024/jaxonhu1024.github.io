@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { HeroInteractionController } from "./components/HeroInteractionController";
 import { MobileLoadFeedback } from "./components/MobileLoadFeedback";
+import { SiteTracingBeam } from "./components/SiteTracingBeam";
 import "./fonts.css";
 import "./globals.css";
 import "./scroll-performance.css";
@@ -60,6 +61,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <HeroInteractionController />
         <MobileLoadFeedback />
+        <SiteTracingBeam />
         {children}
       </body>
     </html>

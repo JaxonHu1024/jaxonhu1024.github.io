@@ -34,7 +34,8 @@ test("keeps the Context path server-rendered and prioritizes current context", a
   assert.match(page, /className="about-loop-step"/);
   assert.match(page, /className="about-context" aria-label="Current context"/);
   assert.equal((page.match(/label: "(?:FRAME|CONNECT|OBSERVE|VERIFY)"/g) ?? []).length, 4);
-  assert.equal((page.match(/label: "(?:Current threads|Core belief)"/g) ?? []).length, 2);
+  assert.match(page, /label: "Focus"/);
+  assert.doesNotMatch(page, /Current threads|Core belief|YIELDS/);
   assert.ok(
     page.indexOf('<dl className="about-context"')
       < page.indexOf('<section className="about-working-loop"'),
@@ -42,7 +43,7 @@ test("keeps the Context path server-rendered and prioritizes current context", a
   );
   assert.doesNotMatch(controller, /useAboutSpotlight|data-about-spotlight/);
   assert.match(css, /\.about-loop-list::before\s*\{/);
-  assert.match(css, /\.about-experience-bridge\s*\{/);
+  assert.doesNotMatch(`${page}\n${css}`, /about-experience-bridge/);
   assert.doesNotMatch(page, /about-loop-step[^\n]*tabIndex/);
 
   for (const component of ["AboutContextCompiler.tsx", "AboutParticleField.tsx"]) {
@@ -51,6 +52,38 @@ test("keeps the Context path server-rendered and prioritizes current context", a
       { code: "ENOENT" },
     );
   }
+});
+
+test("keeps the site tracing beam responsive, pausable, and dependency-light", async () => {
+  const component = await readFile(
+    new URL("../app/components/SiteTracingBeam.tsx", import.meta.url),
+    "utf8",
+  );
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
+  const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
+
+  assert.match(layout, /<SiteTracingBeam \/>/);
+  assert.match(component, /^"use client";/);
+  assert.match(component, /aria-hidden="true"/);
+  assert.match(component, /window\.addEventListener\("scroll", scheduleProgress, \{ passive: true \}\)/);
+  assert.match(component, /window\.requestAnimationFrame\(animate\)/);
+  assert.match(component, /new ResizeObserver\(scheduleProgress\)/);
+  assert.match(component, /prefers-reduced-motion: reduce/);
+  assert.match(component, /visibilitychange/);
+  assert.match(component, /window\.removeEventListener\("scroll", scheduleProgress\)/);
+  assert.match(css, /\.site-tracing-beam\s*\{[^}]*position:\s*fixed[^}]*pointer-events:\s*none/s);
+  assert.match(component, /gradientUnits="userSpaceOnUse"/);
+  assert.match(component, /gradientRef\.current\?\.setAttribute\("y1"/);
+  assert.match(component, /stopColor="var\(--color-accent\)" stopOpacity="0"/);
+  assert.match(component, /stopColor="var\(--color-accent-signal\)"/);
+  assert.match(component, /stopColor="var\(--color-status-active\)" stopOpacity="0"/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.site-tracing-beam__progress/);
+  assert.doesNotMatch(packageJson, /["'](?:motion|framer-motion)["']/);
+  await assert.rejects(
+    readFile(new URL("../app/components/TextType.tsx", import.meta.url), "utf8"),
+    { code: "ENOENT" },
+  );
 });
 
 test("keeps portrait and experience motion compositor-friendly and cheap while offscreen", async () => {
@@ -68,15 +101,18 @@ test("keeps portrait and experience motion compositor-friendly and cheap while o
     "utf8",
   );
   const portraitCanvas = css.match(
-    /\.hero-pixel-canvas\s*\{[^}]*touch-action:\s*none[^}]*\}/s,
+    /\.hero-pixel-canvas\s*\{[^}]*touch-action:\s*pan-y pinch-zoom[^}]*\}/s,
   )?.[0] ?? "";
   const traceFill = css.match(/\.experience-scan-fill \{[^}]*\}/s)?.[0] ?? "";
   const traceCursor = css.match(/\.experience-scan-cursor \{[^}]*\}/s)?.[0] ?? "";
 
-  assert.match(portraitCanvas, /touch-action:\s*none/);
+  assert.match(portraitCanvas, /touch-action:\s*pan-y pinch-zoom/);
   assert.doesNotMatch(css, /hero-terminal|agentctl|@keyframes\s+hero-terminal/);
   assert.match(pixelCanvas, /new IntersectionObserver/);
   assert.match(pixelCanvas, /document\.addEventListener\("visibilitychange"/);
+  assert.match(pixelCanvas, /canvas\.addEventListener\("pointerdown", updatePointer\)/);
+  assert.match(pixelCanvas, /canvas\.addEventListener\("pointercancel", handlePointerCancel\)/);
+  assert.match(pixelCanvas, /canvas\.removeEventListener\("pointercancel", handlePointerCancel\)/);
   assert.match(pixelCanvas, /new ResizeObserver/);
   assert.match(pixelCanvas, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
   assert.match(pixelCanvas, /function timeAdjustedFactor/);
@@ -121,7 +157,7 @@ test("renders the Aceternity pixel portrait and removes the signal and CLI imple
   assert.match(pixelCanvas, /^"use client";/);
   assert.match(pixelCanvas, /export function PixelatedCanvas/);
   assert.match(pixelCanvas, /requestAnimationFrame/);
-  assert.match(pixelCanvas, /prefers-reduced-motion: no-preference/);
+  assert.match(pixelCanvas, /prefers-reduced-motion: reduce/);
   assert.doesNotMatch(pixelCanvas, /setInterval|<animate/);
   assert.match(portrait, /\/assets\/jaxon-sea-portrait\.webp/);
   assert.match(portrait, /<PixelatedCanvas/);
@@ -130,6 +166,13 @@ test("renders the Aceternity pixel portrait and removes the signal and CLI imple
   assert.match(portrait, /fetchPriority="high"/);
   assert.match(portrait, /maxFps=\{60\}/);
   assert.match(page, /<HeroPixelPortrait \/>/);
+  assert.ok(
+    page.indexOf('className="hero-name"')
+      < page.indexOf("<HeroPixelPortrait />")
+      && page.indexOf("<HeroPixelPortrait />")
+        < page.indexOf('className="hero-actions"'),
+    "portrait should be between the name and CTA in source order",
+  );
   assert.doesNotMatch(page, /HeroSignalGraphic|hero-signal-graphic/);
   assert.doesNotMatch(page, /HeroTerminal|hero-terminal|agentctl|CLI/);
   assert.match(css, /--background:\s*#05070b/);

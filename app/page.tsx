@@ -39,40 +39,34 @@ const papers = [
 
 const contactMessage = "For project collaborations, technical consulting, or career opportunities, feel free to reach out.";
 
-const aboutContext = [
-  {
-    label: "Current threads",
-    value: "Agents, multimodal systems, and autonomous intelligence.",
-  },
-  {
-    label: "Core belief",
-    value: "A model matters only when the surrounding system can use it well.",
-  },
-] as const;
+const aboutFocus = {
+  label: "Focus",
+  value: "Agents, multimodal systems, and autonomous intelligence.",
+} as const;
 
 const aboutWorkingLoop = [
   {
     index: "01",
     label: "FRAME",
-    detail: "Define the task, boundary, and proof before building.",
+    detail: "Define scope.",
     outcome: "BOUNDARY",
   },
   {
     index: "02",
     label: "CONNECT",
-    detail: "Join models, tools, and context into one usable system.",
+    detail: "Join models and tools.",
     outcome: "SYSTEM",
   },
   {
     index: "03",
     label: "OBSERVE",
-    detail: "Make decisions, state, and failure modes visible.",
+    detail: "Expose state and failures.",
     outcome: "CLARITY",
   },
   {
     index: "04",
     label: "VERIFY",
-    detail: "Attach every important claim to reproducible evidence.",
+    detail: "Make claims reproducible.",
     outcome: "EVIDENCE",
   },
 ] as const;
@@ -88,28 +82,17 @@ export default function Home() {
         <section className="section hero" id="hero" aria-labelledby="hero-title" tabIndex={-1}>
           <div className="hero-layout">
             <header className="hero-copy">
-              <p className="hero-role">AI ALGORITHM ENGINEER</p>
               <h1 className="hero-name" id="hero-title">
                 JAXON
               </h1>
-              <div className="hero-message">
-                <p className="hero-statement">Turning model capability into real-world systems.</p>
-                <p className="hero-support">
-                  Models, tools, and decisions connected with evidence.
-                </p>
-              </div>
-              <div className="hero-actions">
-                <a className="signal-button hero-cta" href="#about">
-                  <span>Explore context</span>
-                  <span className="signal-button-arrow" aria-hidden="true">↘</span>
-                </a>
-                <a className="hero-secondary-link" href="#research">
-                  View research
-                  <span aria-hidden="true">→</span>
-                </a>
-              </div>
             </header>
             <HeroPixelPortrait />
+            <div className="hero-actions">
+              <a className="signal-button hero-cta" href="#about">
+                <span>Explore context</span>
+                <span className="signal-button-arrow" aria-hidden="true">↘</span>
+              </a>
+            </div>
           </div>
         </section>
 
@@ -127,25 +110,22 @@ export default function Home() {
                 <span>to system behavior.</span>
               </h2>
               <p className="about-introduction">
-                I&apos;m Jaxon. I work where models meet tools, decisions, and the real
-                world, turning promising capability into systems that can be inspected,
-                tested, and improved.
+                I&apos;m Jaxon. I build inspectable systems where models, tools, and
+                decisions meet the real world.
               </p>
             </header>
 
             <dl className="about-context" aria-label="Current context">
-              {aboutContext.map((item) => (
-                <div key={item.label}>
-                  <dt>{item.label}</dt>
-                  <dd>{item.value}</dd>
-                </div>
-              ))}
+              <div>
+                <dt>{aboutFocus.label}</dt>
+                <dd>{aboutFocus.value}</dd>
+              </div>
             </dl>
 
             <section className="about-working-loop" aria-labelledby="about-loop-title">
               <header className="about-loop-header">
                 <p>Working loop</p>
-                <h3 id="about-loop-title">How I turn capability into practice.</h3>
+                <h3 id="about-loop-title">How I work.</h3>
               </header>
 
               <ol className="about-loop-list">
@@ -158,17 +138,12 @@ export default function Home() {
                     </p>
                     <p className="about-loop-detail">{stage.detail}</p>
                     <p className="about-loop-outcome">
-                      <span>YIELDS</span>
                       <strong>{stage.outcome}</strong>
                     </p>
                   </li>
                 ))}
               </ol>
             </section>
-
-            <div className="about-experience-bridge" aria-hidden="true">
-              <span />
-            </div>
           </div>
         </section>
 

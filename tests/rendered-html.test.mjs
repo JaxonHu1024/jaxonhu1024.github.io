@@ -52,9 +52,15 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   );
   assert.match(html, /rel="canonical" href="http:\/\/localhost:3000\/"/);
   assert.match(html, /property="og:url" content="http:\/\/localhost:3000"/);
-  assert.match(html, /AI ALGORITHM ENGINEER/);
-  assert.match(html, /Turning model capability into real-world systems\./);
-  assert.match(html, /Models, tools, and decisions connected with evidence\./);
+  assert.doesNotMatch(
+    html,
+    /AI ALGORITHM ENGINEER|The body achieves what the mind believes|Turning model capability|Models, tools, and decisions connected|View research/,
+  );
+  assert.equal((html.match(/class="site-tracing-beam"/g) ?? []).length, 1);
+  assert.match(
+    html,
+    /<aside(?=[^>]*class="site-tracing-beam")(?=[^>]*aria-hidden="true")(?=[^>]*data-trace-progress="0\.0000")[^>]*>/,
+  );
   assert.match(html, /<main class="site-canvas" id="content">/);
   assert.doesNotMatch(html, /hero-terminal|agentctl compile|BUILD READY/);
   assert.doesNotMatch(html, /terminal-button|class="button-arrow"/);
@@ -201,21 +207,24 @@ test("renders a distinct public-safe About system before Experience", async () =
   );
   assert.match(about, /From model capability/);
   assert.match(about, /to system behavior\./);
-  assert.match(about, /I(?:&#x27;|')m Jaxon/);
+  assert.match(
+    about,
+    /I(?:&#x27;|')m Jaxon\. I build inspectable systems where models, tools, and decisions meet the real world\./,
+  );
   assert.match(
     about,
     /<section(?=[^>]*\bclass="about-working-loop")(?=[^>]*\baria-labelledby="about-loop-title")[^>]*>/,
   );
-  assert.match(about, /<h3 id="about-loop-title">How I turn capability into practice\.<\/h3>/);
+  assert.match(about, /<h3 id="about-loop-title">How I work\.<\/h3>/);
   assert.match(
     about,
     /<ol class="about-loop-list">/,
   );
   for (const [index, label, detail, outcome] of [
-    ["01", "FRAME", "Define the task, boundary, and proof before building.", "BOUNDARY"],
-    ["02", "CONNECT", "Join models, tools, and context into one usable system.", "SYSTEM"],
-    ["03", "OBSERVE", "Make decisions, state, and failure modes visible.", "CLARITY"],
-    ["04", "VERIFY", "Attach every important claim to reproducible evidence.", "EVIDENCE"],
+    ["01", "FRAME", "Define scope.", "BOUNDARY"],
+    ["02", "CONNECT", "Join models and tools.", "SYSTEM"],
+    ["03", "OBSERVE", "Expose state and failures.", "CLARITY"],
+    ["04", "VERIFY", "Make claims reproducible.", "EVIDENCE"],
   ]) {
     assert.match(
       about,
@@ -238,14 +247,14 @@ test("renders a distinct public-safe About system before Experience", async () =
     about.indexOf('class="about-context"') < about.indexOf('class="about-working-loop"'),
     "current context should be readable before the working loop",
   );
-  assert.equal((about.match(/<dt>/g) ?? []).length, 2);
+  assert.equal((about.match(/<dt>/g) ?? []).length, 1);
   for (const [label, value] of [
-    ["Current threads", "Agents, multimodal systems, and autonomous intelligence."],
-    ["Core belief", "A model matters only when the surrounding system can use it well."],
+    ["Focus", "Agents, multimodal systems, and autonomous intelligence."],
   ]) {
     assert.match(about, new RegExp(`<dt>${label}<\\/dt>[\\s\\S]*?<dd>${value.replaceAll(".", "\\.")}<\\/dd>`));
   }
-  assert.match(about, /class="about-experience-bridge" aria-hidden="true"/);
+  assert.doesNotMatch(about, /YIELDS|Current threads|Core belief/);
+  assert.doesNotMatch(about, /about-experience-bridge/);
   assert.doesNotMatch(about, /section-kicker|OPERATING CONTEXT/);
   assert.doesNotMatch(html, /grid-surface/);
   assert.doesNotMatch(
@@ -403,10 +412,18 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
 
   const hero = page.slice(heroStart, heroEnd);
   assert.match(hero, /JAXON/);
-  assert.match(hero, /AI ALGORITHM ENGINEER/);
-  assert.match(hero, /Turning model capability into real-world systems\./);
-  assert.match(hero, /Models, tools, and decisions connected with evidence\./);
+  assert.doesNotMatch(
+    hero,
+    /AI ALGORITHM ENGINEER|The body achieves what the mind believes|Turning model capability|Models, tools, and decisions connected|View research|TextType/,
+  );
   assert.match(hero, /HeroPixelPortrait/);
+  assert.ok(
+    hero.indexOf('className="hero-name"')
+      < hero.indexOf("<HeroPixelPortrait />")
+      && hero.indexOf("<HeroPixelPortrait />")
+        < hero.indexOf('className="hero-actions"'),
+    "mobile source order should remain JAXON, portrait, then CTA",
+  );
   assert.doesNotMatch(hero, /HeroTerminal|hero-terminal|agentctl|CLI/);
   assert.doesNotMatch(hero, /HeroSignalGraphic|hero-signal-/);
   assert.doesNotMatch(hero, /hero-processor-field-optimized\.webp/);

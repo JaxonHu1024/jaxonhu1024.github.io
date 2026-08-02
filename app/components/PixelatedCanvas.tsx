@@ -149,6 +149,7 @@ export function PixelatedCanvas({
     let visible = true;
     let pageActive = document.visibilityState === "visible";
     let interactionEnabled = false;
+    let interactionEndTimeout: number | null = null;
     let baseLayer: HTMLCanvasElement | null = null;
     const affectedSamples: PixelSample[] = [];
     const affectedInfluences: number[] = [];
@@ -157,12 +158,10 @@ export function PixelatedCanvas({
     const image = new Image();
     image.crossOrigin = "anonymous";
 
-    const interactionQuery = window.matchMedia(
-      "(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)",
-    );
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const syncInteractionState = () => {
-      interactionEnabled = interactive && interactionQuery.matches;
+      interactionEnabled = interactive && !motionQuery.matches;
       canvas.dataset.interactive = String(interactionEnabled);
       canvas.dataset.motion = interactionEnabled ? "idle" : "reduced";
       if (!interactionEnabled) {
@@ -625,6 +624,10 @@ export function PixelatedCanvas({
 
     const updatePointer = (event: PointerEvent) => {
       if (!interactionEnabled) return;
+      if (interactionEndTimeout !== null) {
+        window.clearTimeout(interactionEndTimeout);
+        interactionEndTimeout = null;
+      }
       const bounds = canvas.getBoundingClientRect();
       const x = event.clientX - bounds.left;
       const y = event.clientY - bounds.top;
@@ -637,7 +640,8 @@ export function PixelatedCanvas({
       startAnimation();
     };
 
-    const handlePointerLeave = () => {
+    const fadeInteraction = () => {
+      interactionEndTimeout = null;
       pointerInsideRef.current = false;
       targetActivityRef.current = 0;
       if (fadeOnLeave) {
@@ -645,6 +649,28 @@ export function PixelatedCanvas({
       } else {
         resetInteraction();
       }
+    };
+
+    const handlePointerEnd = (event: PointerEvent) => {
+      if (event.pointerType === "mouse") {
+        fadeInteraction();
+        return;
+      }
+
+      if (interactionEndTimeout !== null) window.clearTimeout(interactionEndTimeout);
+      interactionEndTimeout = window.setTimeout(fadeInteraction, 160);
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") handlePointerEnd(event);
+    };
+
+    const handlePointerCancel = () => {
+      if (interactionEndTimeout !== null) {
+        window.clearTimeout(interactionEndTimeout);
+        interactionEndTimeout = null;
+      }
+      resetInteraction();
     };
 
     const handleVisibilityChange = () => {
@@ -656,7 +682,7 @@ export function PixelatedCanvas({
       }
     };
 
-    const handleInteractionChange = () => {
+    const handleMotionChange = () => {
       syncInteractionState();
       if (!interactionEnabled) resetInteraction();
     };
@@ -682,10 +708,13 @@ export function PixelatedCanvas({
 
     syncInteractionState();
     canvas.addEventListener("pointerenter", updatePointer);
+    canvas.addEventListener("pointerdown", updatePointer);
     canvas.addEventListener("pointermove", updatePointer);
-    canvas.addEventListener("pointerleave", handlePointerLeave);
+    canvas.addEventListener("pointerleave", handlePointerEnd);
+    canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("pointercancel", handlePointerCancel);
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    interactionQuery.addEventListener("change", handleInteractionChange);
+    motionQuery.addEventListener("change", handleMotionChange);
     intersectionObserver.observe(canvas);
     if (resizeObserver && canvas.parentElement) resizeObserver.observe(canvas.parentElement);
 
@@ -699,12 +728,16 @@ export function PixelatedCanvas({
     return () => {
       cancelled = true;
       stopAnimation();
+      if (interactionEndTimeout !== null) window.clearTimeout(interactionEndTimeout);
       if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
       canvas.removeEventListener("pointerenter", updatePointer);
+      canvas.removeEventListener("pointerdown", updatePointer);
       canvas.removeEventListener("pointermove", updatePointer);
-      canvas.removeEventListener("pointerleave", handlePointerLeave);
+      canvas.removeEventListener("pointerleave", handlePointerEnd);
+      canvas.removeEventListener("pointerup", handlePointerUp);
+      canvas.removeEventListener("pointercancel", handlePointerCancel);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-      interactionQuery.removeEventListener("change", handleInteractionChange);
+      motionQuery.removeEventListener("change", handleMotionChange);
       intersectionObserver.disconnect();
       resizeObserver?.disconnect();
     };

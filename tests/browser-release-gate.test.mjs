@@ -711,7 +711,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.about.forbiddenCount, 0);
       assert.deepEqual(
         state.about.contextLabels,
-        ["Current threads", "Core belief"],
+        ["Focus"],
       );
       assert.deepEqual(
         state.about.loopSteps.map(({ label }) => label),
@@ -1130,11 +1130,14 @@ test("hero pixel canvas distorts on pointer input, pauses offscreen, and remains
     await page.waitForFunction(() => (
       document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "running"
     ));
-    await page.waitForTimeout(160);
+    await page.waitForFunction((snapshot) => (
+      document.querySelector(".hero-pixel-canvas")?.toDataURL() !== snapshot
+    ), resting.snapshot, { timeout: 1_500 });
     const distortedSnapshot = await page.locator(".hero-pixel-canvas").evaluate(
       (canvas) => canvas.toDataURL(),
     );
     assert.notEqual(distortedSnapshot, resting.snapshot);
+    await page.mouse.move(0, 0);
 
     await page.locator("#contact").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => (
@@ -1157,6 +1160,91 @@ test("hero pixel canvas distorts on pointer input, pauses offscreen, and remains
     await page.waitForFunction(() => (
       document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "idle"
     ));
+  } finally {
+    await context.close();
+  }
+});
+
+test("mobile Hero keeps one full touch-interactive portrait between JAXON and the CTA", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 430, height: 932 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-pixelated-ready") === "true"
+    ), null, { timeout: 3_000 });
+
+    const layout = await page.evaluate(() => {
+      const name = document.querySelector(".hero-name").getBoundingClientRect();
+      const portrait = document.querySelector(".hero-pixel-portrait");
+      const portraitRect = portrait.getBoundingClientRect();
+      const cta = document.querySelector(".hero-cta").getBoundingClientRect();
+      const canvas = portrait.querySelector(".hero-pixel-canvas");
+      const portraitStyle = getComputedStyle(portrait);
+
+      return {
+        canvasCount: document.querySelectorAll(".hero-pixel-canvas").length,
+        ctaTop: cta.top,
+        interactive: canvas.getAttribute("data-interactive"),
+        labelDisplays: Array.from(portrait.querySelectorAll(".hero-portrait-label"))
+          .map((label) => getComputedStyle(label).display),
+        maskImage: portraitStyle.maskImage,
+        nameBottom: name.bottom,
+        opacity: portraitStyle.opacity,
+        pointerEvents: portraitStyle.pointerEvents,
+        portraitBottom: portraitRect.bottom,
+        portraitTop: portraitRect.top,
+        touchAction: getComputedStyle(canvas).touchAction,
+      };
+    });
+
+    assert.equal(layout.canvasCount, 1);
+    assert.equal(layout.interactive, "true");
+    assert.equal(layout.maskImage, "none");
+    assert.equal(layout.opacity, "1");
+    assert.equal(layout.pointerEvents, "auto");
+    assert.equal(layout.touchAction, "pan-y pinch-zoom");
+    assert.equal(layout.labelDisplays.every((display) => display !== "none"), true);
+    assert.ok(layout.nameBottom <= layout.portraitTop + 1);
+    assert.ok(layout.portraitBottom <= layout.ctaTop + 1);
+
+    const canvas = page.locator(".hero-pixel-canvas");
+    const restingSnapshot = await canvas.evaluate((element) => element.toDataURL());
+    await canvas.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      element.dispatchEvent(new PointerEvent("pointerdown", {
+        bubbles: true,
+        buttons: 1,
+        clientX: rect.left + rect.width * 0.6,
+        clientY: rect.top + rect.height * 0.46,
+        isPrimary: true,
+        pointerId: 1,
+        pointerType: "touch",
+      }));
+    });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "running"
+    ));
+    await page.waitForTimeout(120);
+    assert.notEqual(
+      await canvas.evaluate((element) => element.toDataURL()),
+      restingSnapshot,
+    );
+    await canvas.evaluate((element) => {
+      element.dispatchEvent(new PointerEvent("pointerup", {
+        bubbles: true,
+        pointerId: 1,
+        pointerType: "touch",
+      }));
+    });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "idle"
+    ), null, { timeout: 2_000 });
   } finally {
     await context.close();
   }
@@ -1222,7 +1310,7 @@ test("reduced-motion mobile keeps the portrait, Context path, and contact ticker
       ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
     );
     assert.equal(about.steps.every(({ visible }) => visible), true);
-    assert.deepEqual(about.contextLabels, ["Current threads", "Core belief"]);
+    assert.deepEqual(about.contextLabels, ["Focus"]);
     await page.locator("#contact").scrollIntoViewIfNeeded();
     const contact = await page.locator("#contact").evaluate((section) => {
       const marqueeWindow = section.querySelector(".contact-marquee-window");
@@ -1370,7 +1458,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     assert.equal(state.scanAnimation, "none");
     assert.equal(state.pulseAnimation, "none");
     assert.deepEqual(state.about, {
-      contextLabels: ["Current threads", "Core belief"],
+      contextLabels: ["Focus"],
       forbiddenCount: 0,
       stepLabels: ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
     });
@@ -1431,7 +1519,7 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
       });
 
       assert.equal(ledger.labelledBy, "about-loop-title");
-      assert.equal(ledger.loopTitle, "How I turn capability into practice.");
+      assert.equal(ledger.loopTitle, "How I work.");
       assert.equal(ledger.forbiddenCount, 0);
       assert.deepEqual(
         ledger.steps.map(({ index, label, outcome }) => ({ index, label, outcome })),
@@ -1445,7 +1533,7 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
       assert.equal(ledger.steps.every(({ detail, visible }) => detail.length > 0 && visible), true);
       assert.deepEqual(
         ledger.context.map(({ label }) => label),
-        ["Current threads", "Core belief"],
+        ["Focus"],
       );
       assert.equal(ledger.context.every(({ text, visible }) => text.length > 0 && visible), true);
     } finally {
@@ -1820,7 +1908,6 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
 
       const geometry = await measurePageGeometry(page, {
         cta: ".hero-cta",
-        message: ".hero-message",
         name: ".hero-name",
         portrait: ".hero-pixel-portrait",
       });
@@ -1878,6 +1965,22 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         });
         const educationRect = educationColumn?.getBoundingClientRect();
         const toolchainRect = toolchainColumn?.getBoundingClientRect();
+        const navCursorGeometry = innerWidth > 900 ? (() => {
+          const link = document.querySelector('#primary-navigation a[href="#foundations"]');
+          const label = link?.querySelector(".nav-link-label");
+          const cursors = link?.querySelectorAll(".nav-link-cursor") ?? [];
+          if (!link || !label || cursors.length !== 2) return null;
+          const linkRect = link.getBoundingClientRect();
+          const labelRect = label.getBoundingClientRect();
+          const leftRect = cursors[0].getBoundingClientRect();
+          const rightRect = cursors[1].getBoundingClientRect();
+          return {
+            contained: leftRect.left >= linkRect.left - 0.5
+              && rightRect.right <= linkRect.right + 0.5,
+            leftGap: labelRect.left - leftRect.right,
+            rightGap: rightRect.left - labelRect.right,
+          };
+        })() : null;
 
         return {
           clippedContactLabels,
@@ -1906,13 +2009,14 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
             ? toolchainRect.top - educationRect.bottom
             : null,
           heroCtaLineCount: ctaLabel ? ctaRange.getClientRects().length : 0,
+          navCursorGeometry,
           portraitCanvasCount: document.querySelectorAll(".hero-pixel-canvas").length,
           portraitFallbackCount: document.querySelectorAll(".hero-portrait-fallback").length,
           terminalCount: document.querySelectorAll(".hero-terminal").length,
         };
       });
       const {
-        message,
+        cta,
         name,
         portrait,
       } = geometry.boxes;
@@ -1920,8 +2024,10 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         clientWidth: geometry.clientWidth,
         ...responsiveDetails,
         intersections: {
-          nameMessage: intersectionArea(name, message),
+          ctaPortrait: intersectionArea(cta, portrait),
+          namePortrait: intersectionArea(name, portrait),
         },
+        cta,
         name,
         scrollWidth: geometry.scrollWidth,
         portrait,
@@ -1942,6 +2048,15 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         [],
         `${viewport.width}px clipped navigation labels: ${metrics.clippedNavigationLabels.join(", ")}`,
       );
+      if (metrics.navCursorGeometry) {
+        assert.equal(metrics.navCursorGeometry.contained, true);
+        assert.ok(
+          metrics.navCursorGeometry.leftGap >= 2
+            && metrics.navCursorGeometry.rightGap >= 2,
+          `${viewport.width}px navigation cursor gaps were `
+            + `${JSON.stringify(metrics.navCursorGeometry)}`,
+        );
+      }
       assert.equal(
         metrics.contactMarqueeVisible,
         true,
@@ -1966,6 +2081,14 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         1,
         `${viewport.width}px wrapped the hero CTA across ${metrics.heroCtaLineCount} lines`,
       );
+      if (viewport.width <= 900) {
+        assert.ok(
+          metrics.name.bottom <= metrics.portrait.top + 1
+            && metrics.portrait.bottom <= metrics.cta.top + 1,
+          `${viewport.width}px mobile Hero order was not JAXON → portrait → CTA: `
+            + `${JSON.stringify({ cta: metrics.cta, name: metrics.name, portrait: metrics.portrait })}`,
+        );
+      }
       if (viewport.width <= 760) {
         assert.ok(
           metrics.foundationsColumnGap >= 48 && metrics.foundationsColumnGap <= 72,
@@ -2024,6 +2147,137 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
     }
     assert.equal(left.portraitCanvasCount, right.portraitCanvasCount);
     assert.equal(left.portraitFallbackCount, right.portraitFallbackCount);
+  }
+});
+
+test("desktop active navigation brackets hug the label without changing its name", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1024, height: 768 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const foundationsLink = page.getByRole("link", { name: "FOUNDATIONS", exact: true });
+    assert.equal(await foundationsLink.count(), 1);
+    await foundationsLink.click();
+    await page.waitForFunction(() => (
+      document.querySelector('#primary-navigation a[href="#foundations"]')
+        ?.getAttribute("aria-current") === "location"
+    ));
+
+    const geometry = await foundationsLink.evaluate((link) => {
+      const label = link.querySelector(".nav-link-label");
+      const cursors = link.querySelectorAll(".nav-link-cursor");
+      const linkRect = link.getBoundingClientRect();
+      const labelRect = label.getBoundingClientRect();
+      const leftRect = cursors[0].getBoundingClientRect();
+      const rightRect = cursors[1].getBoundingClientRect();
+      return {
+        cursorVisibility: Array.from(cursors).map((cursor) => (
+          getComputedStyle(cursor).visibility
+        )),
+        leftGap: labelRect.left - leftRect.right,
+        leftInside: leftRect.left >= linkRect.left - 0.5,
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        rightGap: rightRect.left - labelRect.right,
+        rightInside: rightRect.right <= linkRect.right + 0.5,
+      };
+    });
+
+    assert.deepEqual(geometry.cursorVisibility, ["visible", "visible"]);
+    assert.ok(geometry.leftGap >= 2 && geometry.rightGap >= 2);
+    assert.equal(geometry.leftInside, true);
+    assert.equal(geometry.rightInside, true);
+    assert.equal(geometry.overflow, 0);
+  } finally {
+    await context.close();
+  }
+});
+
+test("right-side tracing beam follows whole-document scroll and stays static for reduced motion", { timeout: 20_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1280, height: 800 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-motion") !== "pending"
+    ));
+
+    const beam = page.locator(".site-tracing-beam");
+    const initial = await beam.evaluate((element) => ({
+      ariaHidden: element.getAttribute("aria-hidden"),
+      count: document.querySelectorAll(".site-tracing-beam").length,
+      pointerEvents: getComputedStyle(element).pointerEvents,
+      progress: Number(element.getAttribute("data-trace-progress")),
+    }));
+    assert.deepEqual(initial, {
+      ariaHidden: "true",
+      count: 1,
+      pointerEvents: "none",
+      progress: 0,
+    });
+
+    await page.evaluate(() => {
+      const maxScroll = document.documentElement.scrollHeight - innerHeight;
+      window.scrollTo(0, maxScroll * 0.55);
+    });
+    await page.waitForFunction(() => (
+      Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress"))
+        >= 0.5
+    ));
+    const middleProgress = Number(await beam.getAttribute("data-trace-progress"));
+    assert.ok(middleProgress >= 0.5 && middleProgress < 0.8);
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForFunction(() => (
+      Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress"))
+        >= 0.995
+    ));
+    assert.ok(Number(await beam.getAttribute("data-trace-progress")) >= 0.995);
+  } finally {
+    await context.close();
+  }
+
+  const reducedSession = await createReleasePageSession(browser, {
+    reducedMotion: "reduce",
+    viewport: { width: 390, height: 844 },
+  });
+  try {
+    await reducedSession.page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await reducedSession.page.waitForFunction(() => (
+      document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-motion") === "reduced"
+    ));
+    const reducedBeam = reducedSession.page.locator(".site-tracing-beam");
+    const reducedState = await reducedBeam.evaluate((element) => ({
+      headDisplay: getComputedStyle(
+        element.querySelector(".site-tracing-beam__head"),
+      ).display,
+      progressDisplay: getComputedStyle(
+        element.querySelector(".site-tracing-beam__progress"),
+      ).display,
+      runningAnimations: element.getAnimations({ subtree: true })
+        .filter((animation) => animation.playState === "running").length,
+      trackVisibility: getComputedStyle(
+        element.querySelector(".site-tracing-beam__track"),
+      ).visibility,
+    }));
+    assert.deepEqual(reducedState, {
+      headDisplay: "none",
+      progressDisplay: "none",
+      runningAnimations: 0,
+      trackVisibility: "visible",
+    });
+    await reducedSession.page.evaluate(() => (
+      window.scrollTo(0, document.documentElement.scrollHeight)
+    ));
+    await reducedSession.page.waitForFunction(() => (
+      Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress"))
+        >= 0.995
+    ));
+  } finally {
+    await reducedSession.context.close();
   }
 });
 
@@ -2086,29 +2340,45 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       ), null, { timeout: 3_000 });
 
       const geometry = await measurePageGeometry(page, {
+        beam: ".site-tracing-beam",
         header: ".site-header",
         heroCta: ".hero-cta",
         heroName: ".hero-name",
         heroPortrait: ".hero-pixel-portrait",
-        heroStatement: ".hero-statement",
       });
       const {
+        beam,
         header,
         heroCta,
         heroName,
         heroPortrait,
-        heroStatement,
       } = geometry.boxes;
       const initialLayout = {
+        beam,
         clientWidth: geometry.clientWidth,
         header,
         hero: {
           ctaHeight: heroCta?.height ?? 0,
-          nameStatementIntersection: intersectionArea(heroName, heroStatement),
+          namePortraitIntersection: intersectionArea(heroName, heroPortrait),
+          portraitCtaIntersection: intersectionArea(heroPortrait, heroCta),
         },
+        heroCta,
+        heroName,
         heroPortrait,
         scrollWidth: geometry.scrollWidth,
       };
+      const beamPresentation = await page.locator(".site-tracing-beam").evaluate((element) => ({
+        count: document.querySelectorAll(".site-tracing-beam").length,
+        headDisplay: getComputedStyle(
+          element.querySelector(".site-tracing-beam__head"),
+        ).display,
+        pointerEvents: getComputedStyle(element).pointerEvents,
+        position: getComputedStyle(element).position,
+        progress: Number(element.getAttribute("data-trace-progress")),
+        trackVisibility: getComputedStyle(
+          element.querySelector(".site-tracing-beam__track"),
+        ).visibility,
+      }));
       const portraitLayout = await page.locator(".hero-pixel-portrait").evaluate((portrait) => {
         const canvas = portrait.querySelector(".hero-pixel-canvas");
         const bounds = canvas?.getBoundingClientRect();
@@ -2149,9 +2419,14 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             ? backgroundCenters / sampledCenters
             : null,
           maxFps: canvas?.dataset.maxFps,
+          interactive: canvas?.dataset.interactive,
+          maskImage: getComputedStyle(portrait).maskImage,
+          opacity: getComputedStyle(portrait).opacity,
+          pointerEvents: getComputedStyle(portrait).pointerEvents,
           ready: canvas?.dataset.pixelatedReady,
           terminalButtonCount: document.querySelectorAll(".terminal-button").length,
           terminalCount: document.querySelectorAll(".hero-terminal").length,
+          touchAction: canvas ? getComputedStyle(canvas).touchAction : null,
           visible: getComputedStyle(portrait).visibility !== "hidden",
         };
       });
@@ -2357,6 +2632,23 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           && initialLayout.header.top >= -0.5,
         `${viewport.width}x${viewport.height} header escaped the viewport: ${JSON.stringify(initialLayout.header)}`,
       );
+      assert.ok(initialLayout.beam, `${viewport.width}x${viewport.height} tracing beam was missing`);
+      assert.ok(
+        initialLayout.beam.left >= -0.5
+          && initialLayout.beam.right <= viewport.width + 0.5
+          && initialLayout.beam.top >= initialLayout.header.bottom
+          && initialLayout.beam.bottom <= viewport.height + 0.5,
+        `${viewport.width}x${viewport.height} tracing beam escaped its right rail: `
+          + `${JSON.stringify(initialLayout.beam)}`,
+      );
+      assert.deepEqual(beamPresentation, {
+        count: 1,
+        headDisplay: "grid",
+        pointerEvents: "none",
+        position: "fixed",
+        progress: 0,
+        trackVisibility: "visible",
+      });
       assert.equal(
         sectionRhythm.alignmentShells.length,
         13,
@@ -2404,14 +2696,14 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         `${viewport.width}x${viewport.height} About working loop did not span its shell: `
           + JSON.stringify(sectionRhythm.aboutPresentation),
       );
-      assert.equal(sectionRhythm.aboutPresentation.context.length, 2);
+      assert.equal(sectionRhythm.aboutPresentation.context.length, 1);
       assert.equal(sectionRhythm.aboutPresentation.steps.length, 4);
       if (viewport.width <= 430) {
         assert.ok(
-          sectionRhythm.aboutPresentation.sectionHeight >= 1_040
-            && sectionRhythm.aboutPresentation.sectionHeight <= 1_200,
+          sectionRhythm.aboutPresentation.sectionHeight >= 680
+            && sectionRhythm.aboutPresentation.sectionHeight <= 940,
           `${viewport.width}x${viewport.height} About height=`
-            + `${sectionRhythm.aboutPresentation.sectionHeight}px; expected 1040-1200px`,
+            + `${sectionRhythm.aboutPresentation.sectionHeight}px; expected 680-940px`,
         );
       }
       assert.equal(
@@ -2442,22 +2734,22 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           assert.ok(steps[index].top >= steps[index - 1].top + steps[index - 1].height - 1);
         }
       }
-      const [context0, context1] = sectionRhythm.aboutPresentation.context;
-      if (viewport.width > 600 && viewport.width <= 900) {
-        assert.ok(Math.abs(context0.top - context1.top) <= 1);
-        assert.ok(Math.abs(context0.width - context1.width) <= 1);
-        assert.ok(context0.left < context1.left);
-      } else {
-        assert.ok(Math.abs(context0.left - context1.left) <= 1);
-        assert.ok(Math.abs(context0.width - context1.width) <= 1);
-        assert.ok(context1.top >= context0.top + context0.height - 1);
-      }
+      const [contextEntry] = sectionRhythm.aboutPresentation.context;
+      assert.ok(contextEntry.width > 0 && contextEntry.height > 0);
       assert.equal(
         await page.locator(".hero-positioning").count(),
         0,
         `${viewport.width}x${viewport.height} retained the removed hero positioning line`,
       );
       assert.ok(heroPortrait.width > 0 && heroPortrait.height > 0);
+      if (viewport.width <= 900) {
+        assert.ok(
+          heroName.bottom <= heroPortrait.top + 1
+            && heroPortrait.bottom <= heroCta.top + 1,
+          `${viewport.width}x${viewport.height} mobile Hero order was not `
+            + `JAXON → portrait → CTA: ${JSON.stringify({ heroCta, heroName, heroPortrait })}`,
+        );
+      }
       assert.ok(
         initialLayout.hero.ctaHeight >= 44,
         `${viewport.width}x${viewport.height} hero CTA height=${initialLayout.hero.ctaHeight}px`,
@@ -2543,10 +2835,15 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         fallbackSource: "/assets/jaxon-sea-portrait.webp",
         fallbackWidth: "1200",
         idleBackgroundCenterRatio: 0,
+        interactive: "true",
+        maskImage: "none",
         maxFps: "60",
+        opacity: "1",
+        pointerEvents: "auto",
         ready: "true",
         terminalButtonCount: 0,
         terminalCount: 0,
+        touchAction: "pan-y pinch-zoom",
         visible: true,
       });
       for (const [pair, area] of Object.entries(initialLayout.hero)) {
@@ -2858,7 +3155,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             id: "hero",
             selectors: [
               ".hero-name",
-              ".hero-statement",
+              ".hero-pixel-portrait",
               ".hero-cta",
             ],
           },
