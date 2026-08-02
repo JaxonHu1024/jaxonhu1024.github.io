@@ -1,0 +1,47 @@
+app/components/HeroPixelPortrait.tsx
+  s_7245aebeadaadf::t_a3172efac8dffd 1-5,7-55
+app/components/Navigation.tsx
+  s_b04e659cbdf057::t_9bc8a089a39099 315
+app/components/PixelatedCanvas.tsx
+  s_7245aebeadaadf::t_762cfcb0fd290d 1-748
+app/components/ResearchVisual.tsx
+  s_b04e659cbdf057::t_047737e82676c1 8-24,90,102,104-105,119-120,125,138-139,145,150,154,170-171,176
+app/layout.tsx
+  s_b04e659cbdf057::t_ef3ac18abc06aa 12
+app/not-found.tsx
+  s_b04e659cbdf057::t_4d53b48447c5b7 5
+app/page.tsx
+  s_7245aebeadaadf::t_22f823088755cc 2,87,112,176,255,335,375
+app/scroll-performance.css
+  s_7245aebeadaadf::t_1f3f1f135090ee 6-9,24,35
+public/favicon.svg
+  s_b04e659cbdf057::t_df6703938a5c6f 2
+tests/rendered-html.test.mjs
+  s_7245aebeadaadf::t_fe57f96b72627c 40,58,250,259,266-274,277,376,379-380,409,411,422-423,428-432,472-485,487-490,517
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "da15adb7d797fdb00308429f69bf82f33d84ee3e",
+  "prompts": {},
+  "sessions": {
+    "s_7245aebeadaadf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc1f4-42da-7400-8107-47460c968b65",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_b04e659cbdf057": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc138-79f7-7883-8a7b-ed9ad310017a",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
