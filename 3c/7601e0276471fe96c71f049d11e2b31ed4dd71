@@ -1,0 +1,21 @@
+app/globals.css
+  s_b9a411d0705e17::t_7967586bc68e71 2023,2026
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "3c7601e0276471fe96c71f049d11e2b31ed4dd71",
+  "prompts": {},
+  "sessions": {
+    "s_b9a411d0705e17": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc0db-717e-71b2-ab33-afd63fed0444",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
