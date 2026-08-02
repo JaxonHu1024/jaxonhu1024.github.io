@@ -1,0 +1,25 @@
+app/page.tsx
+  s_ad374c805c0844::t_24cbedaf804406 150,196
+tests/rendered-html.test.mjs
+  s_ad374c805c0844::t_769ffa2b0af5e8 204-207
+tests/scroll-performance-contract.test.mjs
+  s_ad374c805c0844::t_52f11e1a782102 22-26,33,38-44,56-59,65-66,76-79,81-86
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "83c027d8d893cad7a1e224ce5318e6156b1bed35",
+  "prompts": {},
+  "sessions": {
+    "s_ad374c805c0844": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc0ac-962c-7760-85af-e1f2b47e1c08",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
