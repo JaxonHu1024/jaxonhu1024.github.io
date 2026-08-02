@@ -1,0 +1,21 @@
+app/globals.css
+  s_e283824de895ce::t_3611715ec881a0 841
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "af56e221ee5e245662b153654730c5646c7728e7",
+  "prompts": {},
+  "sessions": {
+    "s_e283824de895ce": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc0ec-25af-7b80-a7fb-382b23a8ca30",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
