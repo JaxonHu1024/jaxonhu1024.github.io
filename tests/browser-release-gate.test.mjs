@@ -2552,6 +2552,33 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         }
       }
 
+      if (viewport.width <= 900) {
+        await page.locator('a.hero-cta[href="#about"]').click();
+        await page.waitForFunction(() => (
+          location.hash === "#about"
+          && document.activeElement?.id === "about"
+          && Math.abs(document.querySelector("#about")?.getBoundingClientRect().top ?? Infinity) <= 1
+        ));
+        const aboutLanding = await page.evaluate(() => ({
+          headerBottom: document.querySelector(".site-header")?.getBoundingClientRect().bottom
+            ?? Infinity,
+          kickerTop: document.querySelector("#about .about-kicker")?.getBoundingClientRect().top
+            ?? -Infinity,
+        }));
+        assert.ok(
+          aboutLanding.kickerTop >= aboutLanding.headerBottom,
+          `${viewport.width}x${viewport.height} CTA landing placed About kicker at `
+            + `${aboutLanding.kickerTop}px under header bottom ${aboutLanding.headerBottom}px`,
+        );
+
+        await page.locator('a.wordmark[href="#hero"]').click();
+        await page.waitForFunction(() => (
+          location.hash === "#hero"
+          && document.activeElement?.id === "hero"
+          && scrollY <= 1
+        ));
+      }
+
       for (const id of ["about", "experience", "foundations", "research", "contact"]) {
         const link = page.locator(`#primary-navigation a[href="#${id}"]`);
         if (viewport.width <= 900) {

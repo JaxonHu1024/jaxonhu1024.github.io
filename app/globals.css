@@ -2311,7 +2311,7 @@ html[data-page-active="false"] .contact-marquee-track {
     opacity: .34;
   }
 
-  .about { padding-top: 56px; }
+  .about { padding-top: 72px; }
   .about-layout {
     grid-template-columns: minmax(0, 1fr);
     row-gap: 24px;
@@ -2369,7 +2369,7 @@ html[data-page-active="false"] .contact-marquee-track {
     font-size: 9px;
   }
   .about-loop-outcome strong { font-size: 10px; }
-  .about-experience-bridge { height: 64px; margin-top: -6px; }
+  .about-experience-bridge { height: 48px; margin-top: -6px; }
 }
 
 .mobile-load-feedback {
