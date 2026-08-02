@@ -9,7 +9,7 @@ import "./scroll-performance.css";
 export const viewport: Viewport = {
   colorScheme: "dark",
   initialScale: 1,
-  themeColor: "#030507",
+  themeColor: "#05070B",
   viewportFit: "cover",
   width: "device-width",
 };

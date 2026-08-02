@@ -605,7 +605,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
 
       const state = await page.evaluate(() => {
         const navigation = document.querySelector("#primary-navigation");
-        const signal = document.querySelector(".hero-signal-graphic");
+        const portrait = document.querySelector(".hero-pixel-portrait");
         const feedback = document.querySelector('[data-testid="mobile-load-feedback"]');
         const coreSelectors = [
           "#hero-title",
@@ -675,10 +675,20 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                 visibility: getComputedStyle(navigation).visibility,
               }
             : null,
-          signal: signal
+          portrait: portrait
             ? {
-                mainPathCount: signal.querySelectorAll(".hero-signal-path--main").length,
-                visible: getComputedStyle(signal).visibility !== "hidden",
+                canvasCount: portrait.querySelectorAll(".hero-pixel-canvas").length,
+                fallback: (() => {
+                  const image = portrait.querySelector(".hero-portrait-fallback");
+                  return image ? {
+                    complete: image.complete,
+                    height: image.getAttribute("height"),
+                    naturalWidth: image.naturalWidth,
+                    src: image.getAttribute("src"),
+                    width: image.getAttribute("width"),
+                  } : null;
+                })(),
+                visible: getComputedStyle(portrait).visibility !== "hidden",
               }
             : null,
           terminalCount: document.querySelectorAll(".hero-terminal").length,
@@ -729,8 +739,15 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
           `${viewport.width}x${viewport.height} ${target.href} was clipped`,
         );
       }
-      assert.equal(state.signal?.visible, true);
-      assert.equal(state.signal?.mainPathCount, 1);
+      assert.equal(state.portrait?.visible, true);
+      assert.equal(state.portrait?.canvasCount, 1);
+      assert.deepEqual(state.portrait?.fallback, {
+        complete: true,
+        height: "1200",
+        naturalWidth: 1200,
+        src: "/assets/jaxon-sea-portrait.webp",
+        width: "1200",
+      });
       assert.equal(state.terminalCount, 0);
 
       const researchNavigationLink = page.locator(
@@ -1074,7 +1091,7 @@ test("research canvas reports its viewport and page motion lifecycle", { timeout
   }
 });
 
-test("hero signal pauses offscreen and remains terminal-free", { timeout: 15_000 }, async () => {
+test("hero pixel canvas distorts on pointer input, pauses offscreen, and remains terminal-free", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
@@ -1084,48 +1101,68 @@ test("hero signal pauses offscreen and remains terminal-free", { timeout: 15_000
     await page.waitForFunction(() => (
       document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
     ), null, { timeout: 3_000 });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-pixelated-ready") === "true"
+    ), null, { timeout: 3_000 });
 
     assert.equal(await page.locator(".hero-terminal").count(), 0);
-    assert.equal(await page.locator(".hero-signal-path--main").count(), 1);
-    assert.equal(await page.locator(".hero-signal-path--branch").count(), 2);
+    assert.equal(await page.locator(".hero-pixel-canvas").count(), 1);
+    assert.equal(await page.locator(".hero-portrait-fallback").count(), 1);
 
-    const running = await page.locator(".hero-signal-graphic").evaluate((signal) => ({
-      nodeAnimations: signal.querySelector(".hero-signal-node")
-        ?.getAnimations().map((animation) => animation.playState) ?? [],
-      visible: getComputedStyle(signal).visibility !== "hidden",
+    const resting = await page.locator(".hero-pixel-canvas").evaluate((canvas) => ({
+      interactive: canvas.getAttribute("data-interactive"),
+      motion: canvas.getAttribute("data-motion"),
+      ready: canvas.getAttribute("data-pixelated-ready"),
+      snapshot: canvas.toDataURL(),
+      visible: getComputedStyle(canvas).visibility !== "hidden",
     }));
-    assert.equal(running.visible, true);
-    assert.ok(
-      running.nodeAnimations.includes("running"),
-      `signal node animation was not running: ${JSON.stringify(running.nodeAnimations)}`,
+    assert.equal(resting.visible, true);
+    assert.equal(resting.interactive, "true");
+    assert.equal(resting.motion, "idle");
+    assert.equal(resting.ready, "true");
+
+    const canvasBox = await page.locator(".hero-pixel-canvas").boundingBox();
+    assert.ok(canvasBox);
+    await page.mouse.move(
+      canvasBox.x + canvasBox.width * 0.62,
+      canvasBox.y + canvasBox.height * 0.48,
     );
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "running"
+    ));
+    await page.waitForTimeout(160);
+    const distortedSnapshot = await page.locator(".hero-pixel-canvas").evaluate(
+      (canvas) => canvas.toDataURL(),
+    );
+    assert.notEqual(distortedSnapshot, resting.snapshot);
 
     await page.locator("#contact").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => (
       document.querySelector("#hero")?.getAttribute("data-section-visible") === "false"
     ), null, { timeout: 3_000 });
-    const paused = await page.locator(".hero-signal-graphic").evaluate((signal) => (
-      signal.getAnimations({ subtree: true }).map((animation) => animation.playState)
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "paused"
     ));
     assert.equal(
-      paused.some((state) => state === "running"),
-      false,
-      `offscreen signal animations were ${JSON.stringify(paused)}`,
+      await page.locator(".hero-pixel-portrait").evaluate(
+        (portrait) => getComputedStyle(portrait).pointerEvents,
+      ),
+      "none",
     );
 
     await page.locator("#hero").scrollIntoViewIfNeeded();
     await page.waitForFunction(() => (
       document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
     ), null, { timeout: 3_000 });
-    const resumed = await page.locator(".hero-signal-node").first().evaluate((node) => (
-      node.getAnimations().map((animation) => animation.playState)
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "idle"
     ));
-    assert.ok(resumed.includes("running"));
   } finally {
     await context.close();
   }
 });
-test("reduced-motion mobile keeps signal, Context path, and contact ticker complete but still", { timeout: 15_000 }, async () => {
+
+test("reduced-motion mobile keeps the portrait, Context path, and contact ticker complete but still", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     reducedMotion: "reduce",
     viewport: { width: 390, height: 844 },
@@ -1136,15 +1173,22 @@ test("reduced-motion mobile keeps signal, Context path, and contact ticker compl
     await page.waitForFunction(() => (
       document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
     ), null, { timeout: 3_000 });
+    await page.waitForFunction(() => (
+      document.querySelector(".hero-pixel-canvas")?.getAttribute("data-pixelated-ready") === "true"
+    ), null, { timeout: 3_000 });
 
-    const signal = await page.locator(".hero-signal-graphic").evaluate((element) => ({
-      mainPathCount: element.querySelectorAll(".hero-signal-path--main").length,
+    const portrait = await page.locator(".hero-pixel-portrait").evaluate((element) => ({
+      canvasCount: element.querySelectorAll(".hero-pixel-canvas").length,
+      interactive: element.querySelector(".hero-pixel-canvas")?.getAttribute("data-interactive"),
+      motion: element.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion"),
       runningAnimations: element.getAnimations({ subtree: true })
         .filter((animation) => animation.playState === "running").length,
       visible: getComputedStyle(element).visibility !== "hidden",
     }));
-    assert.deepEqual(signal, {
-      mainPathCount: 1,
+    assert.deepEqual(portrait, {
+      canvasCount: 1,
+      interactive: "false",
+      motion: "reduced",
       runningAnimations: 0,
       visible: true,
     });
@@ -1243,7 +1287,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
         };
       });
       const runningAnimations = Array.from(
-        document.querySelectorAll("[data-motion-layer], .hero-signal-graphic"),
+        document.querySelectorAll("[data-motion-layer], .hero-pixel-portrait"),
       ).flatMap((element) => (
         element.getAnimations({ subtree: true })
           .filter((animation) => animation.playState === "running")
@@ -1778,7 +1822,7 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         cta: ".hero-cta",
         message: ".hero-message",
         name: ".hero-name",
-        signal: ".hero-signal-graphic",
+        portrait: ".hero-pixel-portrait",
       });
       const responsiveDetails = await page.evaluate(() => {
         const ctaLabel = document.querySelector(".hero-cta > span:first-child");
@@ -1862,14 +1906,15 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
             ? toolchainRect.top - educationRect.bottom
             : null,
           heroCtaLineCount: ctaLabel ? ctaRange.getClientRects().length : 0,
-          signalPathCount: document.querySelectorAll(".hero-signal-path").length,
+          portraitCanvasCount: document.querySelectorAll(".hero-pixel-canvas").length,
+          portraitFallbackCount: document.querySelectorAll(".hero-portrait-fallback").length,
           terminalCount: document.querySelectorAll(".hero-terminal").length,
         };
       });
       const {
         message,
         name,
-        signal,
+        portrait,
       } = geometry.boxes;
       const metrics = {
         clientWidth: geometry.clientWidth,
@@ -1879,7 +1924,7 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         },
         name,
         scrollWidth: geometry.scrollWidth,
-        signal,
+        portrait,
       };
 
       assert.equal(
@@ -1912,9 +1957,10 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         viewport.width <= 760 ? 1 : viewport.width < 1280 ? 2 : 4,
         `${viewport.width}px used ${metrics.contactColumnCount} contact columns`,
       );
-      assert.equal(metrics.signalPathCount, 3);
+      assert.equal(metrics.portraitCanvasCount, 1);
+      assert.equal(metrics.portraitFallbackCount, 1);
       assert.equal(metrics.terminalCount, 0);
-      assert.ok(metrics.signal.width > 0 && metrics.signal.height > 0);
+      assert.ok(metrics.portrait.width > 0 && metrics.portrait.height > 0);
       assert.equal(
         metrics.heroCtaLineCount,
         1,
@@ -1967,7 +2013,7 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
     const left = samples.get(leftWidth);
     const right = samples.get(rightWidth);
 
-    for (const element of ["name", "signal"]) {
+    for (const element of ["name", "portrait"]) {
       for (const metric of ["top", "width", "height"]) {
         assert.ok(
           Math.abs(left[element][metric] - right[element][metric]) <= 4,
@@ -1976,7 +2022,8 @@ test("responsive boundary pairs stay usable and continuous", { timeout: 45_000 }
         );
       }
     }
-    assert.equal(left.signalPathCount, right.signalPathCount);
+    assert.equal(left.portraitCanvasCount, right.portraitCanvasCount);
+    assert.equal(left.portraitFallbackCount, right.portraitFallbackCount);
   }
 });
 
@@ -2034,19 +2081,22 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       await page.waitForFunction(() => (
         document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
       ), null, { timeout: 3_000 });
+      await page.waitForFunction(() => (
+        document.querySelector(".hero-pixel-canvas")?.getAttribute("data-pixelated-ready") === "true"
+      ), null, { timeout: 3_000 });
 
       const geometry = await measurePageGeometry(page, {
         header: ".site-header",
         heroCta: ".hero-cta",
         heroName: ".hero-name",
-        heroSignal: ".hero-signal-graphic",
+        heroPortrait: ".hero-pixel-portrait",
         heroStatement: ".hero-statement",
       });
       const {
         header,
         heroCta,
         heroName,
-        heroSignal,
+        heroPortrait,
         heroStatement,
       } = geometry.boxes;
       const initialLayout = {
@@ -2056,15 +2106,55 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           ctaHeight: heroCta?.height ?? 0,
           nameStatementIntersection: intersectionArea(heroName, heroStatement),
         },
+        heroPortrait,
         scrollWidth: geometry.scrollWidth,
       };
-      const signalLayout = await page.locator(".hero-signal-graphic").evaluate((signal) => ({
-        branchCount: signal.querySelectorAll(".hero-signal-path--branch").length,
-        mainCount: signal.querySelectorAll(".hero-signal-path--main").length,
-        terminalButtonCount: document.querySelectorAll(".terminal-button").length,
-        terminalCount: document.querySelectorAll(".hero-terminal").length,
-        visible: getComputedStyle(signal).visibility !== "hidden",
-      }));
+      const portraitLayout = await page.locator(".hero-pixel-portrait").evaluate((portrait) => {
+        const canvas = portrait.querySelector(".hero-pixel-canvas");
+        const bounds = canvas?.getBoundingClientRect();
+        const context = canvas?.getContext("2d");
+        const cellSize = Number.parseFloat(canvas?.dataset.cellSize ?? "0");
+        let backgroundCenters = 0;
+        let sampledCenters = 0;
+
+        if (canvas && bounds && context && cellSize > 0) {
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+          const scaleX = canvas.width / bounds.width;
+          const scaleY = canvas.height / bounds.height;
+          for (let y = cellSize / 2; y < bounds.height; y += cellSize) {
+            for (let x = cellSize / 2; x < bounds.width; x += cellSize) {
+              const sampleX = Math.min(canvas.width - 1, Math.floor(x * scaleX));
+              const sampleY = Math.min(canvas.height - 1, Math.floor(y * scaleY));
+              const offset = (sampleY * canvas.width + sampleX) * 4;
+              sampledCenters += 1;
+              if (
+                pixels[offset] === 5
+                && pixels[offset + 1] === 7
+                && pixels[offset + 2] === 11
+              ) {
+                backgroundCenters += 1;
+              }
+            }
+          }
+        }
+
+        return {
+          canvasCount: portrait.querySelectorAll(".hero-pixel-canvas").length,
+          cellSize: canvas?.dataset.cellSize,
+          fallbackCount: portrait.querySelectorAll(".hero-portrait-fallback").length,
+          fallbackHeight: portrait.querySelector(".hero-portrait-fallback")?.getAttribute("height"),
+          fallbackSource: portrait.querySelector(".hero-portrait-fallback")?.getAttribute("src"),
+          fallbackWidth: portrait.querySelector(".hero-portrait-fallback")?.getAttribute("width"),
+          idleBackgroundCenterRatio: sampledCenters > 0
+            ? backgroundCenters / sampledCenters
+            : null,
+          maxFps: canvas?.dataset.maxFps,
+          ready: canvas?.dataset.pixelatedReady,
+          terminalButtonCount: document.querySelectorAll(".terminal-button").length,
+          terminalCount: document.querySelectorAll(".hero-terminal").length,
+          visible: getComputedStyle(portrait).visibility !== "hidden",
+        };
+      });
       const heroFlow = await page.evaluate(() => {
         const cta = document.querySelector(".hero-cta");
         const ctaLabel = cta?.querySelector(":scope > span:first-child");
@@ -2367,7 +2457,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         0,
         `${viewport.width}x${viewport.height} retained the removed hero positioning line`,
       );
-      assert.ok(heroSignal.width > 0 && heroSignal.height > 0);
+      assert.ok(heroPortrait.width > 0 && heroPortrait.height > 0);
       assert.ok(
         initialLayout.hero.ctaHeight >= 44,
         `${viewport.width}x${viewport.height} hero CTA height=${initialLayout.hero.ctaHeight}px`,
@@ -2444,9 +2534,17 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           `${viewport.width}x${viewport.height} education node/rail offset=${offset}px`,
         );
       }
-      assert.deepEqual(signalLayout, {
-        branchCount: 2,
-        mainCount: 1,
+      assert.ok(initialLayout.heroPortrait?.width > 0 && initialLayout.heroPortrait?.height > 0);
+      assert.deepEqual(portraitLayout, {
+        canvasCount: 1,
+        cellSize: "5",
+        fallbackCount: 1,
+        fallbackHeight: "1200",
+        fallbackSource: "/assets/jaxon-sea-portrait.webp",
+        fallbackWidth: "1200",
+        idleBackgroundCenterRatio: 0,
+        maxFps: "60",
+        ready: "true",
         terminalButtonCount: 0,
         terminalCount: 0,
         visible: true,

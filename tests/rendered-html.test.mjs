@@ -37,7 +37,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /property="og:title" content="Jaxon \| AI Engineer"/);
   assert.match(html, /name="twitter:title" content="Jaxon \| AI Engineer"/);
   assert.match(html, /property="og:image:alt" content="Jaxon \| AI Engineer"/);
-  assert.match(html, /<meta name="theme-color" content="#030507"\/>/);
+  assert.match(html, /<meta name="theme-color" content="#05070B"\/>/);
   assert.match(
     html,
     /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"\/>/,
@@ -55,6 +55,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /AI ALGORITHM ENGINEER/);
   assert.match(html, /Turning model capability into real-world systems\./);
   assert.match(html, /Models, tools, and decisions connected with evidence\./);
+  assert.match(html, /<main class="site-canvas" id="content">/);
   assert.doesNotMatch(html, /hero-terminal|agentctl compile|BUILD READY/);
   assert.doesNotMatch(html, /terminal-button|class="button-arrow"/);
   assert.equal((html.match(/class="paper-link"/g) ?? []).length, 2);
@@ -246,7 +247,7 @@ test("renders a distinct public-safe About system before Experience", async () =
   }
   assert.match(about, /class="about-experience-bridge" aria-hidden="true"/);
   assert.doesNotMatch(about, /section-kicker|OPERATING CONTEXT/);
-  assert.doesNotMatch(about, /class="section about grid-surface"/);
+  assert.doesNotMatch(html, /grid-surface/);
   assert.doesNotMatch(
     about,
     /AboutContextCompiler|about-particle|<canvas\b|\brole="tab(?:list|panel)?"|about-stage-|aria-selected=/,
@@ -255,23 +256,25 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.doesNotMatch(html, /VIEW EXPERIENCE/);
 });
 
-test("renders a terminal-free signal hero and defers organization logos", async () => {
+test("renders a terminal-free pixel portrait hero and defers organization logos", async () => {
   const response = await render();
   const html = await response.text();
   const heroStart = html.indexOf('id="hero"');
   const aboutStart = html.indexOf('id="about"');
   const hero = html.slice(heroStart, aboutStart);
 
-  assert.match(hero, /class="hero-signal-graphic" aria-hidden="true"/);
-  assert.match(hero, /<svg(?=[^>]*class="hero-signal-svg")(?=[^>]*aria-hidden="true")[^>]*>/);
-  assert.match(hero, /class="hero-signal-path hero-signal-path--main"/);
-  assert.equal(
-    (hero.match(/class="hero-signal-path hero-signal-path--branch/g) ?? []).length,
-    2,
+  assert.match(hero, /class="hero-pixel-portrait"/);
+  assert.match(hero, /class="hero-portrait-frame"/);
+  assert.match(
+    hero,
+    /<img(?=[^>]*class="hero-portrait-fallback")(?=[^>]*src="\/assets\/jaxon-sea-portrait\.webp")(?=[^>]*width="1200")(?=[^>]*height="1200")(?=[^>]*fetchPriority="high")[^>]*>/,
   );
-  assert.match(hero, /class="hero-signal-node hero-signal-node--coral"/);
+  assert.match(
+    hero,
+    /<canvas(?=[^>]*class="hero-pixel-canvas")(?=[^>]*aria-label="Pixelated portrait of Jaxon facing the sea at dusk")(?=[^>]*role="img")[^>]*>/,
+  );
   assert.doesNotMatch(hero, /hero-terminal|agentctl|BUILD READY|<animate\b/i);
-  assert.doesNotMatch(html, /fetchPriority="high"/);
+  assert.doesNotMatch(hero, /hero-signal-(?:graphic|path|node|svg)/);
   assert.doesNotMatch(html, /hero-processor-field-optimized\.webp/);
 
   for (const src of [
@@ -370,11 +373,11 @@ test("orders About, Experience, Foundations, and Research with distinct layer in
   assert.ok(html.indexOf('href="#foundations"') < html.indexOf('href="#research"'));
   assert.ok(
     html.indexOf('class="section about"')
-      < html.indexOf('class="section experience grid-surface"'),
+      < html.indexOf('class="section experience"'),
   );
   assert.ok(
-    html.indexOf('class="section foundations grid-surface"')
-      < html.indexOf('class="section research grid-surface"'),
+    html.indexOf('class="section foundations"')
+      < html.indexOf('class="section research"'),
   );
   assert.doesNotMatch(html, /OPERATING CONTEXT/);
   assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ EXPERIENCE LAYER/);
@@ -403,8 +406,9 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
   assert.match(hero, /AI ALGORITHM ENGINEER/);
   assert.match(hero, /Turning model capability into real-world systems\./);
   assert.match(hero, /Models, tools, and decisions connected with evidence\./);
-  assert.match(hero, /HeroSignalGraphic/);
+  assert.match(hero, /HeroPixelPortrait/);
   assert.doesNotMatch(hero, /HeroTerminal|hero-terminal|agentctl|CLI/);
+  assert.doesNotMatch(hero, /HeroSignalGraphic|hero-signal-/);
   assert.doesNotMatch(hero, /hero-processor-field-optimized\.webp/);
   assert.doesNotMatch(hero, /[\u4e00-\u9fff]/);
   assert.doesNotMatch(hero, /Road|ResFi|Respiration/i);
@@ -415,10 +419,17 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const rootRule = css.match(/:root\s*\{[^}]+\}/s)?.[0] ?? "";
   const htmlRule = css.match(/html\s*\{[^}]+\}/s)?.[0] ?? "";
+  const mainRule = css.match(/main\s*\{[^}]+\}/s)?.[0] ?? "";
+  const siteCanvasRule = css.match(/\.site-canvas\s*\{[^}]+\}/s)?.[0] ?? "";
   const sectionRule = css.match(/\.section\s*\{[^}]+\}/s)?.[0] ?? "";
   const feedbackRule = css.match(/\.mobile-load-feedback\s*\{[^}]+\}/s)?.[0] ?? "";
 
   for (const token of [
+    "--background",
+    "--text",
+    "--mint",
+    "--violet",
+    "--coral",
     "--color-background",
     "--color-surface",
     "--color-foreground",
@@ -458,7 +469,25 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
   }
   assert.match(htmlRule, /color-scheme:\s*dark/);
   assert.match(htmlRule, /background:\s*var\(--color-background\)/);
+  assert.match(mainRule, /background-color:\s*var\(--color-background\)/);
+  assert.doesNotMatch(mainRule, /background-image|background-size|linear-gradient/);
+  assert.match(siteCanvasRule, /background-image:/);
+  assert.ok(
+    (siteCanvasRule.match(/radial-gradient\(/g) ?? []).length >= 2,
+    "the home page should own one continuous multi-source ambient field",
+  );
+  assert.match(siteCanvasRule, /rgb\(138 114 255 \/ /);
+  assert.match(siteCanvasRule, /rgb\(79 247 213 \/ /);
+  assert.match(siteCanvasRule, /background-repeat:\s*no-repeat/);
+  assert.doesNotMatch(siteCanvasRule, /linear-gradient|repeating-|url\(|background-attachment/);
+  assert.match(sectionRule, /background:\s*transparent/);
+  assert.doesNotMatch(sectionRule, /radial-gradient|--ambient-/);
+  assert.doesNotMatch(css, /--ambient-/);
   assert.match(sectionRule, /scroll-margin-top:\s*calc\(var\(--nav-height\) \+ 2rem \+ env\(safe-area-inset-top\)\)/);
+  assert.doesNotMatch(
+    rootRule,
+    /--(?:void|background-base|experience|research|foundations|about):/,
+  );
   assert.match(
     rootRule,
     /--layout-inline-start:\s*max\([^;]*env\(safe-area-inset-left,\s*0px\)[^;]*\);/s,
@@ -485,7 +514,7 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
   for (const [selector, token] of [
     [".site-header", "--surface-header"],
     [".paper-link", "--color-accent"],
-    [".hero-signal-path--main", "--color-accent"],
+    [".hero-portrait-frame", "--color-background"],
     [".section-footer-index", "--color-foreground-weak"],
     [".contact-socials a", "--color-foreground"],
     [".mobile-load-feedback", "--surface-feedback"],

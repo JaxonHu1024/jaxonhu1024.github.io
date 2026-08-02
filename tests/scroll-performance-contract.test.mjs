@@ -53,8 +53,12 @@ test("keeps the Context path server-rendered and prioritizes current context", a
   }
 });
 
-test("keeps signal and experience motion compositor-friendly and cheap while offscreen", async () => {
+test("keeps portrait and experience motion compositor-friendly and cheap while offscreen", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const pixelCanvas = await readFile(
+    new URL("../app/components/PixelatedCanvas.tsx", import.meta.url),
+    "utf8",
+  );
   const controller = await readFile(
     new URL("../app/components/HeroInteractionController.tsx", import.meta.url),
     "utf8",
@@ -63,12 +67,23 @@ test("keeps signal and experience motion compositor-friendly and cheap while off
     new URL("../app/scroll-performance.css", import.meta.url),
     "utf8",
   );
-  const signalGraphic = css.match(/\.hero-signal-graphic \{[^}]*\}/s)?.[0] ?? "";
+  const portraitCanvas = css.match(
+    /\.hero-pixel-canvas\s*\{[^}]*touch-action:\s*none[^}]*\}/s,
+  )?.[0] ?? "";
   const traceFill = css.match(/\.experience-scan-fill \{[^}]*\}/s)?.[0] ?? "";
   const traceCursor = css.match(/\.experience-scan-cursor \{[^}]*\}/s)?.[0] ?? "";
 
-  assert.match(signalGraphic, /pointer-events:\s*none/);
+  assert.match(portraitCanvas, /touch-action:\s*none/);
   assert.doesNotMatch(css, /hero-terminal|agentctl|@keyframes\s+hero-terminal/);
+  assert.match(pixelCanvas, /new IntersectionObserver/);
+  assert.match(pixelCanvas, /document\.addEventListener\("visibilitychange"/);
+  assert.match(pixelCanvas, /new ResizeObserver/);
+  assert.match(pixelCanvas, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
+  assert.match(pixelCanvas, /function timeAdjustedFactor/);
+  assert.match(pixelCanvas, /const nextBaseLayer = document\.createElement\("canvas"\)/);
+  assert.match(pixelCanvas, /context\.drawImage\(\s*baseLayer/s);
+  assert.match(pixelCanvas, /sample\.drop \? 1 - influence : 1/);
+  assert.doesNotMatch(pixelCanvas, /if \(sample\.drop \|\| sample\.a <= 0\)/);
   assert.match(traceFill, /transform: scaleY\(var\(--experience-trace-progress\)\)/);
   assert.match(traceFill, /transform-origin: top/);
   assert.match(traceCursor, /transform: translate3d\(0, var\(--experience-trace-y\), 0\)/);
@@ -82,7 +97,7 @@ test("keeps signal and experience motion compositor-friendly and cheap while off
   assert.match(controller, /window\.removeEventListener\("scroll", scheduleTrace\)/);
   assert.match(
     scrollCss,
-    /#hero\[data-section-visible="false"\][\s\S]*?animation-play-state:\s*paused/s,
+    /#hero\[data-section-visible="false"\][\s\S]*?pointer-events:\s*none/s,
   );
   assert.match(
     scrollCss,
@@ -91,30 +106,44 @@ test("keeps signal and experience motion compositor-friendly and cheap while off
   assert.doesNotMatch(css, /trace-out|outbound-packet|--packet-travel/);
 });
 
-test("renders a dependency-free signal graphic and removes the CLI implementation", async () => {
-  const signal = await readFile(
-    new URL("../app/components/HeroSignalGraphic.tsx", import.meta.url),
+test("renders the Aceternity pixel portrait and removes the signal and CLI implementations", async () => {
+  const pixelCanvas = await readFile(
+    new URL("../app/components/PixelatedCanvas.tsx", import.meta.url),
+    "utf8",
+  );
+  const portrait = await readFile(
+    new URL("../app/components/HeroPixelPortrait.tsx", import.meta.url),
     "utf8",
   );
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
 
-  assert.doesNotMatch(signal, /^"use client";/);
-  assert.match(signal, /<svg/);
-  assert.match(signal, /className="hero-signal-path hero-signal-path--main"/);
-  assert.match(signal, /className="hero-signal-path hero-signal-path--branch"/);
-  assert.match(signal, /hero-signal-node--coral/);
-  assert.doesNotMatch(signal, /useEffect|requestAnimationFrame|setInterval|<animate/);
-  assert.match(page, /<HeroSignalGraphic \/>/);
+  assert.match(pixelCanvas, /^"use client";/);
+  assert.match(pixelCanvas, /export function PixelatedCanvas/);
+  assert.match(pixelCanvas, /requestAnimationFrame/);
+  assert.match(pixelCanvas, /prefers-reduced-motion: no-preference/);
+  assert.doesNotMatch(pixelCanvas, /setInterval|<animate/);
+  assert.match(portrait, /\/assets\/jaxon-sea-portrait\.webp/);
+  assert.match(portrait, /<PixelatedCanvas/);
+  assert.match(portrait, /width="1200"/);
+  assert.match(portrait, /height="1200"/);
+  assert.match(portrait, /fetchPriority="high"/);
+  assert.match(portrait, /maxFps=\{60\}/);
+  assert.match(page, /<HeroPixelPortrait \/>/);
+  assert.doesNotMatch(page, /HeroSignalGraphic|hero-signal-graphic/);
   assert.doesNotMatch(page, /HeroTerminal|hero-terminal|agentctl|CLI/);
-  assert.match(css, /--violet:\s*#8a72ff/);
+  assert.match(css, /--background:\s*#05070b/);
+  assert.match(css, /--text:\s*#e9fff9/);
   assert.match(css, /--mint:\s*#4ff7d5/);
+  assert.match(css, /--violet:\s*#8a72ff/);
   assert.match(css, /--coral:\s*#ff6b57/);
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero-signal-graphic/s);
-  await assert.rejects(
-    readFile(new URL("../app/components/HeroTerminal.tsx", import.meta.url), "utf8"),
-    { code: "ENOENT" },
-  );
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero-pixel-canvas/s);
+  for (const removedComponent of ["HeroSignalGraphic.tsx", "HeroTerminal.tsx"]) {
+    await assert.rejects(
+      readFile(new URL(`../app/components/${removedComponent}`, import.meta.url), "utf8"),
+      { code: "ENOENT" },
+    );
+  }
 });
 
 test("keeps public links free of the removed terminal visual grammar", async () => {

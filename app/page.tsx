@@ -1,5 +1,5 @@
 import { Navigation } from "./components/Navigation";
-import { HeroSignalGraphic } from "./components/HeroSignalGraphic";
+import { HeroPixelPortrait } from "./components/HeroPixelPortrait";
 import { ResearchVisual } from "./components/ResearchVisual";
 
 const currentExperience = {
@@ -84,7 +84,7 @@ export default function Home() {
         Skip to content
       </a>
       <Navigation />
-      <main id="content">
+      <main className="site-canvas" id="content">
         <section className="section hero" id="hero" aria-labelledby="hero-title" tabIndex={-1}>
           <div className="hero-layout">
             <header className="hero-copy">
@@ -109,9 +109,7 @@ export default function Home() {
                 </a>
               </div>
             </header>
-            <div className="hero-signal-graphic" aria-hidden="true">
-              <HeroSignalGraphic />
-            </div>
+            <HeroPixelPortrait />
           </div>
         </section>
 
@@ -175,7 +173,7 @@ export default function Home() {
         </section>
 
         <section
-          className="section experience grid-surface"
+          className="section experience"
           id="experience"
           aria-labelledby="experience-title"
           tabIndex={-1}
@@ -254,7 +252,7 @@ export default function Home() {
         </section>
 
         <section
-          className="section foundations grid-surface"
+          className="section foundations"
           id="foundations"
           aria-labelledby="foundations-title"
           tabIndex={-1}
@@ -334,7 +332,7 @@ export default function Home() {
         </section>
 
         <section
-          className="section research grid-surface"
+          className="section research"
           id="research"
           aria-labelledby="research-title"
           tabIndex={-1}
@@ -374,7 +372,7 @@ export default function Home() {
         </section>
 
         <section
-          className="section contact grid-surface"
+          className="section contact"
           id="contact"
           aria-labelledby="contact-title"
           tabIndex={-1}

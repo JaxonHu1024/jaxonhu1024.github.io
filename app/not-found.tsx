@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function NotFound() {
   return (
-    <main className="not-found section grid-surface" id="content">
+    <main className="not-found section" id="content">
       <div className="not-found-panel">
         <p className="not-found-code">404 / SIGNAL LOST</p>
         <h1>ROUTE NOT FOUND_</h1>

@@ -312,7 +312,7 @@ export function Navigation() {
               overflow-x: hidden !important;
               overflow-y: hidden !important;
               border: 1px solid rgba(233, 255, 249, .19) !important;
-              background: #030507 !important;
+              background: var(--color-background) !important;
               clip-path: none !important;
               opacity: 1 !important;
               pointer-events: auto !important;

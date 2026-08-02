@@ -3,11 +3,10 @@
  * they remain easy to audit against measured interaction regressions.
  */
 
-/* The section observer already used by reveal and experience motion also
-   pauses the decorative signal field when Hero is outside the viewport. */
-#hero[data-section-visible="false"] .hero-signal-graphic,
-#hero[data-section-visible="false"] .hero-signal-graphic * {
-  animation-play-state: paused;
+/* The canvas owns its runtime visibility observer; this removes its pointer
+   surface immediately when the shared section observer marks Hero offscreen. */
+#hero[data-section-visible="false"] .hero-pixel-portrait {
+  pointer-events: none;
 }
 
 @supports (animation-timeline: view()) {
@@ -22,7 +21,7 @@
 
 @media (max-width: 1100px) {
   :root {
-    --surface-header: rgba(3, 5, 7, .68);
+    --surface-header: rgb(5 7 11 / .68);
   }
 
   .site-header {
@@ -33,7 +32,7 @@
 
 @media (max-width: 900px) {
   :root {
-    --surface-header: rgba(3, 5, 7, .54);
+    --surface-header: rgb(5 7 11 / .54);
   }
 
   .site-header {

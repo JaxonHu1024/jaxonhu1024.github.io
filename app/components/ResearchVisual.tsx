@@ -5,6 +5,23 @@ import { useEffect, useRef } from "react";
 type Variant = "road" | "wave";
 type Point = readonly [number, number];
 
+const canvasPalette = {
+  text: "#E9FFF9",
+  text26: "rgba(233,255,249,.26)",
+  text28: "rgba(233,255,249,.28)",
+  text29: "rgba(233,255,249,.29)",
+  mint: "#4FF7D5",
+  mint13: "rgba(79,247,213,.13)",
+  mint50: "rgba(79,247,213,.5)",
+  mint82: "rgba(79,247,213,.82)",
+  mint85: "rgba(79,247,213,.85)",
+  mint95: "rgba(79,247,213,.95)",
+  violet: "#8A72FF",
+  violet52: "rgba(138,114,255,.52)",
+  violet70: "rgba(138,114,255,.7)",
+  violet95: "rgba(138,114,255,.95)",
+} as const;
+
 const roadRoutes: readonly (readonly Point[])[] = [
   [[0.02, 0.62], [0.16, 0.62], [0.23, 0.39], [0.38, 0.39], [0.49, 0.58], [0.64, 0.31], [0.75, 0.58], [0.87, 0.43], [0.98, 0.43]],
   [[0.11, 0.86], [0.23, 0.64], [0.35, 0.79], [0.48, 0.79], [0.58, 0.59], [0.75, 0.58], [0.84, 0.76], [0.96, 0.76]],
@@ -70,7 +87,7 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
       const h = rect.height;
       const phase = reducedMotion ? 0 : time * 0.001;
 
-      ctx.strokeStyle = "rgba(79,247,213,.13)";
+      ctx.strokeStyle = canvasPalette.mint13;
       ctx.lineWidth = 1;
       for (let x = 0; x <= w; x += 34) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
@@ -82,10 +99,10 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
       if (variant === "road") {
         roadRoutes.forEach((route, routeIndex) => {
           ctx.strokeStyle = routeIndex === 0
-            ? "rgba(79,247,213,.82)"
+            ? canvasPalette.mint82
             : routeIndex === 2
-              ? "rgba(181,140,255,.52)"
-              : "rgba(233,255,249,.29)";
+              ? canvasPalette.violet52
+              : canvasPalette.text29;
           ctx.lineWidth = routeIndex === 0 ? 1.7 : 1.05;
           ctx.beginPath();
           route.forEach(([x, y], pointIndex) => {
@@ -99,13 +116,13 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
           const primary = [1, 4, 6, 7, 8].includes(index);
           const pulse = reducedMotion ? 0 : (Math.sin(phase * 1.8 + index * 0.9) + 1) * 0.55;
           const size = (primary ? 9 : 5) + pulse;
-          ctx.fillStyle = primary ? "#e9fff9" : "#8a72ff";
-          ctx.shadowColor = primary ? "rgba(79,247,213,.85)" : "rgba(181,140,255,.7)";
+          ctx.fillStyle = primary ? canvasPalette.text : canvasPalette.violet;
+          ctx.shadowColor = primary ? canvasPalette.mint85 : canvasPalette.violet70;
           ctx.shadowBlur = primary ? 11 : 7;
           ctx.fillRect(x * w - size / 2, y * h - size / 2, size, size);
           ctx.shadowBlur = 0;
           if (primary) {
-            ctx.strokeStyle = "rgba(79,247,213,.5)";
+            ctx.strokeStyle = canvasPalette.mint50;
             ctx.strokeRect(x * w - size / 2 - 4, y * h - size / 2 - 4, size + 8, size + 8);
           }
         });
@@ -118,23 +135,23 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
           const progress = reducedMotion ? 0.32 + index * 0.21 : (phase * speed + offset) % 1;
           const [x, y] = pointOnRoute(roadRoutes[route], progress);
           const packetSize = index === 0 ? 6 : 4;
-          ctx.fillStyle = index === 1 ? "#d5b6ff" : "#d7fff6";
-          ctx.shadowColor = index === 1 ? "rgba(181,140,255,.95)" : "rgba(79,247,213,.95)";
+          ctx.fillStyle = index === 1 ? canvasPalette.violet : canvasPalette.text;
+          ctx.shadowColor = index === 1 ? canvasPalette.violet95 : canvasPalette.mint95;
           ctx.shadowBlur = 15;
           ctx.fillRect(x * w - packetSize / 2, y * h - packetSize / 2, packetSize, packetSize);
           ctx.shadowBlur = 0;
         });
 
-        ctx.fillStyle = "rgba(233,255,249,.26)";
+        ctx.fillStyle = canvasPalette.text26;
         [[0.04, 0.19], [0.055, 0.19], [0.07, 0.19], [0.93, 0.9], [0.945, 0.9], [0.96, 0.9]].forEach(([x, y]) => {
           ctx.fillRect(x * w, y * h, 2, 2);
         });
       } else {
-        ctx.strokeStyle = "rgba(233,255,249,.28)";
+        ctx.strokeStyle = canvasPalette.text28;
         ctx.setLineDash([5, 7]);
         ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
         ctx.setLineDash([]);
-        ctx.strokeStyle = "#d5b6ff";
+        ctx.strokeStyle = canvasPalette.violet;
         ctx.lineWidth = 2;
         ctx.beginPath();
         for (let x = 0; x <= w; x += 2) {
@@ -150,13 +167,13 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
         const packetY = h / 2
           + Math.sin(packetProgress * Math.PI * 9 + phase * 0.8) * h * 0.2
           + Math.sin(packetProgress * Math.PI * 18 + phase * 1.15) * h * 0.11;
-        ctx.fillStyle = "#f1e8ff";
-        ctx.shadowColor = "rgba(181,140,255,.95)";
+        ctx.fillStyle = canvasPalette.text;
+        ctx.shadowColor = canvasPalette.violet95;
         ctx.shadowBlur = 15;
         ctx.fillRect(packetX - 3, packetY - 3, 6, 6);
         ctx.shadowBlur = 0;
         [[0.04, 0.6], [0.96, 0.36]].forEach(([x, y]) => {
-          ctx.fillStyle = "#b58cff";
+          ctx.fillStyle = canvasPalette.violet;
           ctx.fillRect(x * w - 5, y * h - 5, 10, 10);
         });
       }
