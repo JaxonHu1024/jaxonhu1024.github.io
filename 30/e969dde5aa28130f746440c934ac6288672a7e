@@ -1,0 +1,23 @@
+app/not-found.tsx
+  s_73d56e8e14c100::t_235b8d5fafdf68 12,14
+app/page.tsx
+  s_73d56e8e14c100::t_e70664b148a169 359,361
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "30e969dde5aa28130f746440c934ac6288672a7e",
+  "prompts": {},
+  "sessions": {
+    "s_73d56e8e14c100": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc121-03fa-7af3-aa93-9ee8c71accb1",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
