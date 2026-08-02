@@ -14,6 +14,7 @@ type PixelatedCanvasProps = {
   shape?: "circle" | "square";
   backgroundColor?: string;
   grayscale?: boolean;
+  id?: string;
   className?: string;
   responsive?: boolean;
   dropoutStrength?: number;
@@ -31,6 +32,7 @@ type PixelatedCanvasProps = {
   jitterSpeed?: number;
   fadeOnLeave?: boolean;
   fadeSpeed?: number;
+  touchHandleId?: string;
   ariaLabel?: string;
 };
 
@@ -108,6 +110,7 @@ export function PixelatedCanvas({
   shape = "square",
   backgroundColor = "#000000",
   grayscale = false,
+  id,
   className,
   responsive = false,
   dropoutStrength = 0.4,
@@ -125,6 +128,7 @@ export function PixelatedCanvas({
   jitterSpeed = 4,
   fadeOnLeave = true,
   fadeSpeed = 0.1,
+  touchHandleId,
   ariaLabel = "Pixelated rendering of source image",
 }: PixelatedCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -143,6 +147,7 @@ export function PixelatedCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const touchHandle = touchHandleId ? document.getElementById(touchHandleId) : null;
 
     let cancelled = false;
     let sourceReady = false;
@@ -150,6 +155,7 @@ export function PixelatedCanvas({
     let pageActive = document.visibilityState === "visible";
     let interactionEnabled = false;
     let interactionEndTimeout: number | null = null;
+    let touchHandlePointerId: number | null = null;
     let baseLayer: HTMLCanvasElement | null = null;
     const affectedSamples: PixelSample[] = [];
     const affectedInfluences: number[] = [];
@@ -160,6 +166,34 @@ export function PixelatedCanvas({
 
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
+    const setTouchHandleActive = (active: boolean) => {
+      if (!touchHandle) return;
+      touchHandle.dataset.touchActive = String(active);
+      touchHandle.setAttribute("aria-pressed", String(active));
+    };
+
+    const clearTouchHandleInteraction = () => {
+      const pointerId = touchHandlePointerId;
+      touchHandlePointerId = null;
+      setTouchHandleActive(false);
+      if (pointerId !== null && touchHandle?.hasPointerCapture(pointerId)) {
+        try {
+          touchHandle.releasePointerCapture(pointerId);
+        } catch {
+          // Pointer capture can already be gone after a system-level cancellation.
+        }
+      }
+    };
+
+    const syncTouchHandleAvailability = () => {
+      if (!touchHandle) return;
+      const ready = interactionEnabled && sourceReady;
+      touchHandle.dataset.touchReady = String(ready);
+      touchHandle.setAttribute("aria-disabled", String(!ready));
+      if (touchHandle instanceof HTMLButtonElement) touchHandle.disabled = !ready;
+      if (!ready) clearTouchHandleInteraction();
+    };
+
     const syncInteractionState = () => {
       interactionEnabled = interactive && !motionQuery.matches;
       canvas.dataset.interactive = String(interactionEnabled);
@@ -168,6 +202,7 @@ export function PixelatedCanvas({
         pointerInsideRef.current = false;
         targetActivityRef.current = 0;
       }
+      syncTouchHandleAvailability();
     };
 
     const getDisplayDimensions = () => {
@@ -610,10 +645,12 @@ export function PixelatedCanvas({
 
       sourceReady = true;
       canvas.dataset.pixelatedReady = "true";
+      syncTouchHandleAvailability();
       draw(performance.now(), 0);
     };
 
     const resetInteraction = (motion = interactionEnabled ? "idle" : "reduced") => {
+      clearTouchHandleInteraction();
       pointerInsideRef.current = false;
       targetActivityRef.current = 0;
       activityRef.current = 0;
@@ -622,15 +659,15 @@ export function PixelatedCanvas({
       if (sourceReady) draw(performance.now(), 0);
     };
 
-    const updatePointer = (event: PointerEvent) => {
+    const updatePointerPosition = (clientX: number, clientY: number) => {
       if (!interactionEnabled) return;
       if (interactionEndTimeout !== null) {
         window.clearTimeout(interactionEndTimeout);
         interactionEndTimeout = null;
       }
       const bounds = canvas.getBoundingClientRect();
-      const x = event.clientX - bounds.left;
-      const y = event.clientY - bounds.top;
+      const x = clientX - bounds.left;
+      const y = clientY - bounds.top;
       if (!pointerInsideRef.current || animatedPointerRef.current.x === OFFSCREEN_POINTER) {
         animatedPointerRef.current = { x, y };
       }
@@ -638,6 +675,10 @@ export function PixelatedCanvas({
       pointerInsideRef.current = true;
       targetActivityRef.current = 1;
       startAnimation();
+    };
+
+    const updatePointer = (event: PointerEvent) => {
+      updatePointerPosition(event.clientX, event.clientY);
     };
 
     const fadeInteraction = () => {
@@ -673,6 +714,92 @@ export function PixelatedCanvas({
       resetInteraction();
     };
 
+    const canvasUsesTouchHandle = (event: PointerEvent) => (
+      event.pointerType === "touch" && touchHandle !== null
+    );
+
+    const handleCanvasPointerEnter = (event: PointerEvent) => {
+      if (!canvasUsesTouchHandle(event)) updatePointer(event);
+    };
+
+    const handleCanvasPointerDown = (event: PointerEvent) => {
+      if (!canvasUsesTouchHandle(event)) updatePointer(event);
+    };
+
+    const handleCanvasPointerMove = (event: PointerEvent) => {
+      if (!canvasUsesTouchHandle(event)) updatePointer(event);
+    };
+
+    const handleCanvasPointerLeave = (event: PointerEvent) => {
+      if (!canvasUsesTouchHandle(event)) handlePointerEnd(event);
+    };
+
+    const handleCanvasPointerUp = (event: PointerEvent) => {
+      if (!canvasUsesTouchHandle(event)) handlePointerUp(event);
+    };
+
+    const handleCanvasPointerCancel = (event: PointerEvent) => {
+      if (!canvasUsesTouchHandle(event)) handlePointerCancel();
+    };
+
+    const beginTouchHandleInteraction = (event: PointerEvent) => {
+      if (!interactionEnabled || !sourceReady || !event.isPrimary || event.button > 0) return;
+      event.preventDefault();
+      touchHandlePointerId = event.pointerId;
+      setTouchHandleActive(true);
+      try {
+        touchHandle?.setPointerCapture(event.pointerId);
+      } catch {
+        // Continue without capture if the browser has already retired this pointer.
+      }
+      updatePointer(event);
+    };
+
+    const moveTouchHandleInteraction = (event: PointerEvent) => {
+      if (touchHandlePointerId !== event.pointerId) return;
+      event.preventDefault();
+      updatePointer(event);
+    };
+
+    const endTouchHandleInteraction = (event: PointerEvent, interrupted = false) => {
+      if (touchHandlePointerId !== event.pointerId) return;
+      event.preventDefault();
+      clearTouchHandleInteraction();
+      if (interrupted) {
+        handlePointerCancel();
+      } else {
+        handlePointerEnd(event);
+      }
+    };
+
+    const handleTouchHandlePointerUp = (event: PointerEvent) => {
+      endTouchHandleInteraction(event);
+    };
+
+    const handleTouchHandlePointerCancel = (event: PointerEvent) => {
+      endTouchHandleInteraction(event, true);
+    };
+
+    const handleTouchHandleLostCapture = (event: PointerEvent) => {
+      if (touchHandlePointerId === event.pointerId) {
+        touchHandlePointerId = null;
+        setTouchHandleActive(false);
+        handlePointerCancel();
+      }
+    };
+
+    const handleTouchHandleClick = (event: MouseEvent) => {
+      if (event.detail !== 0 || !interactionEnabled || !sourceReady) return;
+      const bounds = canvas.getBoundingClientRect();
+      setTouchHandleActive(true);
+      updatePointerPosition(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+      if (interactionEndTimeout !== null) window.clearTimeout(interactionEndTimeout);
+      interactionEndTimeout = window.setTimeout(() => {
+        setTouchHandleActive(false);
+        fadeInteraction();
+      }, 320);
+    };
+
     const handleVisibilityChange = () => {
       pageActive = document.visibilityState === "visible";
       if (!pageActive) {
@@ -680,6 +807,10 @@ export function PixelatedCanvas({
       } else if (visible) {
         canvas.dataset.motion = interactionEnabled ? "idle" : "reduced";
       }
+    };
+
+    const handleWindowBlur = () => {
+      resetInteraction();
     };
 
     const handleMotionChange = () => {
@@ -707,13 +838,20 @@ export function PixelatedCanvas({
     const resizeObserver = responsive ? new ResizeObserver(scheduleResize) : null;
 
     syncInteractionState();
-    canvas.addEventListener("pointerenter", updatePointer);
-    canvas.addEventListener("pointerdown", updatePointer);
-    canvas.addEventListener("pointermove", updatePointer);
-    canvas.addEventListener("pointerleave", handlePointerEnd);
-    canvas.addEventListener("pointerup", handlePointerUp);
-    canvas.addEventListener("pointercancel", handlePointerCancel);
+    canvas.addEventListener("pointerenter", handleCanvasPointerEnter);
+    canvas.addEventListener("pointerdown", handleCanvasPointerDown);
+    canvas.addEventListener("pointermove", handleCanvasPointerMove);
+    canvas.addEventListener("pointerleave", handleCanvasPointerLeave);
+    canvas.addEventListener("pointerup", handleCanvasPointerUp);
+    canvas.addEventListener("pointercancel", handleCanvasPointerCancel);
+    touchHandle?.addEventListener("pointerdown", beginTouchHandleInteraction);
+    touchHandle?.addEventListener("pointermove", moveTouchHandleInteraction);
+    touchHandle?.addEventListener("pointerup", handleTouchHandlePointerUp);
+    touchHandle?.addEventListener("pointercancel", handleTouchHandlePointerCancel);
+    touchHandle?.addEventListener("lostpointercapture", handleTouchHandleLostCapture);
+    touchHandle?.addEventListener("click", handleTouchHandleClick);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
     motionQuery.addEventListener("change", handleMotionChange);
     intersectionObserver.observe(canvas);
     if (resizeObserver && canvas.parentElement) resizeObserver.observe(canvas.parentElement);
@@ -721,6 +859,7 @@ export function PixelatedCanvas({
     image.onload = computeSamples;
     image.onerror = () => {
       canvas.dataset.pixelatedError = "true";
+      syncTouchHandleAvailability();
       console.error("Failed to load image for PixelatedCanvas:", src);
     };
     image.src = src;
@@ -728,15 +867,28 @@ export function PixelatedCanvas({
     return () => {
       cancelled = true;
       stopAnimation();
+      clearTouchHandleInteraction();
+      if (touchHandle) {
+        touchHandle.dataset.touchReady = "false";
+        touchHandle.setAttribute("aria-disabled", "true");
+        if (touchHandle instanceof HTMLButtonElement) touchHandle.disabled = true;
+      }
       if (interactionEndTimeout !== null) window.clearTimeout(interactionEndTimeout);
       if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
-      canvas.removeEventListener("pointerenter", updatePointer);
-      canvas.removeEventListener("pointerdown", updatePointer);
-      canvas.removeEventListener("pointermove", updatePointer);
-      canvas.removeEventListener("pointerleave", handlePointerEnd);
-      canvas.removeEventListener("pointerup", handlePointerUp);
-      canvas.removeEventListener("pointercancel", handlePointerCancel);
+      canvas.removeEventListener("pointerenter", handleCanvasPointerEnter);
+      canvas.removeEventListener("pointerdown", handleCanvasPointerDown);
+      canvas.removeEventListener("pointermove", handleCanvasPointerMove);
+      canvas.removeEventListener("pointerleave", handleCanvasPointerLeave);
+      canvas.removeEventListener("pointerup", handleCanvasPointerUp);
+      canvas.removeEventListener("pointercancel", handleCanvasPointerCancel);
+      touchHandle?.removeEventListener("pointerdown", beginTouchHandleInteraction);
+      touchHandle?.removeEventListener("pointermove", moveTouchHandleInteraction);
+      touchHandle?.removeEventListener("pointerup", handleTouchHandlePointerUp);
+      touchHandle?.removeEventListener("pointercancel", handleTouchHandlePointerCancel);
+      touchHandle?.removeEventListener("lostpointercapture", handleTouchHandleLostCapture);
+      touchHandle?.removeEventListener("click", handleTouchHandleClick);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
       motionQuery.removeEventListener("change", handleMotionChange);
       intersectionObserver.disconnect();
       resizeObserver?.disconnect();
@@ -765,12 +917,14 @@ export function PixelatedCanvas({
     src,
     tintColor,
     tintStrength,
+    touchHandleId,
     width,
   ]);
 
   return (
     <canvas
       ref={canvasRef}
+      id={id}
       className={className}
       data-cell-size={Math.max(1, Math.round(cellSize))}
       data-max-fps={Math.max(1, maxFps)}

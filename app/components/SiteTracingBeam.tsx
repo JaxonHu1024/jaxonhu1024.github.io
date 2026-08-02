@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 
 const TRACE_EPSILON = 0.0005;
 const TRACE_EASING = 0.18;
+const TRACE_PATH = "M 10 0 V 4 L 1 7 V 80 L 19 83 V 100";
 
 function clampProgress(value: number) {
   return Math.max(0, Math.min(1, value));
@@ -144,10 +145,10 @@ export function SiteTracingBeam() {
             <stop offset="1" stopColor="var(--color-status-active)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path className="site-tracing-beam__track" d="M 10 0 V 4 L 19 7 V 80 L 1 83 V 100" />
+        <path className="site-tracing-beam__track" d={TRACE_PATH} />
         <path
           className="site-tracing-beam__progress"
-          d="M 10 0 V 4 L 19 7 V 80 L 1 83 V 100"
+          d={TRACE_PATH}
           stroke="url(#site-tracing-beam-gradient)"
         />
       </svg>

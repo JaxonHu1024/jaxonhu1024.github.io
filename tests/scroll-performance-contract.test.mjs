@@ -62,6 +62,7 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
+  const beamCss = css.match(/\.site-tracing-beam\s*\{[^}]*\}/s)?.[0] ?? "";
 
   assert.match(layout, /<SiteTracingBeam \/>/);
   assert.match(component, /^"use client";/);
@@ -72,7 +73,13 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
   assert.match(component, /prefers-reduced-motion: reduce/);
   assert.match(component, /visibilitychange/);
   assert.match(component, /window\.removeEventListener\("scroll", scheduleProgress\)/);
-  assert.match(css, /\.site-tracing-beam\s*\{[^}]*position:\s*fixed[^}]*pointer-events:\s*none/s);
+  assert.match(beamCss, /position:\s*fixed/);
+  assert.match(beamCss, /left:\s*calc\(env\(safe-area-inset-left, 0px\) \+ var\(--site-trace-edge-gap\)\)/);
+  assert.match(beamCss, /right:\s*auto/);
+  assert.match(beamCss, /pointer-events:\s*none/);
+  assert.match(css, /--site-trace-lane-width:\s*calc\(/);
+  assert.match(component, /const TRACE_PATH = "M 10 0 V 4 L 1 7 V 80 L 19 83 V 100"/);
+  assert.equal((component.match(/d=\{TRACE_PATH\}/g) ?? []).length, 2);
   assert.match(component, /gradientUnits="userSpaceOnUse"/);
   assert.match(component, /gradientRef\.current\?\.setAttribute\("y1"/);
   assert.match(component, /stopColor="var\(--color-accent\)" stopOpacity="0"/);
@@ -86,8 +93,9 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
   );
 });
 
-test("keeps portrait and experience motion compositor-friendly and cheap while offscreen", async () => {
+test("keeps portrait motion cheap and the Experience guide fully static", async () => {
   const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const pixelCanvas = await readFile(
     new URL("../app/components/PixelatedCanvas.tsx", import.meta.url),
     "utf8",
@@ -103,16 +111,18 @@ test("keeps portrait and experience motion compositor-friendly and cheap while o
   const portraitCanvas = css.match(
     /\.hero-pixel-canvas\s*\{[^}]*touch-action:\s*pan-y pinch-zoom[^}]*\}/s,
   )?.[0] ?? "";
-  const traceFill = css.match(/\.experience-scan-fill \{[^}]*\}/s)?.[0] ?? "";
-  const traceCursor = css.match(/\.experience-scan-cursor \{[^}]*\}/s)?.[0] ?? "";
 
   assert.match(portraitCanvas, /touch-action:\s*pan-y pinch-zoom/);
   assert.doesNotMatch(css, /hero-terminal|agentctl|@keyframes\s+hero-terminal/);
   assert.match(pixelCanvas, /new IntersectionObserver/);
   assert.match(pixelCanvas, /document\.addEventListener\("visibilitychange"/);
-  assert.match(pixelCanvas, /canvas\.addEventListener\("pointerdown", updatePointer\)/);
-  assert.match(pixelCanvas, /canvas\.addEventListener\("pointercancel", handlePointerCancel\)/);
-  assert.match(pixelCanvas, /canvas\.removeEventListener\("pointercancel", handlePointerCancel\)/);
+  assert.match(pixelCanvas, /event\.pointerType === "touch" && touchHandle !== null/);
+  assert.match(pixelCanvas, /touchHandle\?\.setPointerCapture\(event\.pointerId\)/);
+  assert.match(pixelCanvas, /touchHandle\?\.addEventListener\("pointercancel"/);
+  assert.match(pixelCanvas, /touchHandle\?\.addEventListener\("lostpointercapture"/);
+  assert.match(pixelCanvas, /touchHandle\?\.removeEventListener\("pointercancel"/);
+  assert.match(pixelCanvas, /touchHandle\?\.removeEventListener\("lostpointercapture"/);
+  assert.match(css, /\.hero-portrait-touch-handle\s*\{[^}]*min-height:\s*44px[^}]*touch-action:\s*none/s);
   assert.match(pixelCanvas, /new ResizeObserver/);
   assert.match(pixelCanvas, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
   assert.match(pixelCanvas, /function timeAdjustedFactor/);
@@ -120,17 +130,13 @@ test("keeps portrait and experience motion compositor-friendly and cheap while o
   assert.match(pixelCanvas, /context\.drawImage\(\s*baseLayer/s);
   assert.match(pixelCanvas, /sample\.drop \? 1 - influence : 1/);
   assert.doesNotMatch(pixelCanvas, /if \(sample\.drop \|\| sample\.a <= 0\)/);
-  assert.match(traceFill, /transform: scaleY\(var\(--experience-trace-progress\)\)/);
-  assert.match(traceFill, /transform-origin: top/);
-  assert.match(traceCursor, /transform: translate3d\(0, var\(--experience-trace-y\), 0\)/);
-  assert.doesNotMatch(css, /@keyframes timeline-scan/);
-  assert.match(css, /\.experience-scan-track\s*\{[^}]*overflow:\s*hidden/s);
-  assert.match(controller, /function useExperienceTrace\(\)/);
-  assert.match(controller, /new ResizeObserver\(syncGeometry\)/);
-  assert.match(controller, /window\.addEventListener\("scroll", scheduleTrace, \{ passive: true \}\)/);
-  assert.match(controller, /requestAnimationFrame\(updateTrace\)/);
-  assert.match(controller, /section\.dataset\.sectionVisible/);
-  assert.match(controller, /window\.removeEventListener\("scroll", scheduleTrace\)/);
+  assert.match(page, /<div className="experience-log">/);
+  assert.doesNotMatch(`${page}\n${css}\n${controller}`, /experience-scan-(?:track|fill|cursor)/);
+  assert.doesNotMatch(`${css}\n${controller}`, /--experience-trace-|data-trace-/);
+  assert.doesNotMatch(controller, /useExperienceTrace|scheduleTrace|updateTrace/);
+  assert.doesNotMatch(css, /active-node-pulse|timeline-node::before/);
+  assert.match(css, /\.experience-log::before\s*\{[^}]*background:\s*var\(--guide-rail-vertical\)/s);
+  assert.match(css, /\.experience-row\.is-current \.timeline-node\s*\{[^}]*--guide-node-tone:\s*var\(--color-accent\)/s);
   assert.match(
     scrollCss,
     /#hero\[data-section-visible="false"\][\s\S]*?pointer-events:\s*none/s,

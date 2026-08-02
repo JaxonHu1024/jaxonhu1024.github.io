@@ -763,7 +763,102 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
   }
 });
 
-test("page background state pauses ambient loops and scroll-trace work", { timeout: 10_000 }, async () => {
+test("mobile internal guides share one static vertical axis", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 430, height: 932 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+
+    const state = await page.evaluate(() => {
+      const guideMetrics = (selector) => {
+        const host = document.querySelector(selector);
+        const hostRect = host.getBoundingClientRect();
+        const guide = getComputedStyle(host, "::before");
+        const width = Number.parseFloat(guide.width);
+
+        return {
+          animationName: guide.animationName,
+          backgroundImage: guide.backgroundImage,
+          centerX: hostRect.left + Number.parseFloat(guide.left) + width / 2,
+          height: Number.parseFloat(guide.height),
+          transitionDuration: guide.transitionDuration,
+          width,
+        };
+      };
+      const nodeCenter = (selector, pseudo = null) => {
+        const node = document.querySelector(selector);
+        const rect = node.getBoundingClientRect();
+        if (pseudo === null) return rect.left + rect.width / 2;
+
+        const marker = getComputedStyle(node, pseudo);
+        return (
+          rect.left
+          + Number.parseFloat(marker.left)
+          + Number.parseFloat(marker.width) / 2
+        );
+      };
+
+      return {
+        experience: {
+          nodeAnimation: getComputedStyle(
+            document.querySelector(".timeline-node"),
+            "::before",
+          ).animationName,
+          scanCount: document.querySelectorAll(".experience-scan-track").length,
+          traceMotion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
+          traceProgress: document.querySelector(".experience-log")
+            ?.getAttribute("data-trace-progress"),
+        },
+        guides: [
+          guideMetrics(".about-loop-list"),
+          guideMetrics(".experience-log"),
+          guideMetrics(".education-timeline"),
+          guideMetrics(".toolchain-list"),
+        ],
+        nodeCenters: [
+          nodeCenter(".about-loop-node"),
+          nodeCenter(".timeline-node"),
+          nodeCenter(".education-node"),
+          nodeCenter(".toolchain-module", "::after"),
+        ],
+      };
+    });
+
+    for (const guide of state.guides) {
+      assert.ok(guide.width <= 1.25, `mobile guide width was ${guide.width}px`);
+      assert.ok(guide.height >= 48, `mobile guide height was ${guide.height}px`);
+      assert.equal(guide.animationName, "none");
+      assert.equal(guide.transitionDuration, "0s");
+      assert.notEqual(guide.backgroundImage, "none");
+    }
+
+    const guideCenters = state.guides.map(({ centerX }) => centerX);
+    assert.equal(new Set(state.guides.map(({ backgroundImage }) => backgroundImage)).size, 1);
+    assert.ok(
+      Math.max(...guideCenters) - Math.min(...guideCenters) <= 0.75,
+      `mobile guide centers diverged: ${guideCenters.join(", ")}`,
+    );
+    state.nodeCenters.forEach((centerX, index) => {
+      assert.ok(
+        Math.abs(centerX - guideCenters[index]) <= 0.75,
+        `mobile guide ${index + 1} node=${centerX}px missed rail=${guideCenters[index]}px`,
+      );
+    });
+    assert.deepEqual(state.experience, {
+      nodeAnimation: "none",
+      scanCount: 0,
+      traceMotion: null,
+      traceProgress: null,
+    });
+  } finally {
+    await context.close();
+  }
+});
+
+test("page background state pauses remaining ambient loops", { timeout: 10_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
@@ -782,78 +877,6 @@ test("page background state pauses ambient loops and scroll-trace work", { timeo
     });
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.waitForFunction(() => document.documentElement.dataset.pageActive === "true");
-    await page.locator("#experience").scrollIntoViewIfNeeded();
-    await page.waitForFunction(() => (
-      document.querySelector("#experience")?.getAttribute("data-section-visible") === "true"
-      && document.querySelector(".experience-log")?.hasAttribute("data-trace-progress")
-    ));
-
-    const experienceRunning = await page.evaluate(() => ({
-      cursorWillChange: getComputedStyle(
-        document.querySelector(".experience-scan-cursor"),
-      ).willChange,
-      fillWillChange: getComputedStyle(
-        document.querySelector(".experience-scan-fill"),
-      ).willChange,
-      progress: Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress")),
-      pulse: getComputedStyle(document.querySelector(".timeline-node"), "::before").animationPlayState,
-      traceMotion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
-    }));
-    assert.equal(experienceRunning.pulse, "running");
-    assert.equal(experienceRunning.traceMotion, "responsive");
-    assert.deepEqual(
-      [experienceRunning.fillWillChange, experienceRunning.cursorWillChange],
-      ["transform", "transform"],
-    );
-    assert.ok(experienceRunning.progress >= 0 && experienceRunning.progress <= 1);
-
-    await page.evaluate(() => window.__setDocumentHidden(true));
-    await page.waitForFunction(() => document.documentElement.dataset.pageActive === "false");
-    await page.evaluate(() => window.scrollBy(0, 40));
-    await page.waitForTimeout(80);
-
-    const paused = await page.evaluate(() => ({
-      cursorWillChange: getComputedStyle(
-        document.querySelector(".experience-scan-cursor"),
-      ).willChange,
-      fillWillChange: getComputedStyle(
-        document.querySelector(".experience-scan-fill"),
-      ).willChange,
-      progress: Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress")),
-      pulse: getComputedStyle(document.querySelector(".timeline-node"), "::before").animationPlayState,
-    }));
-    assert.equal(paused.pulse, "paused");
-    assert.equal(paused.progress, experienceRunning.progress);
-    assert.deepEqual(
-      [paused.fillWillChange, paused.cursorWillChange],
-      ["auto", "auto"],
-    );
-
-    await page.evaluate(() => window.__setDocumentHidden(false));
-    await page.waitForFunction(() => document.documentElement.dataset.pageActive === "true");
-    await page.waitForFunction((previousProgress) => (
-      Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress"))
-        !== previousProgress
-    ), experienceRunning.progress);
-    const resumed = await page.evaluate(() => ({
-      cursorWillChange: getComputedStyle(
-        document.querySelector(".experience-scan-cursor"),
-      ).willChange,
-      fillWillChange: getComputedStyle(
-        document.querySelector(".experience-scan-fill"),
-      ).willChange,
-      progress: Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress")),
-      pulse: getComputedStyle(document.querySelector(".timeline-node"), "::before").animationPlayState,
-      traceMotion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
-    }));
-    assert.equal(resumed.pulse, "running");
-    assert.equal(resumed.traceMotion, "responsive");
-    assert.deepEqual(
-      [resumed.fillWillChange, resumed.cursorWillChange],
-      ["transform", "transform"],
-    );
-    assert.notEqual(resumed.progress, experienceRunning.progress);
-
     await page.locator("#contact").evaluate((element) => {
       element.scrollIntoView({ block: "center" });
     });
@@ -889,7 +912,7 @@ test("page background state pauses ambient loops and scroll-trace work", { timeo
   }
 });
 
-test("experience trace and keyboard focus remain responsive", { timeout: 15_000 }, async () => {
+test("experience guide stays static while keyboard focus remains responsive", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1440, height: 900 },
   });
@@ -901,49 +924,59 @@ test("experience trace and keyboard focus remain responsive", { timeout: 15_000 
     await page.locator("#experience").evaluate((element) => {
       element.scrollIntoView({ block: "start" });
     });
-    await page.waitForFunction(() => (
-      document.querySelector(".experience-log")?.hasAttribute("data-trace-progress")
-    ));
-    const progressBefore = Number(
-      await page.locator(".experience-log").getAttribute("data-trace-progress"),
-    );
-    await page.evaluate(() => window.scrollBy(0, 120));
-    await page.waitForFunction((before) => (
-      Number(document.querySelector(".experience-log")?.getAttribute("data-trace-progress"))
-        > before
-    ), progressBefore);
-    const trace = await page.locator(".experience-log").evaluate((element) => {
-      const track = element.querySelector(".experience-scan-track");
-      const fill = element.querySelector(".experience-scan-fill");
-      const cursor = element.querySelector(".experience-scan-cursor");
+
+    const measureGuide = () => page.locator(".experience-log").evaluate((element) => {
+      const rail = getComputedStyle(element, "::before");
       const node = element.querySelector(".timeline-node");
-      const trackRect = track.getBoundingClientRect();
+      const elementRect = element.getBoundingClientRect();
       const nodeRect = node.getBoundingClientRect();
-      const progress = Number(element.dataset.traceProgress);
-      const cursorHeight = cursor.offsetHeight;
-      const trackHeight = track.clientHeight;
-      const range = trackHeight - cursorHeight;
-      const expectedCursorY = Math.min(
-        range,
-        Math.max(0, progress * trackHeight - cursorHeight / 2),
+      const railCenterX = (
+        elementRect.left
+        + Number.parseFloat(rail.left)
+        + Number.parseFloat(rail.width) / 2
       );
+
       return {
-        axisDelta: Math.abs(
-          trackRect.left + trackRect.width / 2 - (nodeRect.left + nodeRect.width / 2),
-        ),
-        cursorY: new DOMMatrixReadOnly(getComputedStyle(cursor).transform).f,
-        fillScaleY: new DOMMatrixReadOnly(getComputedStyle(fill).transform).d,
-        motion: document.querySelector("#experience")?.dataset.traceMotion,
-        progress,
-        range,
-        expectedCursorY,
+        axisDelta: Math.abs(railCenterX - (nodeRect.left + nodeRect.width / 2)),
+        backgroundImage: rail.backgroundImage,
+        centerX: railCenterX,
+        hasRevealAnimation: element.classList.contains("reveal"),
+        nodeAnimation: getComputedStyle(node, "::before").animationName,
+        runningAnimations: element.getAnimations({ subtree: true })
+          .filter((animation) => animation.playState === "running").length,
+        scanCount: element.querySelectorAll(".experience-scan-track").length,
+        traceMotion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
+        traceProgress: element.getAttribute("data-trace-progress"),
       };
     });
-    assert.equal(trace.motion, "responsive");
-    assert.ok(trace.progress > progressBefore && trace.progress <= 1);
-    assert.ok(Math.abs(trace.fillScaleY - trace.progress) <= 0.01);
-    assert.ok(Math.abs(trace.cursorY - trace.expectedCursorY) <= 1);
-    assert.ok(trace.axisDelta <= 1);
+
+    const guideBefore = await measureGuide();
+    await page.evaluate(() => window.scrollBy(0, 120));
+    await page.evaluate(() => new Promise((resolveFrame) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolveFrame));
+    }));
+    const guideAfter = await measureGuide();
+    assert.deepEqual(guideAfter, guideBefore);
+    assert.ok(guideBefore.axisDelta <= 0.75);
+    assert.notEqual(guideBefore.backgroundImage, "none");
+    assert.deepEqual(
+      {
+        hasRevealAnimation: guideBefore.hasRevealAnimation,
+        nodeAnimation: guideBefore.nodeAnimation,
+        runningAnimations: guideBefore.runningAnimations,
+        scanCount: guideBefore.scanCount,
+        traceMotion: guideBefore.traceMotion,
+        traceProgress: guideBefore.traceProgress,
+      },
+      {
+        hasRevealAnimation: false,
+        nodeAnimation: "none",
+        runningAnimations: 0,
+        scanCount: 0,
+        traceMotion: null,
+        traceProgress: null,
+      },
+    );
 
     const contact = page.locator("#contact");
     await contact.scrollIntoViewIfNeeded();
@@ -1165,7 +1198,7 @@ test("hero pixel canvas distorts on pointer input, pauses offscreen, and remains
   }
 });
 
-test("mobile Hero keeps one full touch-interactive portrait between JAXON and the CTA", { timeout: 15_000 }, async () => {
+test("mobile Hero keeps portrait scrolling separate from deliberate touch distortion", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     hasTouch: true,
     isMobile: true,
@@ -1185,20 +1218,30 @@ test("mobile Hero keeps one full touch-interactive portrait between JAXON and th
       const portraitRect = portrait.getBoundingClientRect();
       const cta = document.querySelector(".hero-cta").getBoundingClientRect();
       const canvas = portrait.querySelector(".hero-pixel-canvas");
+      const frame = portrait.querySelector(".hero-portrait-frame");
       const portraitStyle = getComputedStyle(portrait);
+      const touchHandle = portrait.querySelector(".hero-portrait-touch-handle");
 
       return {
         canvasCount: document.querySelectorAll(".hero-pixel-canvas").length,
         ctaTop: cta.top,
+        frameOverlay: getComputedStyle(frame, "::before").backgroundImage,
         interactive: canvas.getAttribute("data-interactive"),
-        labelDisplays: Array.from(portrait.querySelectorAll(".hero-portrait-label"))
-          .map((label) => getComputedStyle(label).display),
+        topLabelDisplay: getComputedStyle(
+          portrait.querySelector(".hero-portrait-label--top"),
+        ).display,
         maskImage: portraitStyle.maskImage,
         nameBottom: name.bottom,
         opacity: portraitStyle.opacity,
         pointerEvents: portraitStyle.pointerEvents,
         portraitBottom: portraitRect.bottom,
         portraitTop: portraitRect.top,
+        touchHandle: touchHandle ? {
+          ariaPressed: touchHandle.getAttribute("aria-pressed"),
+          display: getComputedStyle(touchHandle).display,
+          ready: touchHandle.getAttribute("data-touch-ready"),
+          touchAction: getComputedStyle(touchHandle).touchAction,
+        } : null,
         touchAction: getComputedStyle(canvas).touchAction,
       };
     });
@@ -1209,42 +1252,91 @@ test("mobile Hero keeps one full touch-interactive portrait between JAXON and th
     assert.equal(layout.opacity, "1");
     assert.equal(layout.pointerEvents, "auto");
     assert.equal(layout.touchAction, "pan-y pinch-zoom");
-    assert.equal(layout.labelDisplays.every((display) => display !== "none"), true);
+    assert.equal(layout.topLabelDisplay !== "none", true);
+    assert.deepEqual(layout.touchHandle, {
+      ariaPressed: "false",
+      display: "flex",
+      ready: "true",
+      touchAction: "none",
+    });
+    assert.doesNotMatch(layout.frameOverlay, /90deg/);
     assert.ok(layout.nameBottom <= layout.portraitTop + 1);
     assert.ok(layout.portraitBottom <= layout.ctaTop + 1);
 
     const canvas = page.locator(".hero-pixel-canvas");
+    const touchHandle = page.locator(".hero-portrait-touch-handle");
+    const touchHandleBox = await touchHandle.boundingBox();
+    assert.ok(touchHandleBox);
+    assert.ok(touchHandleBox.width >= 44 && touchHandleBox.height >= 44);
+
+    const cdp = await context.newCDPSession(page);
+    const canvasBox = await canvas.boundingBox();
+    assert.ok(canvasBox);
     const restingSnapshot = await canvas.evaluate((element) => element.toDataURL());
-    await canvas.evaluate((element) => {
-      const rect = element.getBoundingClientRect();
-      element.dispatchEvent(new PointerEvent("pointerdown", {
-        bubbles: true,
-        buttons: 1,
-        clientX: rect.left + rect.width * 0.6,
-        clientY: rect.top + rect.height * 0.46,
-        isPrimary: true,
-        pointerId: 1,
-        pointerType: "touch",
-      }));
+    const scrollStart = {
+      x: canvasBox.x + canvasBox.width * 0.48,
+      y: canvasBox.y + canvasBox.height * 0.72,
+    };
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [scrollStart],
+    });
+    for (let step = 1; step <= 6; step += 1) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{
+          x: scrollStart.x + step * 4,
+          y: scrollStart.y - step * 18,
+        }],
+      });
+      await page.waitForTimeout(20);
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await page.waitForTimeout(120);
+    assert.ok(await page.evaluate(() => scrollY) >= 48);
+    assert.equal(await canvas.evaluate((element) => element.toDataURL()), restingSnapshot);
+    assert.equal(await canvas.getAttribute("data-motion"), "idle");
+
+    await page.waitForTimeout(240);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForFunction(() => window.scrollY === 0);
+    await page.waitForTimeout(80);
+    const distortionScrollStart = await page.evaluate(() => scrollY);
+    const distortionStart = {
+      x: touchHandleBox.x + touchHandleBox.width * 0.5,
+      y: touchHandleBox.y + touchHandleBox.height * 0.5,
+    };
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [distortionStart],
+    });
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: [{
+        x: canvasBox.x + canvasBox.width * 0.38,
+        y: canvasBox.y + canvasBox.height * 0.42,
+      }],
     });
     await page.waitForFunction(() => (
       document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "running"
     ));
     await page.waitForTimeout(120);
+    assert.ok(
+      Math.abs(await page.evaluate(() => scrollY) - distortionScrollStart) <= 1,
+      "dragging the portrait touch handle scrolled the page",
+    );
+    assert.equal(await touchHandle.getAttribute("aria-pressed"), "true");
     assert.notEqual(
       await canvas.evaluate((element) => element.toDataURL()),
       restingSnapshot,
     );
-    await canvas.evaluate((element) => {
-      element.dispatchEvent(new PointerEvent("pointerup", {
-        bubbles: true,
-        pointerId: 1,
-        pointerType: "touch",
-      }));
-    });
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     await page.waitForFunction(() => (
       document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "idle"
     ), null, { timeout: 2_000 });
+    assert.equal(await touchHandle.getAttribute("aria-pressed"), "false");
+    assert.equal(await canvas.evaluate((element) => getComputedStyle(element).touchAction), "pan-y pinch-zoom");
+    await cdp.detach();
   } finally {
     await context.close();
   }
@@ -1252,6 +1344,8 @@ test("mobile Hero keeps one full touch-interactive portrait between JAXON and th
 
 test("reduced-motion mobile keeps the portrait, Context path, and contact ticker complete but still", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
+    hasTouch: true,
+    isMobile: true,
     reducedMotion: "reduce",
     viewport: { width: 390, height: 844 },
   });
@@ -1271,6 +1365,12 @@ test("reduced-motion mobile keeps the portrait, Context path, and contact ticker
       motion: element.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion"),
       runningAnimations: element.getAnimations({ subtree: true })
         .filter((animation) => animation.playState === "running").length,
+      touchHandleDisabled: element.querySelector(".hero-portrait-touch-handle")?.disabled,
+      touchHandleDisplay: getComputedStyle(
+        element.querySelector(".hero-portrait-touch-handle"),
+      ).display,
+      touchHandleReady: element.querySelector(".hero-portrait-touch-handle")
+        ?.getAttribute("data-touch-ready"),
       visible: getComputedStyle(element).visibility !== "hidden",
     }));
     assert.deepEqual(portrait, {
@@ -1278,6 +1378,9 @@ test("reduced-motion mobile keeps the portrait, Context path, and contact ticker
       interactive: "false",
       motion: "reduced",
       runningAnimations: 0,
+      touchHandleDisabled: true,
+      touchHandleDisplay: "none",
+      touchHandleReady: "false",
       visible: true,
     });
     assert.equal(await page.locator(".hero-terminal").count(), 0);
@@ -1404,35 +1507,23 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
             document.querySelector(".contact-marquee-track"),
           ).transform,
         },
-        experienceTrace: {
-          cursorOpacity: getComputedStyle(
-            document.querySelector(".experience-scan-cursor"),
-          ).opacity,
-          cursorWillChange: getComputedStyle(
-            document.querySelector(".experience-scan-cursor"),
-          ).willChange,
-          fillTransform: getComputedStyle(
-            document.querySelector(".experience-scan-fill"),
-          ).transform,
-          fillWillChange: getComputedStyle(
-            document.querySelector(".experience-scan-fill"),
-          ).willChange,
-          motion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
-          progress: document.querySelector(".experience-log")
+        experienceGuide: {
+          animationCount: document.querySelector(".experience-log")
+            ?.getAnimations({ subtree: true }).length,
+          nodeAnimation: getComputedStyle(
+            document.querySelector(".timeline-node"),
+            "::before",
+          ).animationName,
+          scanCount: document.querySelectorAll(".experience-scan-track").length,
+          traceMotion: document.querySelector("#experience")?.getAttribute("data-trace-motion"),
+          traceProgress: document.querySelector(".experience-log")
             ?.getAttribute("data-trace-progress"),
         },
-        pulseAnimation: getComputedStyle(
-          document.querySelector(".timeline-node"),
-          "::before",
-        ).animationName,
         researchMotion: Array.from(
           document.querySelectorAll(".research-canvas"),
         ).map((canvas) => canvas.getAttribute("data-motion")),
         reveal,
         runningAnimations,
-        scanAnimation: getComputedStyle(
-          document.querySelector(".experience-scan-cursor"),
-        ).animationName,
       };
     });
 
@@ -1447,16 +1538,13 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
       animationName: "none",
       transform: "none",
     });
-    assert.deepEqual(state.experienceTrace, {
-      cursorOpacity: "0",
-      cursorWillChange: "auto",
-      fillTransform: "matrix(1, 0, 0, 1, 0, 0)",
-      fillWillChange: "auto",
-      motion: "reduced",
-      progress: "1.0000",
+    assert.deepEqual(state.experienceGuide, {
+      animationCount: 0,
+      nodeAnimation: "none",
+      scanCount: 0,
+      traceMotion: null,
+      traceProgress: null,
     });
-    assert.equal(state.scanAnimation, "none");
-    assert.equal(state.pulseAnimation, "none");
     assert.deepEqual(state.about, {
       contextLabels: ["Focus"],
       forbiddenCount: 0,
@@ -2194,7 +2282,7 @@ test("desktop active navigation brackets hug the label without changing its name
   }
 });
 
-test("right-side tracing beam follows whole-document scroll and stays static for reduced motion", { timeout: 20_000 }, async () => {
+test("left-side tracing beam follows whole-document scroll and stays static for reduced motion", { timeout: 20_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
@@ -2209,15 +2297,24 @@ test("right-side tracing beam follows whole-document scroll and stays static for
     const initial = await beam.evaluate((element) => ({
       ariaHidden: element.getAttribute("aria-hidden"),
       count: document.querySelectorAll(".site-tracing-beam").length,
+      leftGap: element.getBoundingClientRect().left,
       pointerEvents: getComputedStyle(element).pointerEvents,
       progress: Number(element.getAttribute("data-trace-progress")),
+      rightGap: innerWidth - element.getBoundingClientRect().right,
     }));
-    assert.deepEqual(initial, {
+    assert.deepEqual({
+      ariaHidden: initial.ariaHidden,
+      count: initial.count,
+      pointerEvents: initial.pointerEvents,
+      progress: initial.progress,
+    }, {
       ariaHidden: "true",
       count: 1,
       pointerEvents: "none",
       progress: 0,
     });
+    assert.ok(initial.leftGap <= 24, `tracing beam left gap was ${initial.leftGap}px`);
+    assert.ok(initial.leftGap < initial.rightGap, "tracing beam remained on the right side");
 
     await page.evaluate(() => {
       const maxScroll = document.documentElement.scrollHeight - innerHeight;
@@ -2637,8 +2734,10 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         initialLayout.beam.left >= -0.5
           && initialLayout.beam.right <= viewport.width + 0.5
           && initialLayout.beam.top >= initialLayout.header.bottom
-          && initialLayout.beam.bottom <= viewport.height + 0.5,
-        `${viewport.width}x${viewport.height} tracing beam escaped its right rail: `
+          && initialLayout.beam.bottom <= viewport.height + 0.5
+          && initialLayout.beam.left <= 24
+          && initialLayout.beam.right <= initialLayout.header.left - 3.5,
+        `${viewport.width}x${viewport.height} tracing beam escaped its left rail: `
           + `${JSON.stringify(initialLayout.beam)}`,
       );
       assert.deepEqual(beamPresentation, {
@@ -3041,18 +3140,16 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 ).length === 0;
             }
             if (sectionId === "experience") {
-              const progress = Number(
-                section.querySelector(".experience-log")?.getAttribute("data-trace-progress"),
-              );
+              const log = section.querySelector(".experience-log");
+              const node = section.querySelector(".timeline-node");
               return (
-                section.getAttribute("data-trace-motion") === "responsive"
-                && Number.isFinite(progress)
-                && progress >= 0
-                && progress <= 1
-                && getComputedStyle(
-                  section.querySelector(".timeline-node"),
-                  "::before",
-                ).animationPlayState === "running"
+                log
+                && !log.classList.contains("reveal")
+                && section.querySelectorAll(".experience-scan-track").length === 0
+                && !section.hasAttribute("data-trace-motion")
+                && !log.hasAttribute("data-trace-progress")
+                && getComputedStyle(log, "::before").backgroundImage !== "none"
+                && getComputedStyle(node, "::before").animationName === "none"
               );
             }
             if (sectionId === "research") {
@@ -3120,10 +3217,15 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 : null,
               revealOpacity: revealStyle?.opacity ?? null,
               revealTranslateY: revealTransform?.m42 ?? null,
-              trace: section?.querySelector(".experience-log")
+              guide: section?.querySelector(".experience-log")
                 ? {
-                    motion: section.getAttribute("data-trace-motion"),
-                    progress: section.querySelector(".experience-log")
+                    nodeAnimation: getComputedStyle(
+                      section.querySelector(".timeline-node"),
+                      "::before",
+                    ).animationName,
+                    scanCount: section.querySelectorAll(".experience-scan-track").length,
+                    traceMotion: section.getAttribute("data-trace-motion"),
+                    traceProgress: section.querySelector(".experience-log")
                       ?.getAttribute("data-trace-progress"),
                   }
                 : null,
@@ -3329,13 +3431,17 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const railMetrics = (selector) => {
           const element = document.querySelector(selector);
           const box = element.getBoundingClientRect();
-          const relativeX = Number.parseFloat(
-            getComputedStyle(element, "::before").left,
-          );
+          const guide = getComputedStyle(element, "::before");
+          const relativeX = Number.parseFloat(guide.left);
+          const width = Number.parseFloat(guide.width);
 
           return {
+            absoluteCenterX: round(box.x + relativeX + width / 2),
             absoluteX: round(box.x + relativeX),
+            backgroundImage: guide.backgroundImage,
+            height: round(Number.parseFloat(guide.height)),
             relativeX: round(relativeX),
+            width: round(width),
           };
         };
         const logoMetrics = (selector) => {
@@ -3360,6 +3466,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         ];
 
         return {
+          aboutRail: railMetrics(".about-loop-list"),
           logos: logoSelectors.map(logoMetrics),
           rails: [
             railMetrics(".experience-log"),
@@ -3412,6 +3519,24 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           Math.max(...railPositions) - Math.min(...railPositions) <= 0.75,
           `${viewport.width}x${viewport.height} stacked rail positions diverged: ${railPositions.join(", ")}`,
         );
+      }
+
+      if (viewport.width <= 900) {
+        const mobileRails = [layout.aboutRail, ...layout.rails];
+        const railPositions = mobileRails.map(({ absoluteCenterX }) => absoluteCenterX);
+        assert.ok(
+          Math.max(...railPositions) - Math.min(...railPositions) <= 0.75,
+          `${viewport.width}x${viewport.height} internal guide centers diverged: ${railPositions.join(", ")}`,
+        );
+        for (const rail of mobileRails) {
+          assert.ok(rail.width <= 1.25, `${viewport.width}x${viewport.height} guide was ${rail.width}px wide`);
+          assert.ok(rail.height >= 48, `${viewport.width}x${viewport.height} guide was ${rail.height}px tall`);
+          assert.notEqual(rail.backgroundImage, "none");
+        }
+      } else if (viewport.width >= 1280) {
+        assert.ok(layout.aboutRail.height <= 1.25);
+        assert.ok(layout.aboutRail.width >= 100);
+        assert.notEqual(layout.aboutRail.backgroundImage, "none");
       }
 
       if (viewport.width <= 760) {

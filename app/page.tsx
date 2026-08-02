@@ -158,11 +158,7 @@ export default function Home() {
             <span className="kicker-rule" aria-hidden="true" />
             <span className="square-end" aria-hidden="true" />
           </h2>
-          <div className="experience-log reveal">
-            <span className="experience-scan-track" aria-hidden="true">
-              <span className="experience-scan-fill" />
-              <span className="experience-scan-cursor" />
-            </span>
+          <div className="experience-log">
             <article className="experience-row is-current">
               <div className="timeline-cell" aria-hidden="true">
                 <span className="timeline-node" />

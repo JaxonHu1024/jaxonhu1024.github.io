@@ -1,6 +1,8 @@
 import { PixelatedCanvas } from "./PixelatedCanvas";
 
 const portraitSource = "/assets/jaxon-sea-portrait.webp";
+const portraitCanvasId = "hero-pixel-canvas";
+const portraitTouchHandleId = "hero-portrait-touch-handle";
 
 export function HeroPixelPortrait() {
   return (
@@ -19,6 +21,7 @@ export function HeroPixelPortrait() {
           fetchPriority="high"
         />
         <PixelatedCanvas
+          id={portraitCanvasId}
           className="hero-pixel-canvas"
           src={portraitSource}
           width={560}
@@ -43,6 +46,7 @@ export function HeroPixelPortrait() {
           fadeOnLeave
           fadeSpeed={0.16}
           responsive
+          touchHandleId={portraitTouchHandleId}
           ariaLabel="Pixelated portrait of Jaxon facing the sea at dusk"
         />
         <span className="hero-portrait-label hero-portrait-label--top" aria-hidden="true">
@@ -51,6 +55,20 @@ export function HeroPixelPortrait() {
         <span className="hero-portrait-label hero-portrait-label--bottom" aria-hidden="true">
           MOVE / DISTORT
         </span>
+        <button
+          id={portraitTouchHandleId}
+          className="hero-portrait-touch-handle"
+          type="button"
+          aria-controls={portraitCanvasId}
+          aria-label="Drag to distort the portrait. Swipe elsewhere on the image to scroll."
+          aria-pressed="false"
+          data-touch-active="false"
+          data-touch-ready="false"
+          disabled
+        >
+          <span data-touch-label="idle">DRAG / DISTORT</span>
+          <span data-touch-label="active">RELEASE / SCROLL</span>
+        </button>
       </div>
     </figure>
   );

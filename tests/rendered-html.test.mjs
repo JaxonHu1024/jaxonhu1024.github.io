@@ -74,6 +74,8 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /CURRENT ROLE|PREVIOUS ROLE|experience-status/);
   assert.doesNotMatch(html, /AI ALGORITHM ENGINEER · EXPERIENCE · RESEARCH/);
   assert.match(html, /ByteDance/);
+  assert.match(html, /class="experience-log"/);
+  assert.doesNotMatch(html, /class="experience-log reveal"|experience-scan-(?:track|fill|cursor)/);
   assert.match(html, /<h3 id="alibaba-group-title">Alibaba<\/h3>/);
   assert.match(html, /DAMO Academy/);
   assert.match(html, /FOUNDATIONS/);
