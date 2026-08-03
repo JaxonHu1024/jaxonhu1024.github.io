@@ -1,0 +1,25 @@
+app/components/Navigation.tsx
+  s_37388fbdf2a47a::t_1564fcb27dcdeb 35,253,258-265,307
+app/globals.css
+  s_37388fbdf2a47a::t_5f82f4c3714dcb 2036-2039
+tests/browser-interactions.test.mjs
+  s_37388fbdf2a47a::t_c901e7d3bfd863 829-900
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0028bce8cf3782da98cebd6c5d923c155eae1857",
+  "prompts": {},
+  "sessions": {
+    "s_37388fbdf2a47a": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc6d6-78d6-7cc1-932c-5bd77d64bb4d",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
