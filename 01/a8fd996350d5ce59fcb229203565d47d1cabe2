@@ -1,0 +1,35 @@
+app/components/SiteTracingBeam.tsx
+  s_b79b46e6a5d249::t_eb5d00dd635e16 5,9,28,54-55,74-95,132-136,140,142,145-148,161,165-167,170,173,187,203,206-212,216,219,226
+app/globals.css
+  s_b79b46e6a5d249::t_355cb84195932e 47-48,182,184-187,191-196,211-212,217,219,227-228,230,234-235,239-242,244-245,250-264,2482-2485
+app/lib/motion-performance.ts
+  s_b79b46e6a5d249::t_ae7406cad42aca 7-11,13-20
+tests/browser-interactions.test.mjs
+  s_b79b46e6a5d249::t_6040778f356f2d 17-24,1294,1310,1314,1319,1322,1326,1329,1339-1341,1345-1352,1356-1357,1372,1387,1391,1400-1401,1403-1407
+tests/browser-release-gate.test.mjs
+  s_b79b46e6a5d249::t_3aaea89aa1941e 110,117,390,395
+tests/motion-performance.test.mjs
+  s_b79b46e6a5d249::t_ad6ea96bd789c8 5,40,42,45-46,51
+tests/rendered-html.test.mjs
+  s_b79b46e6a5d249::t_8efe6fd5e0bd04 64
+tests/scroll-performance-contract.test.mjs
+  s_b79b46e6a5d249::t_566784c5dbeee4 66-68,73-77,89-90,95-101,103-106,108-109,114-115,173-176
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "01a8fd996350d5ce59fcb229203565d47d1cabe2",
+  "prompts": {},
+  "sessions": {
+    "s_b79b46e6a5d249": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc5ab-ec8e-72e1-97ee-2675a3558b32",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
