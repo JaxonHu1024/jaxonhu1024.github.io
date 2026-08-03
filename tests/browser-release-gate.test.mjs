@@ -1259,7 +1259,7 @@ test("mobile Hero keeps portrait scrolling separate from deliberate touch distor
       ready: "true",
       touchAction: "none",
     });
-    assert.doesNotMatch(layout.frameOverlay, /90deg/);
+    assert.equal(layout.frameOverlay, "none");
     assert.ok(layout.nameBottom <= layout.portraitTop + 1);
     assert.ok(layout.portraitBottom <= layout.ctaTop + 1);
 
