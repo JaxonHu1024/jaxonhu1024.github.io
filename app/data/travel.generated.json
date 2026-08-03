@@ -1,0 +1,730 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "flightData": "Flighty CSV",
+    "airportData": "OurAirports",
+    "rowCount": 83
+  },
+  "yearRange": [
+    2011,
+    2026
+  ],
+  "counts": {
+    "flights": 83,
+    "airports": 33,
+    "cities": 31,
+    "countries": 9,
+    "continents": 2,
+    "routes": 38
+  },
+  "totalDistanceKm": 128917,
+  "airports": [
+    {
+      "iata": "BKI",
+      "name": "Kota Kinabalu International Airport",
+      "city": "Kota Kinabalu",
+      "country": "Malaysia",
+      "countryCode": "MY",
+      "continent": "AS",
+      "lat": 5.932743,
+      "lng": 116.049324,
+      "visits": 2
+    },
+    {
+      "iata": "BKK",
+      "name": "Suvarnabhumi Airport",
+      "city": "Bangkok",
+      "country": "Thailand",
+      "countryCode": "TH",
+      "continent": "AS",
+      "lat": 13.6811,
+      "lng": 100.747002,
+      "visits": 2
+    },
+    {
+      "iata": "CAN",
+      "name": "Guangzhou Baiyun International Airport",
+      "city": "Guangzhou (Huadu)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 23.392401,
+      "lng": 113.299004,
+      "visits": 4
+    },
+    {
+      "iata": "CEB",
+      "name": "Mactan Cebu International Airport",
+      "city": "Cebu City/Lapu-Lapu City",
+      "country": "Philippines",
+      "countryCode": "PH",
+      "continent": "AS",
+      "lat": 10.309261,
+      "lng": 123.97974,
+      "visits": 2
+    },
+    {
+      "iata": "CGQ",
+      "name": "Changchun Longjia International Airport",
+      "city": "Changchun",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 43.996201,
+      "lng": 125.684998,
+      "visits": 2
+    },
+    {
+      "iata": "CJU",
+      "name": "Jeju International Airport",
+      "city": "Jeju City",
+      "country": "South Korea",
+      "countryCode": "KR",
+      "continent": "AS",
+      "lat": 33.512058,
+      "lng": 126.492548,
+      "visits": 2
+    },
+    {
+      "iata": "CKG",
+      "name": "Chongqing Jiangbei International Airport",
+      "city": "Chongqing",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 29.712254,
+      "lng": 106.651895,
+      "visits": 2
+    },
+    {
+      "iata": "CNS",
+      "name": "Cairns International Airport",
+      "city": "Cairns",
+      "country": "Australia",
+      "countryCode": "AU",
+      "continent": "OC",
+      "lat": -16.878921,
+      "lng": 145.74948,
+      "visits": 2
+    },
+    {
+      "iata": "DMK",
+      "name": "Don Mueang International Airport",
+      "city": "Bangkok",
+      "country": "Thailand",
+      "countryCode": "TH",
+      "continent": "AS",
+      "lat": 13.9126,
+      "lng": 100.607002,
+      "visits": 2
+    },
+    {
+      "iata": "ENH",
+      "name": "Enshi Xujiaping Airport",
+      "city": "Enshi (Enshi)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 30.320299,
+      "lng": 109.485001,
+      "visits": 2
+    },
+    {
+      "iata": "HAK",
+      "name": "Haikou Meilan International Airport",
+      "city": "Haikou (Meilan)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 19.9349,
+      "lng": 110.459,
+      "visits": 1
+    },
+    {
+      "iata": "HGH",
+      "name": "Hangzhou Xiaoshan International Airport",
+      "city": "Hangzhou",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 30.23609,
+      "lng": 120.428865,
+      "visits": 50
+    },
+    {
+      "iata": "HKG",
+      "name": "Hong Kong International Airport",
+      "city": "Hong Kong",
+      "country": "Hong Kong",
+      "countryCode": "HK",
+      "continent": "AS",
+      "lat": 22.31184,
+      "lng": 113.914862,
+      "visits": 6
+    },
+    {
+      "iata": "KBV",
+      "name": "Krabi International Airport",
+      "city": "Krabi",
+      "country": "Thailand",
+      "countryCode": "TH",
+      "continent": "AS",
+      "lat": 8.095591,
+      "lng": 98.988955,
+      "visits": 2
+    },
+    {
+      "iata": "KIX",
+      "name": "Kansai International Airport",
+      "city": "Osaka",
+      "country": "Japan",
+      "countryCode": "JP",
+      "continent": "AS",
+      "lat": 34.427299,
+      "lng": 135.244003,
+      "visits": 1
+    },
+    {
+      "iata": "KUL",
+      "name": "Kuala Lumpur International Airport",
+      "city": "Sepang",
+      "country": "Malaysia",
+      "countryCode": "MY",
+      "continent": "AS",
+      "lat": 2.74558,
+      "lng": 101.709999,
+      "visits": 2
+    },
+    {
+      "iata": "MEL",
+      "name": "Melbourne Airport",
+      "city": "Melbourne",
+      "country": "Australia",
+      "countryCode": "AU",
+      "continent": "OC",
+      "lat": -37.670732,
+      "lng": 144.837898,
+      "visits": 2
+    },
+    {
+      "iata": "NKG",
+      "name": "Nanjing Lukou International Airport",
+      "city": "Nanjing",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 31.735032,
+      "lng": 118.865949,
+      "visits": 6
+    },
+    {
+      "iata": "NRT",
+      "name": "Narita International Airport",
+      "city": "Narita",
+      "country": "Japan",
+      "countryCode": "JP",
+      "continent": "AS",
+      "lat": 35.76858,
+      "lng": 140.388714,
+      "visits": 1
+    },
+    {
+      "iata": "PEK",
+      "name": "Beijing Capital International Airport",
+      "city": "Beijing",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 40.077349,
+      "lng": 116.596702,
+      "visits": 2
+    },
+    {
+      "iata": "PKX",
+      "name": "Beijing Daxing International Airport",
+      "city": "Beijing",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 39.501289,
+      "lng": 116.413967,
+      "visits": 1
+    },
+    {
+      "iata": "PVG",
+      "name": "Shanghai Pudong International Airport",
+      "city": "Shanghai (Pudong)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 31.1434,
+      "lng": 121.805,
+      "visits": 5
+    },
+    {
+      "iata": "SHE",
+      "name": "Shenyang Taoxian International Airport",
+      "city": "Shenyang",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 41.6398,
+      "lng": 123.483668,
+      "visits": 1
+    },
+    {
+      "iata": "SIN",
+      "name": "Singapore Changi Airport",
+      "city": "Singapore",
+      "country": "Singapore",
+      "countryCode": "SG",
+      "continent": "AS",
+      "lat": 1.35019,
+      "lng": 103.994003,
+      "visits": 4
+    },
+    {
+      "iata": "SYD",
+      "name": "Sydney Kingsford Smith International Airport",
+      "city": "Sydney (Mascot)",
+      "country": "Australia",
+      "countryCode": "AU",
+      "continent": "OC",
+      "lat": -33.946098,
+      "lng": 151.177002,
+      "visits": 2
+    },
+    {
+      "iata": "SYX",
+      "name": "Sanya Phoenix International Airport",
+      "city": "Sanya (Tianya)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 18.3029,
+      "lng": 109.412003,
+      "visits": 1
+    },
+    {
+      "iata": "SZX",
+      "name": "Shenzhen Bao'an International Airport",
+      "city": "Shenzhen",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 22.639474,
+      "lng": 113.803262,
+      "visits": 8
+    },
+    {
+      "iata": "TFU",
+      "name": "Chengdu Tianfu International Airport",
+      "city": "Chengdu (Jianyang)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 30.31252,
+      "lng": 104.441284,
+      "visits": 1
+    },
+    {
+      "iata": "TWU",
+      "name": "Tawau Airport",
+      "city": "Tawau",
+      "country": "Malaysia",
+      "countryCode": "MY",
+      "continent": "AS",
+      "lat": 4.31338,
+      "lng": 118.12152,
+      "visits": 2
+    },
+    {
+      "iata": "WNZ",
+      "name": "Wenzhou Longwan International Airport",
+      "city": "Wenzhou (Longwan)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 27.910572,
+      "lng": 120.853465,
+      "visits": 1
+    },
+    {
+      "iata": "WUH",
+      "name": "Wuhan Tianhe International Airport",
+      "city": "Wuhan (Huangpi)",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 30.774798,
+      "lng": 114.213723,
+      "visits": 2
+    },
+    {
+      "iata": "XIY",
+      "name": "Xi'an Xianyang International Airport",
+      "city": "Xi'an",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 34.442207,
+      "lng": 108.762385,
+      "visits": 41
+    },
+    {
+      "iata": "XMN",
+      "name": "Xiamen Gaoqi International Airport",
+      "city": "Xiamen",
+      "country": "China",
+      "countryCode": "CN",
+      "continent": "AS",
+      "lat": 24.543889,
+      "lng": 118.127454,
+      "visits": 2
+    }
+  ],
+  "routes": [
+    {
+      "from": "BKI",
+      "to": "HGH",
+      "count": 1,
+      "firstYear": 2026,
+      "lastYear": 2026,
+      "distanceKm": 2741,
+      "bidirectional": false
+    },
+    {
+      "from": "BKI",
+      "to": "TWU",
+      "count": 1,
+      "firstYear": 2026,
+      "lastYear": 2026,
+      "distanceKm": 292,
+      "bidirectional": false
+    },
+    {
+      "from": "BKK",
+      "to": "HGH",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 2731,
+      "bidirectional": false
+    },
+    {
+      "from": "BKK",
+      "to": "KBV",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 650,
+      "bidirectional": false
+    },
+    {
+      "from": "CAN",
+      "to": "HGH",
+      "count": 2,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 1039,
+      "bidirectional": true
+    },
+    {
+      "from": "CAN",
+      "to": "MEL",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 7548,
+      "bidirectional": false
+    },
+    {
+      "from": "CAN",
+      "to": "SYD",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 7529,
+      "bidirectional": false
+    },
+    {
+      "from": "CEB",
+      "to": "HKG",
+      "count": 2,
+      "firstYear": 2025,
+      "lastYear": 2025,
+      "distanceKm": 1712,
+      "bidirectional": true
+    },
+    {
+      "from": "CGQ",
+      "to": "HGH",
+      "count": 2,
+      "firstYear": 2022,
+      "lastYear": 2023,
+      "distanceKm": 1599,
+      "bidirectional": true
+    },
+    {
+      "from": "CJU",
+      "to": "HGH",
+      "count": 2,
+      "firstYear": 2023,
+      "lastYear": 2024,
+      "distanceKm": 678,
+      "bidirectional": true
+    },
+    {
+      "from": "CKG",
+      "to": "XIY",
+      "count": 2,
+      "firstYear": 2016,
+      "lastYear": 2016,
+      "distanceKm": 562,
+      "bidirectional": true
+    },
+    {
+      "from": "CNS",
+      "to": "MEL",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 2314,
+      "bidirectional": false
+    },
+    {
+      "from": "CNS",
+      "to": "SYD",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 1974,
+      "bidirectional": false
+    },
+    {
+      "from": "DMK",
+      "to": "HGH",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 2724,
+      "bidirectional": false
+    },
+    {
+      "from": "DMK",
+      "to": "KBV",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 670,
+      "bidirectional": false
+    },
+    {
+      "from": "ENH",
+      "to": "HGH",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 1051,
+      "bidirectional": false
+    },
+    {
+      "from": "ENH",
+      "to": "PVG",
+      "count": 1,
+      "firstYear": 2023,
+      "lastYear": 2023,
+      "distanceKm": 1180,
+      "bidirectional": false
+    },
+    {
+      "from": "HAK",
+      "to": "HGH",
+      "count": 1,
+      "firstYear": 2024,
+      "lastYear": 2024,
+      "distanceKm": 1522,
+      "bidirectional": false
+    },
+    {
+      "from": "HGH",
+      "to": "HKG",
+      "count": 4,
+      "firstYear": 2024,
+      "lastYear": 2025,
+      "distanceKm": 1094,
+      "bidirectional": true
+    },
+    {
+      "from": "HGH",
+      "to": "KIX",
+      "count": 1,
+      "firstYear": 2024,
+      "lastYear": 2024,
+      "distanceKm": 1466,
+      "bidirectional": false
+    },
+    {
+      "from": "HGH",
+      "to": "KUL",
+      "count": 1,
+      "firstYear": 2026,
+      "lastYear": 2026,
+      "distanceKm": 3637,
+      "bidirectional": false
+    },
+    {
+      "from": "HGH",
+      "to": "NRT",
+      "count": 1,
+      "firstYear": 2024,
+      "lastYear": 2024,
+      "distanceKm": 1956,
+      "bidirectional": false
+    },
+    {
+      "from": "HGH",
+      "to": "PEK",
+      "count": 2,
+      "firstYear": 2025,
+      "lastYear": 2025,
+      "distanceKm": 1148,
+      "bidirectional": true
+    },
+    {
+      "from": "HGH",
+      "to": "PKX",
+      "count": 1,
+      "firstYear": 2025,
+      "lastYear": 2025,
+      "distanceKm": 1093,
+      "bidirectional": false
+    },
+    {
+      "from": "HGH",
+      "to": "SIN",
+      "count": 1,
+      "firstYear": 2020,
+      "lastYear": 2020,
+      "distanceKm": 3650,
+      "bidirectional": false
+    },
+    {
+      "from": "HGH",
+      "to": "SYX",
+      "count": 1,
+      "firstYear": 2024,
+      "lastYear": 2024,
+      "distanceKm": 1732,
+      "bidirectional": false
+    },
+    {
+      "from": "HGH",
+      "to": "SZX",
+      "count": 6,
+      "firstYear": 2025,
+      "lastYear": 2026,
+      "distanceKm": 1071,
+      "bidirectional": true
+    },
+    {
+      "from": "HGH",
+      "to": "XIY",
+      "count": 21,
+      "firstYear": 2020,
+      "lastYear": 2026,
+      "distanceKm": 1191,
+      "bidirectional": true
+    },
+    {
+      "from": "KUL",
+      "to": "TWU",
+      "count": 1,
+      "firstYear": 2026,
+      "lastYear": 2026,
+      "distanceKm": 1830,
+      "bidirectional": false
+    },
+    {
+      "from": "NKG",
+      "to": "XIY",
+      "count": 6,
+      "firstYear": 2017,
+      "lastYear": 2020,
+      "distanceKm": 988,
+      "bidirectional": true
+    },
+    {
+      "from": "PVG",
+      "to": "XIY",
+      "count": 4,
+      "firstYear": 2016,
+      "lastYear": 2021,
+      "distanceKm": 1272,
+      "bidirectional": true
+    },
+    {
+      "from": "SHE",
+      "to": "XIY",
+      "count": 1,
+      "firstYear": 2017,
+      "lastYear": 2017,
+      "distanceKm": 1514,
+      "bidirectional": false
+    },
+    {
+      "from": "SIN",
+      "to": "WUH",
+      "count": 1,
+      "firstYear": 2021,
+      "lastYear": 2021,
+      "distanceKm": 3444,
+      "bidirectional": false
+    },
+    {
+      "from": "SIN",
+      "to": "XIY",
+      "count": 2,
+      "firstYear": 2021,
+      "lastYear": 2021,
+      "distanceKm": 3713,
+      "bidirectional": false
+    },
+    {
+      "from": "SZX",
+      "to": "XIY",
+      "count": 2,
+      "firstYear": 2011,
+      "lastYear": 2011,
+      "distanceKm": 1401,
+      "bidirectional": true
+    },
+    {
+      "from": "TFU",
+      "to": "WUH",
+      "count": 1,
+      "firstYear": 2021,
+      "lastYear": 2021,
+      "distanceKm": 937,
+      "bidirectional": false
+    },
+    {
+      "from": "WNZ",
+      "to": "XIY",
+      "count": 1,
+      "firstYear": 2026,
+      "lastYear": 2026,
+      "distanceKm": 1359,
+      "bidirectional": false
+    },
+    {
+      "from": "XIY",
+      "to": "XMN",
+      "count": 2,
+      "firstYear": 2020,
+      "lastYear": 2020,
+      "distanceKm": 1424,
+      "bidirectional": true
+    }
+  ]
+}

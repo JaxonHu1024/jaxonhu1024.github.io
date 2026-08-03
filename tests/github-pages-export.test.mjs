@@ -75,6 +75,7 @@ test("keeps optimized organization marks within their checked-in budgets", async
     ["logo-alibaba-color.svg", 1_500],
     ["logo-ntu.svg", 83_000],
     ["logo-seu-color.svg", 60_000],
+    ["travel-world-solid.svg", 65_000],
   ]);
 
   for (const [file, budget] of budgets) {

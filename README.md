@@ -32,6 +32,8 @@ intentionally never committed; everything ships from source.
   throughout.
 - **Static release metadata.** Canonical, Open Graph, Twitter Card, robots, and
   sitemap output are deterministic for the GitHub Pages origin.
+- **Privacy-safe travel footprint.** A build-time Flighty import publishes only
+  aggregate airport and corridor data; raw itinerary details remain local.
 
 ## Prerequisites
 
@@ -59,6 +61,8 @@ Open <http://localhost:3000>.
 | `npm run export:github-pages`   | Build and export the static Pages bundle to `github-pages-dist/`. |
 | `npm run test:export`           | Check the exported bundle's integrity.                        |
 | `npm run test:browser`          | Run browser, eight-viewport, and Web Vitals release checks.   |
+| `npm run test:travel`           | Validate Flighty parsing, privacy, and deterministic output.  |
+| `npm run travel:sync -- <csv>`  | Refresh the checked-in travel aggregate from a Flighty CSV.   |
 | `npm run optimize:svg`          | Re-run deterministic SVGO compression for organization marks. |
 | `npm run verify`                | Full gate: typecheck → lint → tests → export → browser checks. |
 
@@ -76,6 +80,25 @@ Core Web Vitals validation. To create only the deployable artifact:
 npm run export:github-pages
 ```
 
+## Refreshing the travel map
+
+Flighty exports may contain exact dates, booking references, seats, gates, and
+stable identifiers. Keep the raw file outside public source and refresh only the
+privacy-safe aggregate:
+
+```bash
+npm run travel:sync -- /path/to/FlightyExport.csv
+npm run verify
+```
+
+The importer merges repeated and reverse-direction flight segments into one
+corridor, marks a corridor as bidirectional only when both directions occur, and
+writes `app/data/travel.generated.json`. Flights dated after the sync date are
+excluded, and ordinary builds never read the private CSV. Airport metadata comes
+from the public-domain [OurAirports data set](https://ourairports.com/data/), and
+the solid base map is derived from public-domain [Natural Earth data](https://www.naturalearthdata.com/).
+See [`data/private/README.md`](./data/private/README.md) for the local update flow.
+
 ## Deployment
 
 Every push to `main` runs [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml). The workflow:
@@ -90,11 +113,13 @@ Every push to `main` runs [`.github/workflows/deploy-pages.yml`](./.github/workf
 ```
 app/                  Page source, React components, and styling
 ├─ components/        Navigation, pixel portrait, and research visuals
+├─ data/              Privacy-safe generated travel aggregate
 ├─ lib/               Cancellable-scroll and motion helpers
 ├─ layout.tsx         Root layout + static release metadata
 ├─ page.tsx           Single-page portfolio content
 └─ globals.css        Dark signal design system
 public/               Source-controlled images and metadata assets
+data/private/          Gitignored raw travel-import staging area
 scripts/              Deterministic static-export tooling
 tests/                Rendered-output and export-integrity tests
 worker/               vinext / Cloudflare Worker build entry point

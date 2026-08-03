@@ -12,6 +12,11 @@ import {
   setupReleaseHarness,
   teardownReleaseHarness,
 } from "./browser-release-harness.mjs";
+import {
+  generatedBidirectionalCorridors,
+  generatedCountryCodes,
+  generatedTravelData,
+} from "./generated-travel-contract.mjs";
 
 before(setupReleaseHarness);
 after(teardownReleaseHarness);
@@ -221,9 +226,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const aboutLoopRect = document.querySelector(".about-working-loop")?.getBoundingClientRect();
         const aboutStatementRect = document.querySelector(".about-statement")?.getBoundingClientRect();
         const aboutIntroductionRect = document.querySelector(".about-introduction")?.getBoundingClientRect();
-        const aboutContextRects = Array.from(
-          document.querySelectorAll(".about-context > div"),
-        ).map((element) => element.getBoundingClientRect());
+        const travelMapElement = document.querySelector(".about-travel");
+        const travelMapRect = travelMapElement?.getBoundingClientRect();
+        const travelMapViewportRect = document.querySelector(".travel-map-viewport")?.getBoundingClientRect();
         const aboutStepElements = Array.from(document.querySelectorAll(".about-loop-step"));
         const aboutStepRects = aboutStepElements.map((element) => element.getBoundingClientRect());
         const shellSelectors = [
@@ -281,17 +286,13 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           compactKickers,
           aboutPresentation: aboutShellRect && aboutLoopRect
             ? {
-                context: aboutContextRects.map((rect) => ({
-                  height: rect.height,
-                  left: rect.left,
-                  right: rect.right,
-                  top: rect.top,
-                  width: rect.width,
-                })),
+                contextCount: document.querySelectorAll(".about-context").length,
                 forbiddenCount: document.querySelectorAll(
                   "#about canvas, #about [class*='about-particle'], #about [role='tab'], "
                     + "#about [role='tablist'], #about [role='tabpanel']",
                 ).length,
+                introductionText: document.querySelector(".about-introduction")
+                  ?.textContent?.replace(/\s+/g, " ").trim() ?? "",
                 introductionWidth: aboutIntroductionRect?.width ?? 0,
                 loopLeftDelta: aboutLoopRect.left - aboutShellRect.left,
                 loopRightDelta: aboutShellRect.right - aboutLoopRect.right,
@@ -299,6 +300,81 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 sectionHeight: aboutSectionRect?.height ?? 0,
                 shellWidth: aboutShellRect.width,
                 statementWidth: aboutStatementRect?.width ?? 0,
+                travelMap: travelMapRect && travelMapViewportRect
+                  ? {
+                      airportCount: travelMapElement.querySelectorAll(".travel-map-airport").length,
+                      bidirectionalRouteCount: travelMapElement.querySelectorAll(
+                        '.travel-map-route[data-route-direction="both"]',
+                      ).length,
+                      descriptionLength: travelMapElement.querySelector(".travel-map-canvas desc")
+                        ?.textContent?.trim().length ?? 0,
+                      distanceText: travelMapElement.querySelector(".travel-map-distance")
+                        ?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+                      flagCount: travelMapElement.querySelectorAll(".travel-map-flags > li").length,
+                      flagCountryCodes: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-flags > li"),
+                      ).map((flag) => flag.getAttribute("data-country-code") ?? "").sort(),
+                      flagListTagName: travelMapElement.querySelector(".travel-map-flags")
+                        ?.tagName ?? null,
+                      flagsHaveDockStructure: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-flags > li"),
+                      ).every((flag) => (
+                        Boolean(flag.getAttribute("data-country-code"))
+                        && Boolean(flag.querySelector(".travel-map-flag-icon"))
+                        && Boolean(flag.querySelector(".travel-map-flag-tooltip"))
+                      )),
+                      flagsClipped: (() => {
+                        const list = travelMapElement.querySelector(".travel-map-flags");
+                        const listRect = list?.getBoundingClientRect();
+                        return !list || !listRect || Array.from(list.children).some((flag) => {
+                          const rect = flag.getBoundingClientRect();
+                          return rect.left < listRect.left - .5 || rect.right > listRect.right + .5;
+                        });
+                      })(),
+                      imageCount: travelMapElement.querySelectorAll(
+                        'image[href="/assets/travel-world-solid.svg"]',
+                      ).length,
+                      leftDelta: travelMapRect.left - aboutShellRect.left,
+                      lineRoutesOnly: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-route-path"),
+                      ).every((route) => {
+                        const path = route.getAttribute("d") ?? "";
+                        return path.includes(" L ") && !path.includes(" Q ");
+                      }),
+                      routePresentation: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-route-path"),
+                      ).map((route) => {
+                        const style = getComputedStyle(route);
+                        return {
+                          animationName: style.animationName,
+                          strokeDasharray: style.strokeDasharray,
+                          strokeDashoffset: Number.parseFloat(style.strokeDashoffset),
+                        };
+                      }),
+                      rightDelta: aboutShellRect.right - travelMapRect.right,
+                      routeCount: travelMapElement.querySelectorAll(".travel-map-route").length,
+                      routesUnique: (() => {
+                        const keys = Array.from(
+                          travelMapElement.querySelectorAll(".travel-map-route"),
+                        ).map((route) => route.getAttribute("data-route-key"));
+                        return keys.every(Boolean) && new Set(keys).size === keys.length;
+                      })(),
+                      role: travelMapElement.querySelector(".travel-map-canvas")
+                        ?.getAttribute("role"),
+                      statsClipped: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-stats > div"),
+                      ).some((element) => (
+                        element.scrollWidth > element.clientWidth + 1
+                        || element.scrollHeight > element.clientHeight + 1
+                      )),
+                      statValues: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-stats dd"),
+                      ).map((element) => element.textContent?.trim() ?? ""),
+                      viewportHeight: travelMapViewportRect.height,
+                      viewportWidth: travelMapViewportRect.width,
+                      width: travelMapRect.width,
+                    }
+                  : null,
                 steps: aboutStepRects.map((rect, index) => ({
                   contentClipped: Array.from(
                     aboutStepElements[index].querySelectorAll(
@@ -452,14 +528,74 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         `${viewport.width}x${viewport.height} About working loop did not span its shell: `
           + JSON.stringify(sectionRhythm.aboutPresentation),
       );
-      assert.equal(sectionRhythm.aboutPresentation.context.length, 1);
+      assert.equal(sectionRhythm.aboutPresentation.contextCount, 0);
+      assert.equal(
+        sectionRhythm.aboutPresentation.introductionText,
+        "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet the "
+          + "real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
+      );
       assert.equal(sectionRhythm.aboutPresentation.steps.length, 4);
+      assert.ok(
+        sectionRhythm.aboutPresentation.travelMap,
+        `${viewport.width}x${viewport.height} travel map was missing`,
+      );
+      const travelMap = sectionRhythm.aboutPresentation.travelMap;
+      assert.ok(
+        Math.abs(travelMap.leftDelta) <= 0.75
+          && Math.abs(travelMap.rightDelta) <= 0.75
+          && Math.abs(travelMap.width - sectionRhythm.aboutPresentation.shellWidth) <= 1,
+        `${viewport.width}x${viewport.height} travel map did not span the About shell: `
+          + JSON.stringify(travelMap),
+      );
+      assert.equal(travelMap.airportCount, generatedTravelData.counts.airports);
+      assert.equal(travelMap.bidirectionalRouteCount, generatedBidirectionalCorridors);
+      assert.equal(travelMap.routeCount, generatedTravelData.counts.routes);
+      assert.equal(travelMap.routesUnique, true);
+      assert.equal(travelMap.lineRoutesOnly, true);
+      assert.equal(travelMap.flagCount, generatedTravelData.counts.countries);
+      assert.deepEqual(travelMap.flagCountryCodes, generatedCountryCodes);
+      assert.equal(travelMap.flagListTagName, "UL");
+      assert.equal(travelMap.flagsHaveDockStructure, true);
+      assert.equal(travelMap.flagsClipped, false);
+      assert.equal(travelMap.imageCount, 1);
+      assert.equal(travelMap.role, "img");
+      assert.equal(travelMap.statsClipped, false);
+      assert.ok(
+        travelMap.routePresentation.length >= generatedTravelData.counts.routes,
+        `${viewport.width}x${viewport.height} omitted rendered route paths`,
+      );
+      assert.equal(
+        travelMap.routePresentation.every((route) => (
+          route.animationName === "none"
+          && route.strokeDasharray === "none"
+          && route.strokeDashoffset === 0
+        )),
+        true,
+        `${viewport.width}x${viewport.height} rendered an incomplete flight corridor: `
+          + JSON.stringify(travelMap.routePresentation),
+      );
+      assert.deepEqual(travelMap.statValues, [
+        String(generatedTravelData.counts.flights),
+        String(generatedTravelData.counts.airports),
+        String(generatedTravelData.counts.countries),
+      ]);
+      assert.match(
+        travelMap.distanceText,
+        new RegExp(generatedTravelData.totalDistanceKm.toLocaleString("en-US")),
+      );
+      assert.ok(travelMap.descriptionLength > 200);
+      const expectedMapRatio = viewport.width <= 600 ? 4 / 3 : 2;
+      assert.ok(
+        Math.abs(travelMap.viewportWidth / travelMap.viewportHeight - expectedMapRatio) <= 0.02,
+        `${viewport.width}x${viewport.height} travel map ratio was `
+          + `${travelMap.viewportWidth / travelMap.viewportHeight}; expected ${expectedMapRatio}`,
+      );
       if (viewport.width <= 430) {
         assert.ok(
-          sectionRhythm.aboutPresentation.sectionHeight >= 680
-            && sectionRhythm.aboutPresentation.sectionHeight <= 940,
+          sectionRhythm.aboutPresentation.sectionHeight >= 1_350
+            && sectionRhythm.aboutPresentation.sectionHeight <= 2_000,
           `${viewport.width}x${viewport.height} About height=`
-            + `${sectionRhythm.aboutPresentation.sectionHeight}px; expected 680-940px`,
+            + `${sectionRhythm.aboutPresentation.sectionHeight}px; expected 1350-2000px`,
         );
       }
       assert.equal(
@@ -490,8 +626,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           assert.ok(steps[index].top >= steps[index - 1].top + steps[index - 1].height - 1);
         }
       }
-      const [contextEntry] = sectionRhythm.aboutPresentation.context;
-      assert.ok(contextEntry.width > 0 && contextEntry.height > 0);
       assert.equal(
         await page.locator(".hero-positioning").count(),
         0,
@@ -850,7 +984,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             return {
               aboutLedger: sectionId === "about"
                 ? {
-                    contextCount: section.querySelectorAll(".about-context > div").length,
+                    contextCount: section.querySelectorAll(".about-context").length,
                     forbiddenCount: section.querySelectorAll(
                       "canvas, [class*='about-particle'], [role='tab'], "
                         + "[role='tablist'], [role='tabpanel']",
@@ -936,7 +1070,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
               ".about-loop-step",
               ".about-loop-detail",
               ".about-loop-outcome",
-              ".about-context > div",
             ],
           },
           {

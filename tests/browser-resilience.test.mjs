@@ -11,6 +11,10 @@ import {
   teardownReleaseHarness,
   within,
 } from "./browser-release-harness.mjs";
+import {
+  generatedCountryCodes,
+  generatedTravelData,
+} from "./generated-travel-contract.mjs";
 
 before(setupReleaseHarness);
 after(teardownReleaseHarness);
@@ -284,6 +288,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         const coreSelectors = [
           "#hero-title",
           "#about-title",
+          "#travel-map-title",
           "#about-loop-title",
           "#experience-title",
           "#foundations-title",
@@ -294,13 +299,13 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
 
         return {
           about: {
-            contextLabels: Array.from(
-              document.querySelectorAll("#about .about-context dt"),
-            ).map((element) => element.textContent?.trim() ?? ""),
+            contextCount: document.querySelectorAll("#about .about-context").length,
             forbiddenCount: document.querySelectorAll(
               "#about canvas, #about [class*='about-particle'], #about [role='tab'], "
                 + "#about [role='tablist'], #about [role='tabpanel']",
             ).length,
+            introductionText: document.querySelector("#about .about-introduction")
+              ?.textContent?.replace(/\s+/g, " ").trim() ?? "",
             loopSteps: Array.from(
               document.querySelectorAll("#about .about-loop-step"),
             ).map((element) => ({
@@ -310,6 +315,38 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                 && element.getBoundingClientRect().width > 0
                 && element.getBoundingClientRect().height > 0,
             })),
+            travelMap: (() => {
+              const element = document.querySelector("#about .about-travel");
+              const routeKeys = Array.from(
+                element?.querySelectorAll(".travel-map-route") ?? [],
+              ).map((route) => route.getAttribute("data-route-key"));
+              const rect = element?.getBoundingClientRect();
+
+              return element && rect ? {
+                airportCount: element.querySelectorAll(".travel-map-airport").length,
+                copy: element.textContent?.replace(/\s+/g, " ").trim() ?? "",
+                flagCount: element.querySelectorAll(".travel-map-flags > li").length,
+                flagCountryCodes: Array.from(
+                  element.querySelectorAll(".travel-map-flags > li"),
+                ).map((flag) => flag.getAttribute("data-country-code") ?? "").sort(),
+                flagListTagName: element.querySelector(".travel-map-flags")?.tagName ?? null,
+                flagsHaveDockStructure: Array.from(
+                  element.querySelectorAll(".travel-map-flags > li"),
+                ).every((flag) => (
+                  Boolean(flag.getAttribute("data-country-code"))
+                  && Boolean(flag.querySelector(".travel-map-flag-icon"))
+                  && Boolean(flag.querySelector(".travel-map-flag-tooltip"))
+                )),
+                routeCount: routeKeys.length,
+                routesUnique: routeKeys.every(Boolean) && new Set(routeKeys).size === routeKeys.length,
+                stats: Array.from(element.querySelectorAll(".travel-map-stats dd"))
+                  .map((entry) => entry.textContent?.trim() ?? ""),
+                svgRole: element.querySelector(".travel-map-canvas")?.getAttribute("role"),
+                visible: rect.width > 0
+                  && rect.height > 0
+                  && getComputedStyle(element).visibility !== "hidden",
+              } : null;
+            })(),
           },
           coreContent: coreSelectors.map((selector) => {
             const element = document.querySelector(selector);
@@ -383,9 +420,11 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.documentOverflow, 0);
       assert.equal(state.feedbackDisplay, "none");
       assert.equal(state.about.forbiddenCount, 0);
-      assert.deepEqual(
-        state.about.contextLabels,
-        ["Focus"],
+      assert.equal(state.about.contextCount, 0);
+      assert.equal(
+        state.about.introductionText,
+        "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet the "
+          + "real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
       );
       assert.deepEqual(
         state.about.loopSteps.map(({ label }) => label),
@@ -394,6 +433,22 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.about.loopSteps.every(({ text, visible }) => (
         visible && text.length > 0
       )), true);
+      assert.ok(state.about.travelMap);
+      assert.equal(state.about.travelMap.visible, true);
+      assert.equal(state.about.travelMap.svgRole, "img");
+      assert.equal(state.about.travelMap.airportCount, generatedTravelData.counts.airports);
+      assert.equal(state.about.travelMap.flagCount, generatedTravelData.counts.countries);
+      assert.deepEqual(state.about.travelMap.flagCountryCodes, generatedCountryCodes);
+      assert.equal(state.about.travelMap.flagListTagName, "UL");
+      assert.equal(state.about.travelMap.flagsHaveDockStructure, true);
+      assert.equal(state.about.travelMap.routeCount, generatedTravelData.counts.routes);
+      assert.equal(state.about.travelMap.routesUnique, true);
+      assert.deepEqual(state.about.travelMap.stats, [
+        String(generatedTravelData.counts.flights),
+        String(generatedTravelData.counts.airports),
+        String(generatedTravelData.counts.countries),
+      ]);
+      assert.doesNotMatch(state.about.travelMap.copy, /Trace window|DATA LAYER/i);
       assert.ok(state.navigation);
       assert.equal(state.navigation.clipPath, "none");
       assert.equal(state.navigation.opacity, "1");

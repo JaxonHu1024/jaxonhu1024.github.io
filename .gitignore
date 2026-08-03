@@ -43,6 +43,10 @@ next-env.d.ts
 /outputs/
 /work/
 
+# private travel imports
+/data/private/**
+!/data/private/README.md
+
 # agents
 .trae/
 .codex/

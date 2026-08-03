@@ -30,6 +30,8 @@ GitHub Pages。生成的产物刻意不纳入版本管理，一切都从源码�
 - **精心的无障碍设计。** 提供跳转链接、可聚焦的地标区块，以及贯穿全站的 ARIA 标注。
 - **静态发布元数据。** canonical、Open Graph、Twitter Card、robots 与 sitemap 均按
   GitHub Pages 域名确定性生成。
+- **隐私安全的旅行足迹。** Flighty 数据仅在构建前生成机场与航线聚合，原始行程细节始终
+  保留在本地。
 
 ## 环境要求
 
@@ -57,6 +59,8 @@ npm run dev
 | `npm run export:github-pages`   | 构建并将静态 Pages 产物导出到 `github-pages-dist/`。  |
 | `npm run test:export`           | 校验导出产物的完整性。                                |
 | `npm run test:browser`          | 运行浏览器、8 视口与 Web Vitals 发布校验。             |
+| `npm run test:travel`           | 校验 Flighty 解析、隐私边界与确定性输出。               |
+| `npm run travel:sync -- <csv>`  | 从 Flighty CSV 刷新纳入版本管理的旅行聚合。             |
 | `npm run optimize:svg`          | 确定性重新压缩组织标志 SVG。                           |
 | `npm run verify`                | 完整校验：类型 → lint → 测试 → 导出 → 浏览器校验。     |
 
@@ -73,6 +77,22 @@ Pages 导出、8 个精确视口校验，以及移动端 Core Web Vitals 校验�
 npm run export:github-pages
 ```
 
+## 更新旅行地图
+
+Flighty 导出可能包含精确日期、预订编号、座位、登机口和稳定标识符。原始文件不要放入
+公开源码，只生成隐私安全的聚合数据：
+
+```bash
+npm run travel:sync -- /path/to/FlightyExport.csv
+npm run verify
+```
+
+导入器会把重复航段和反向航段合并成一条走廊；只有两个方向都真实出现时，才将其标记为
+双向。同步日期之后的未来航班不会进入公开足迹。结果写入 `app/data/travel.generated.json`，
+普通构建不会读取私有 CSV。机场元数据来自公有领域的 [OurAirports 数据集](https://ourairports.com/data/)，实心底图来自公有领域的
+[Natural Earth 数据](https://www.naturalearthdata.com/)。本地更新流程详见
+[`data/private/README.md`](./data/private/README.md)。
+
 ## 部署
 
 每次推送到 `main` 都会触发 [`.github/workflows/deploy-pages.yml`](./.github/workflows/deploy-pages.yml)。该工作流会：
@@ -87,11 +107,13 @@ npm run export:github-pages
 ```
 app/                  页面源码、React 组件与样式
 ├─ components/        导航、像素肖像与研究可视化
+├─ data/              隐私安全的旅行聚合数据
 ├─ lib/               可打断滚动与动效辅助函数
 ├─ layout.tsx         根布局 + 静态发布元数据
 ├─ page.tsx           单页作品集内容
 └─ globals.css        深色信号视觉系统
 public/               纳入版本管理的图片与元数据资源
+data/private/          Git 忽略的原始旅行数据暂存区
 scripts/              确定性的静态导出工具
 tests/                渲染产物与导出完整性测试
 worker/               vinext / Cloudflare Worker 构建入口

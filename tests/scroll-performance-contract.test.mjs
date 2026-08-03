@@ -9,16 +9,37 @@ test("wires the hero CTA to About through cancellable navigation without client-
   );
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
 
   assert.match(page, /className="signal-button hero-cta" href="#about"/);
+  assert.match(page, /className="hero-cta-label">About me<\/span>/);
+  assert.doesNotMatch(page, /signal-button-arrow|↘/);
+  assert.doesNotMatch(css, /signal-button-arrow/);
+  assert.match(page, /className="hero-cta-border" aria-hidden="true"/);
+  assert.match(page, /className="hero-cta-border-signal"/);
   assert.match(controller, /a\.hero-cta\[href\^=['"]#['"]\]/);
   assert.match(controller, /createHashNavigation/);
   assert.match(layout, /<HeroInteractionController \/>/);
   assert.doesNotMatch(page, /^"use client";/);
+  assert.match(css, /@keyframes\s+hero-cta-border-travel/);
+  assert.match(
+    css,
+    /#hero\[data-section-visible="false"\] \.hero-cta-border-signal,[\s\S]*?html\[data-page-active="false"\] \.hero-cta-border-signal[\s\S]*?animation-play-state:\s*paused/,
+  );
+  assert.match(
+    css,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.hero-cta-border-signal\s*\{[\s\S]*?animation:\s*none !important/,
+  );
+  assert.doesNotMatch(packageJson, /["'](?:motion|framer-motion)["']/);
 });
 
 test("keeps the Context path server-rendered and prioritizes current context", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
+  const travelMap = await readFile(
+    new URL("../app/components/TravelMap.tsx", import.meta.url),
+    "utf8",
+  );
   const controller = await readFile(
     new URL("../app/components/HeroInteractionController.tsx", import.meta.url),
     "utf8",
@@ -32,16 +53,38 @@ test("keeps the Context path server-rendered and prioritizes current context", a
   assert.match(page, /<section className="about-working-loop" aria-labelledby="about-loop-title">/);
   assert.match(page, /<ol className="about-loop-list">/);
   assert.match(page, /className="about-loop-step"/);
-  assert.match(page, /className="about-context" aria-label="Current context"/);
+  assert.match(page, /<TravelMap \/>/);
   assert.equal((page.match(/label: "(?:FRAME|CONNECT|OBSERVE|VERIFY)"/g) ?? []).length, 4);
-  assert.match(page, /label: "Focus"/);
+  assert.match(
+    page,
+    /decisions meet the real world—with a focus on agents, multimodal[\s\S]*?systems, and autonomous intelligence\./,
+  );
+  assert.doesNotMatch(page, /aboutFocus|about-context|label: "Focus"/);
   assert.doesNotMatch(page, /Current threads|Core belief|YIELDS/);
   assert.ok(
-    page.indexOf('<dl className="about-context"')
-      < page.indexOf('<section className="about-working-loop"'),
-    "current context should precede the working loop in reading order",
+    page.indexOf('<header className="about-copy">') < page.indexOf("<TravelMap />")
+      && page.indexOf("<TravelMap />")
+        < page.indexOf('<section className="about-working-loop"'),
+    "introduction, travel map, and working loop should retain their reading order",
   );
+  assert.doesNotMatch(travelMap, /^"use client";/);
+  assert.match(travelMap, /role="img"/);
+  assert.match(travelMap, /href="\/assets\/travel-world-solid\.svg"/);
+  assert.match(travelMap, /preserveAspectRatio="xMaxYMid slice"/);
+  assert.match(travelMap, /Math\.abs\(horizontalDistance\) <= MAP_WIDTH \/ 2/);
+  assert.match(travelMap, /travelData\.routes\.map\(\(route\) =>/);
+  assert.match(travelMap, /data-route-key=\{routeKey\}/);
+  assert.match(travelMap, /data-route-direction=\{route\.bidirectional \? "both" : "one-way"\}/);
+  assert.match(travelMap, /<ul className="travel-map-flags" aria-label="Visited countries and regions">/);
+  assert.match(travelMap, /data-country-code=\{country\.code\}/);
+  assert.match(travelMap, /className="travel-map-flag-icon"/);
+  assert.match(travelMap, /className="travel-map-flag-tooltip"/);
+  assert.doesNotMatch(travelMap, /routeIndex|--travel-route-delay/);
+  assert.doesNotMatch(travelMap, /createCurvedPath|selectRepresentativeRoutes|markerStart|markerEnd/);
+  assert.doesNotMatch(travelMap, /Trace window|DATA LAYER/i);
+  assert.doesNotMatch(travelMap, /<canvas\b|motion\/react|dotted-map|next-themes/);
   assert.doesNotMatch(controller, /useAboutSpotlight|data-about-spotlight/);
+  assert.doesNotMatch(css, /@keyframes\s+travel-route-acquire|--travel-route-delay/);
   assert.match(css, /\.about-loop-list::before\s*\{/);
   assert.doesNotMatch(`${page}\n${css}`, /about-experience-bridge/);
   assert.doesNotMatch(page, /about-loop-step[^\n]*tabIndex/);

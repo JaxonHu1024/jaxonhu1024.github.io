@@ -10,6 +10,11 @@ import {
   setupReleaseHarness,
   teardownReleaseHarness,
 } from "./browser-release-harness.mjs";
+import {
+  generatedBidirectionalCorridors,
+  generatedCountryCodes,
+  generatedTravelData,
+} from "./generated-travel-contract.mjs";
 
 before(setupReleaseHarness);
 after(teardownReleaseHarness);
@@ -156,6 +161,79 @@ test("hero pixel canvas distorts on pointer input, pauses offscreen, and remains
     await page.waitForFunction(() => (
       document.querySelector(".hero-pixel-canvas")?.getAttribute("data-motion") === "idle"
     ));
+  } finally {
+    await context.close();
+  }
+});
+
+test("hero CTA border runs only while the Hero and page are active", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1280, height: 800 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
+    ), null, { timeout: 3_000 });
+
+    const border = page.locator(".hero-cta-border-signal");
+    assert.equal(await border.count(), 1);
+    const activeState = await border.evaluate((element) => {
+      const style = getComputedStyle(element);
+      const container = element.closest(".hero-cta-border");
+      const cta = element.closest(".hero-cta");
+      const label = cta?.querySelector(".hero-cta-label");
+      const ctaRect = cta?.getBoundingClientRect();
+      const labelRect = label?.getBoundingClientRect();
+      return {
+        animationDuration: style.animationDuration,
+        animationName: style.animationName,
+        animationPlayState: style.animationPlayState,
+        arrowCount: cta?.querySelectorAll(".signal-button-arrow").length,
+        containerHidden: container?.getAttribute("aria-hidden"),
+        dashArray: style.strokeDasharray,
+        justifyContent: cta ? getComputedStyle(cta).justifyContent : null,
+        labelCenterDelta: ctaRect && labelRect
+          ? Math.abs(
+            labelRect.left + labelRect.width / 2
+              - (ctaRect.left + ctaRect.width / 2),
+          )
+          : null,
+        labelText: label?.textContent?.trim(),
+        svgFocusable: element.ownerSVGElement?.getAttribute("focusable"),
+      };
+    });
+    const { labelCenterDelta, ...activeContract } = activeState;
+    assert.deepEqual(activeContract, {
+      animationDuration: "4.2s",
+      animationName: "hero-cta-border-travel",
+      animationPlayState: "running",
+      arrowCount: 0,
+      containerHidden: "true",
+      dashArray: "17px, 83px",
+      justifyContent: "center",
+      labelText: "About me",
+      svgFocusable: "false",
+    });
+    assert.ok(
+      labelCenterDelta !== null && labelCenterDelta <= .75,
+      `hero CTA label was not centered: delta=${labelCenterDelta}px`,
+    );
+
+    await page.locator("#contact").scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "false"
+      && getComputedStyle(document.querySelector(".hero-cta-border-signal"))
+        .animationPlayState === "paused"
+    ), null, { timeout: 3_000 });
+
+    await page.locator("#hero").scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector("#hero")?.getAttribute("data-section-visible") === "true"
+      && getComputedStyle(document.querySelector(".hero-cta-border-signal"))
+        .animationPlayState === "running"
+    ), null, { timeout: 3_000 });
   } finally {
     await context.close();
   }
@@ -347,14 +425,24 @@ test("reduced-motion mobile keeps the portrait, Context path, and contact ticker
       visible: true,
     });
     assert.equal(await page.locator(".hero-terminal").count(), 0);
+    const ctaBorder = await page.locator(".hero-cta-border-signal").evaluate((element) => ({
+      animationName: getComputedStyle(element).animationName,
+      runningAnimations: element.getAnimations()
+        .filter((animation) => animation.playState === "running").length,
+    }));
+    assert.deepEqual(ctaBorder, {
+      animationName: "none",
+      runningAnimations: 0,
+    });
 
     await page.locator("#about").scrollIntoViewIfNeeded();
     const about = await page.locator("#about").evaluate((section) => ({
-      contextLabels: Array.from(section.querySelectorAll(".about-context dt"))
-        .map((element) => element.textContent?.trim() ?? ""),
+      contextCount: section.querySelectorAll(".about-context").length,
       forbiddenCount: section.querySelectorAll(
         "canvas, [class*='about-particle'], [role='tab'], [role='tablist'], [role='tabpanel']",
       ).length,
+      introductionText: section.querySelector(".about-introduction")
+        ?.textContent?.replace(/\s+/g, " ").trim() ?? "",
       runningAnimations: section.getAnimations({ subtree: true })
         .filter((animation) => animation.playState === "running").length,
       steps: Array.from(section.querySelectorAll(".about-loop-step")).map((element) => {
@@ -376,7 +464,12 @@ test("reduced-motion mobile keeps the portrait, Context path, and contact ticker
       ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
     );
     assert.equal(about.steps.every(({ visible }) => visible), true);
-    assert.deepEqual(about.contextLabels, ["Focus"]);
+    assert.equal(about.contextCount, 0);
+    assert.equal(
+      about.introductionText,
+      "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet the "
+        + "real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
+    );
     await page.locator("#contact").scrollIntoViewIfNeeded();
     const contact = await page.locator("#contact").evaluate((section) => {
       const marquee = section.querySelector(".contact-marquee");
@@ -499,14 +592,22 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
 
       return {
         about: {
-          contextLabels: Array.from(document.querySelectorAll("#about .about-context dt"))
-            .map((element) => element.textContent?.trim() ?? ""),
+          contextCount: document.querySelectorAll("#about .about-context").length,
           forbiddenCount: document.querySelectorAll(
             "#about canvas, #about [class*='about-particle'], #about [role='tab'], "
               + "#about [role='tablist'], #about [role='tabpanel']",
           ).length,
+          introductionText: document.querySelector("#about .about-introduction")
+            ?.textContent?.replace(/\s+/g, " ").trim() ?? "",
           stepLabels: Array.from(document.querySelectorAll("#about .about-loop-label"))
             .map((element) => element.textContent?.trim() ?? ""),
+          travelMap: {
+            routeAnimationNames: [...new Set(Array.from(
+              document.querySelectorAll(".travel-map-route-path"),
+            ).map((element) => getComputedStyle(element).animationName))],
+            routeCount: document.querySelectorAll(".travel-map-route").length,
+            svgRole: document.querySelector(".travel-map-canvas")?.getAttribute("role"),
+          },
         },
         contactMarquee: {
           animationName: getComputedStyle(
@@ -555,9 +656,17 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
       traceProgress: null,
     });
     assert.deepEqual(state.about, {
-      contextLabels: ["Focus"],
+      contextCount: 0,
       forbiddenCount: 0,
+      introductionText: "I'm Jaxon. I build inspectable systems where models, tools, and "
+        + "decisions meet the real world—with a focus on agents, multimodal systems, and "
+        + "autonomous intelligence.",
       stepLabels: ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
+      travelMap: {
+        routeAnimationNames: ["none"],
+        routeCount: generatedTravelData.counts.routes,
+        svgRole: "img",
+      },
     });
     assert.deepEqual(state.researchMotion, ["reduced", "reduced"]);
     assert.deepEqual(
@@ -592,12 +701,14 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
             && Number.parseFloat(style.opacity) > 0;
         };
 
+        const introductionElement = section.querySelector(".about-introduction");
+        const travelMapElement = section.querySelector(".about-travel");
+        const loopElement = section.querySelector(".about-working-loop");
+        const routeKeys = Array.from(section.querySelectorAll(".travel-map-route"))
+          .map((route) => route.getAttribute("data-route-key") ?? "");
+
         return {
-          context: Array.from(section.querySelectorAll(".about-context > div")).map((entry) => ({
-            label: entry.querySelector("dt")?.textContent?.trim() ?? "",
-            text: entry.querySelector("dd")?.textContent?.trim() ?? "",
-            visible: visible(entry),
-          })),
+          contextCount: section.querySelectorAll(".about-context").length,
           forbiddenCount: section.querySelectorAll(
             "canvas, [class*='about-particle'], [role='tab'], [role='tablist'], "
               + "[role='tabpanel'], [aria-selected], button",
@@ -605,6 +716,19 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
           labelledBy: section.querySelector(".about-working-loop")
             ?.getAttribute("aria-labelledby"),
           loopTitle: section.querySelector("#about-loop-title")?.textContent?.trim() ?? "",
+          introduction: introductionElement ? {
+            text: introductionElement.textContent?.replace(/\s+/g, " ").trim() ?? "",
+            visible: visible(introductionElement),
+          } : null,
+          readingOrder: Boolean(
+            introductionElement
+            && travelMapElement
+            && loopElement
+            && (introductionElement.compareDocumentPosition(travelMapElement)
+              & Node.DOCUMENT_POSITION_FOLLOWING)
+            && (travelMapElement.compareDocumentPosition(loopElement)
+              & Node.DOCUMENT_POSITION_FOLLOWING)
+          ),
           steps: Array.from(section.querySelectorAll(".about-loop-step")).map((step) => ({
             detail: step.querySelector(".about-loop-detail")?.textContent?.trim() ?? "",
             index: step.querySelector(".about-loop-index")?.textContent?.trim() ?? "",
@@ -612,12 +736,39 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
             outcome: step.querySelector(".about-loop-outcome strong")?.textContent?.trim() ?? "",
             visible: visible(step),
           })),
+          travelMap: travelMapElement ? {
+            airportCount: travelMapElement.querySelectorAll(".travel-map-airport").length,
+            bidirectionalRouteCount: travelMapElement.querySelectorAll(
+              '.travel-map-route[data-route-direction="both"]',
+            ).length,
+            copy: travelMapElement.textContent?.replace(/\s+/g, " ").trim() ?? "",
+            flagCount: travelMapElement.querySelectorAll(".travel-map-flags > li").length,
+            lineRoutesOnly: Array.from(
+              travelMapElement.querySelectorAll(".travel-map-route-path"),
+            ).every((route) => {
+              const path = route.getAttribute("d") ?? "";
+              return path.includes(" L ") && !path.includes(" Q ");
+            }),
+            routeCount: routeKeys.length,
+            routesUnique: new Set(routeKeys).size === routeKeys.length,
+            stats: Array.from(travelMapElement.querySelectorAll(".travel-map-stats > div"))
+              .map((entry) => ({
+                label: entry.querySelector("dt")?.textContent?.trim() ?? "",
+                value: entry.querySelector("dd")?.textContent?.trim() ?? "",
+                visible: visible(entry),
+              })),
+            svgRole: travelMapElement.querySelector(".travel-map-canvas")?.getAttribute("role"),
+            title: travelMapElement.querySelector("#travel-map-title")?.textContent?.trim() ?? "",
+            visible: visible(travelMapElement),
+          } : null,
         };
       });
 
       assert.equal(ledger.labelledBy, "about-loop-title");
       assert.equal(ledger.loopTitle, "How I work.");
       assert.equal(ledger.forbiddenCount, 0);
+      assert.equal(ledger.contextCount, 0);
+      assert.equal(ledger.readingOrder, true);
       assert.deepEqual(
         ledger.steps.map(({ index, label, outcome }) => ({ index, label, outcome })),
         [
@@ -628,14 +779,134 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
         ],
       );
       assert.equal(ledger.steps.every(({ detail, visible }) => detail.length > 0 && visible), true);
-      assert.deepEqual(
-        ledger.context.map(({ label }) => label),
-        ["Focus"],
-      );
-      assert.equal(ledger.context.every(({ text, visible }) => text.length > 0 && visible), true);
+      assert.deepEqual(ledger.introduction, {
+        text: "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet "
+          + "the real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
+        visible: true,
+      });
+      assert.ok(ledger.travelMap);
+      assert.equal(ledger.travelMap.title, "Places leave a signal.");
+      assert.equal(ledger.travelMap.svgRole, "img");
+      assert.equal(ledger.travelMap.visible, true);
+      assert.equal(ledger.travelMap.airportCount, generatedTravelData.counts.airports);
+      assert.equal(ledger.travelMap.bidirectionalRouteCount, generatedBidirectionalCorridors);
+      assert.equal(ledger.travelMap.flagCount, generatedTravelData.counts.countries);
+      assert.equal(ledger.travelMap.lineRoutesOnly, true);
+      assert.equal(ledger.travelMap.routeCount, generatedTravelData.counts.routes);
+      assert.equal(ledger.travelMap.routesUnique, true);
+      assert.deepEqual(ledger.travelMap.stats, [
+        {
+          label: "Flight segments",
+          value: String(generatedTravelData.counts.flights),
+          visible: true,
+        },
+        {
+          label: "Airports reached",
+          value: String(generatedTravelData.counts.airports),
+          visible: true,
+        },
+        {
+          label: "Countries / regions",
+          value: String(generatedTravelData.counts.countries),
+          visible: true,
+        },
+      ]);
+      assert.doesNotMatch(ledger.travelMap.copy, /Trace window|DATA LAYER/i);
     } finally {
       await context.close();
     }
+  }
+});
+
+test("desktop travel flag dock magnifies countries and reveals their labels", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1440, height: 900 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const flags = page.locator(".travel-map-flags > li[data-country-code]");
+    assert.equal(await flags.count(), generatedCountryCodes.length);
+    assert.deepEqual(
+      (await flags.evaluateAll((items) => (
+        items.map((item) => item.getAttribute("data-country-code") ?? "").sort()
+      ))),
+      generatedCountryCodes,
+    );
+
+    const flag = flags.first();
+    await flag.scrollIntoViewIfNeeded();
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(250);
+
+    const snapshot = (element) => {
+      const rect = element.getBoundingClientRect();
+      const tooltip = element.querySelector(".travel-map-flag-tooltip");
+      const tooltipRect = tooltip?.getBoundingClientRect();
+      const tooltipStyle = tooltip ? getComputedStyle(tooltip) : null;
+
+      return {
+        code: element.getAttribute("data-country-code"),
+        height: rect.height,
+        left: rect.left,
+        tooltip: tooltip && tooltipRect && tooltipStyle ? {
+          height: tooltipRect.height,
+          opacity: Number.parseFloat(tooltipStyle.opacity),
+          visibility: tooltipStyle.visibility,
+          width: tooltipRect.width,
+        } : null,
+        top: rect.top,
+        width: rect.width,
+      };
+    };
+
+    const resting = await flag.evaluate(snapshot);
+    assert.ok(resting.code);
+    assert.ok(resting.tooltip);
+    assert.ok(
+      resting.tooltip.visibility === "hidden" || resting.tooltip.opacity <= .05,
+      `resting flag exposed its tooltip: ${JSON.stringify(resting)}`,
+    );
+
+    await flag.hover();
+    await page.waitForTimeout(250);
+    const hovered = await flag.evaluate(snapshot);
+    assert.ok(
+      hovered.width >= resting.width + 3 && hovered.height >= resting.height + 3,
+      `hovered flag did not noticeably magnify: resting=${JSON.stringify(resting)}, `
+        + `hovered=${JSON.stringify(hovered)}`,
+    );
+    assert.ok(
+      hovered.top <= resting.top - 2,
+      `hovered flag did not rise: resting top=${resting.top}, hovered top=${hovered.top}`,
+    );
+    assert.ok(
+      hovered.tooltip
+        && hovered.tooltip.visibility !== "hidden"
+        && hovered.tooltip.opacity >= .9
+        && hovered.tooltip.width > 0
+        && hovered.tooltip.height > 0,
+      `hovered flag label was not visible: ${JSON.stringify(hovered)}`,
+    );
+
+    await page.mouse.move(0, 0);
+    await page.waitForTimeout(300);
+    const restored = await flag.evaluate(snapshot);
+    assert.ok(
+      Math.abs(restored.width - resting.width) <= .75
+        && Math.abs(restored.height - resting.height) <= .75
+        && Math.abs(restored.top - resting.top) <= .75
+        && Math.abs(restored.left - resting.left) <= .75,
+      `flag did not return to rest: resting=${JSON.stringify(resting)}, `
+        + `restored=${JSON.stringify(restored)}`,
+    );
+    assert.ok(
+      restored.tooltip
+        && (restored.tooltip.visibility === "hidden" || restored.tooltip.opacity <= .05),
+      `flag label remained visible after pointer exit: ${JSON.stringify(restored)}`,
+    );
+  } finally {
+    await context.close();
   }
 });
 
@@ -764,6 +1035,7 @@ test("touch-only users return to the resting control style after tapping", { tim
         await nextFrame();
         await Promise.allSettled(
           element.getAnimations({ subtree: true })
+            .filter((animation) => Number.isFinite(animation.effect?.getTiming().iterations ?? 1))
             .map((animation) => animation.finished),
         );
         await nextFrame();

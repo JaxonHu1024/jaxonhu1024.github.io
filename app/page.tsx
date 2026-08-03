@@ -1,6 +1,7 @@
 import { Navigation } from "./components/Navigation";
 import { HeroPixelPortrait } from "./components/HeroPixelPortrait";
 import { ResearchVisual } from "./components/ResearchVisual";
+import { TravelMap } from "./components/TravelMap";
 
 const currentExperience = {
   company: "ByteDance",
@@ -39,11 +40,6 @@ const papers = [
 
 const contactMessage = "For project collaborations, technical consulting, or career opportunities, feel free to reach out.";
 const currentYear = new Date().getUTCFullYear();
-
-const aboutFocus = {
-  label: "Focus",
-  value: "Agents, multimodal systems, and autonomous intelligence.",
-} as const;
 
 const aboutWorkingLoop = [
   {
@@ -90,8 +86,31 @@ export default function Home() {
             <HeroPixelPortrait />
             <div className="hero-actions">
               <a className="signal-button hero-cta" href="#about">
-                <span>Explore context</span>
-                <span className="signal-button-arrow" aria-hidden="true">↘</span>
+                <span className="hero-cta-label">About me</span>
+                <span className="hero-cta-border" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 100 40"
+                    preserveAspectRatio="none"
+                    focusable="false"
+                  >
+                    <rect
+                      className="hero-cta-border-track"
+                      x="1"
+                      y="1"
+                      width="98"
+                      height="38"
+                      pathLength="100"
+                    />
+                    <rect
+                      className="hero-cta-border-signal"
+                      x="1"
+                      y="1"
+                      width="98"
+                      height="38"
+                      pathLength="100"
+                    />
+                  </svg>
+                </span>
               </a>
             </div>
           </div>
@@ -112,16 +131,12 @@ export default function Home() {
               </h2>
               <p className="about-introduction">
                 I&apos;m Jaxon. I build inspectable systems where models, tools, and
-                decisions meet the real world.
+                decisions meet the real world—with a focus on agents, multimodal
+                systems, and autonomous intelligence.
               </p>
             </header>
 
-            <dl className="about-context" aria-label="Current context">
-              <div>
-                <dt>{aboutFocus.label}</dt>
-                <dd>{aboutFocus.value}</dd>
-              </div>
-            </dl>
+            <TravelMap />
 
             <section className="about-working-loop" aria-labelledby="about-loop-title">
               <header className="about-loop-header">

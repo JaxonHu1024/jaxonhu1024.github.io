@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
+import { generatedCountryCodes } from "./generated-travel-contract.mjs";
+
 async function render(pathname = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
   workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}`);
@@ -202,11 +204,23 @@ test("renders every organization logo with its measured intrinsic dimensions", a
 test("renders a distinct public-safe About system before Experience", async () => {
   const response = await render();
   const html = await response.text();
+  const travelData = JSON.parse(await readFile(
+    new URL("../app/data/travel.generated.json", import.meta.url),
+    "utf8",
+  ));
+  const bidirectionalCorridors = travelData.routes
+    .filter(({ bidirectional }) => bidirectional).length;
   const aboutStart = html.indexOf('id="about"');
   const experienceStart = html.indexOf('id="experience"');
 
   assert.ok(aboutStart >= 0 && experienceStart > aboutStart);
-  assert.match(html, /href="#about"[^>]*>\s*<span>Explore context<\/span>/);
+  assert.match(
+    html,
+    /href="#about"[^>]*>[\s\S]*?<span class="hero-cta-label">About me<\/span>/,
+  );
+  assert.doesNotMatch(html, /signal-button-arrow|>↘</);
+  assert.match(html, /<span class="hero-cta-border" aria-hidden="true">/);
+  assert.match(html, /<rect class="hero-cta-border-signal"/);
   assert.ok(html.indexOf('href="#about"') < html.indexOf('href="#experience"'));
 
   const about = html.slice(aboutStart, experienceStart);
@@ -222,7 +236,7 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.match(about, /to system behavior\./);
   assert.match(
     about,
-    /I(?:&#x27;|')m Jaxon\. I build inspectable systems where models, tools, and decisions meet the real world\./,
+    /I(?:&#x27;|')m Jaxon\. I build inspectable systems where models, tools, and decisions meet the real world—with a focus on agents, multimodal systems, and autonomous intelligence\./,
   );
   assert.match(
     about,
@@ -255,17 +269,87 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.equal((about.match(/class="about-loop-label"/g) ?? []).length, 4);
   assert.equal((about.match(/class="about-loop-detail"/g) ?? []).length, 4);
   assert.equal((about.match(/class="about-loop-outcome"/g) ?? []).length, 4);
-  assert.match(about, /<dl class="about-context" aria-label="Current context">/);
   assert.ok(
-    about.indexOf('class="about-context"') < about.indexOf('class="about-working-loop"'),
-    "current context should be readable before the working loop",
+    about.indexOf('class="about-copy"') < about.indexOf('class="about-travel"')
+      && about.indexOf('class="about-travel"') < about.indexOf('class="about-working-loop"'),
+    "introduction, travel footprint, and working loop should keep their reading order",
   );
-  assert.equal((about.match(/<dt>/g) ?? []).length, 1);
-  for (const [label, value] of [
-    ["Focus", "Agents, multimodal systems, and autonomous intelligence."],
-  ]) {
-    assert.match(about, new RegExp(`<dt>${label}<\\/dt>[\\s\\S]*?<dd>${value.replaceAll(".", "\\.")}<\\/dd>`));
-  }
+  assert.doesNotMatch(about, /about-context|<dt>Focus<\/dt>|Current context/);
+  assert.match(
+    about,
+    /<figure(?=[^>]*\bclass="about-travel")(?=[^>]*\baria-labelledby="travel-map-title")[^>]*>/,
+  );
+  assert.match(about, /<p class="travel-map-kicker">FLIGHT\.FOOTPRINT<\/p>/);
+  assert.match(about, /<h3 id="travel-map-title">Places leave a signal\.<\/h3>/);
+  assert.match(
+    about,
+    /Routes I(?:&#x27;|')ve flown—and the places that keep widening how I see,[\s\S]*?learn, and build\./,
+  );
+  assert.match(about, /<dl class="travel-map-stats" aria-label="Flight footprint summary">/);
+  assert.match(
+    about,
+    new RegExp(`<dt>Flight segments<\\/dt>[\\s\\S]*?<dd>${travelData.counts.flights}<\\/dd>`),
+  );
+  assert.match(
+    about,
+    new RegExp(`<dt>Airports reached<\\/dt>[\\s\\S]*?<dd>${travelData.counts.airports}<\\/dd>`),
+  );
+  assert.match(
+    about,
+    new RegExp(`<dt>Countries \\/ regions<\\/dt>[\\s\\S]*?<dd>${travelData.counts.countries}<\\/dd>`),
+  );
+  assert.doesNotMatch(about, /Trace window|DATA LAYER/i);
+  assert.match(
+    about,
+    /<svg(?=[^>]*\bclass="travel-map-canvas")(?=[^>]*\bviewBox="0 0 800 400")(?=[^>]*\brole="img")[^>]*>/,
+  );
+  assert.match(
+    about,
+    /<image(?=[^>]*\bclass="travel-map-land")(?=[^>]*\bhref="\/assets\/travel-world-solid\.svg")(?=[^>]*\bwidth="800")(?=[^>]*\bheight="400")[^>]*>/,
+  );
+  const renderedRouteKeys = [...about.matchAll(/data-route-key="([^"]+)"/g)]
+    .map((match) => match[1]);
+  assert.equal(renderedRouteKeys.length, travelData.counts.routes);
+  assert.equal(new Set(renderedRouteKeys).size, renderedRouteKeys.length);
+  assert.equal(
+    (about.match(/data-route-direction="both"/g) ?? []).length,
+    bidirectionalCorridors,
+  );
+  assert.match(
+    about,
+    new RegExp(`${travelData.counts.routes} unique flight corridors connect `
+      + `${travelData.counts.airports} airports`),
+  );
+  assert.match(
+    about,
+    new RegExp(`${bidirectionalCorridors} corridors include completed flights in both directions`),
+  );
+  const renderedRoutePaths = [...about.matchAll(/<path class="travel-map-route-path" d="([^"]+)"/g)]
+    .map((match) => match[1]);
+  assert.ok(renderedRoutePaths.length >= renderedRouteKeys.length);
+  assert.equal(renderedRoutePaths.every((path) => path.includes(" L ") && !path.includes(" Q ")), true);
+  assert.match(about, /<ul class="travel-map-flags" aria-label="Visited countries and regions">/);
+  const renderedFlagCodes = [...about.matchAll(/<li[^>]*data-country-code="([^"]+)"[^>]*>/g)]
+    .map((match) => match[1])
+    .sort();
+  assert.deepEqual(renderedFlagCodes, generatedCountryCodes);
+  assert.equal(
+    (about.match(/class="travel-map-flag-icon"/g) ?? []).length,
+    travelData.counts.countries,
+  );
+  assert.equal(
+    (about.match(/class="travel-map-flag-tooltip"/g) ?? []).length,
+    travelData.counts.countries,
+  );
+  assert.match(
+    about,
+    new RegExp(`Approximately ${travelData.totalDistanceKm.toLocaleString("en-US")} kilometers flown`),
+  );
+  assert.doesNotMatch(about, /travel-map-frame|travel-map-place-index|travel-map-caption/);
+  assert.doesNotMatch(
+    about,
+    /\bPNR\b|Tail Number|Flight Flighty ID|Airport Flighty ID|Gate Departure|Seat Type|Cabin Class|\b20\d{2}-\d{2}-\d{2}\b/,
+  );
   assert.doesNotMatch(about, /YIELDS|Current threads|Core belief/);
   assert.doesNotMatch(about, /about-experience-bridge/);
   assert.doesNotMatch(about, /section-kicker|OPERATING CONTEXT/);
@@ -321,7 +405,7 @@ test("renders all public portfolio copy in English", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(html, /<html lang="en">/);
-  assert.match(html, /Explore context/);
+  assert.match(html, /About me/);
   assert.match(html, /<h3>ByteDance<\/h3>/);
   assert.match(html, /<p>Senior AI Engineer<\/p>/);
   assert.match(
