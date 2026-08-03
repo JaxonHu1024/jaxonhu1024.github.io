@@ -63,11 +63,18 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
   const layout = await readFile(new URL("../app/layout.tsx", import.meta.url), "utf8");
   const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
   const beamCss = css.match(/\.site-tracing-beam\s*\{[^}]*\}/s)?.[0] ?? "";
+  const activeBeamCss = css.match(
+    /\.site-tracing-beam\[data-trace-visibility="active"\]\s*\{[^}]*\}/s,
+  )?.[0] ?? "";
 
   assert.match(layout, /<SiteTracingBeam \/>/);
   assert.match(component, /^"use client";/);
   assert.match(component, /aria-hidden="true"/);
-  assert.match(component, /window\.addEventListener\("scroll", scheduleProgress, \{ passive: true \}\)/);
+  assert.match(component, /const TRACE_IDLE_DELAY_MS = 900/);
+  assert.match(component, /data-trace-visibility="idle"/);
+  assert.match(component, /beam\.dataset\.traceVisibility = "active"/);
+  assert.match(component, /window\.setTimeout\(settleIdle, TRACE_IDLE_DELAY_MS\)/);
+  assert.match(component, /window\.addEventListener\("scroll", handleScroll, \{ passive: true \}\)/);
   assert.match(component, /window\.requestAnimationFrame\(animate\)/);
   assert.match(component, /new ResizeObserver\(\(entries\) =>/);
   assert.match(component, /resizeObserver\.observe\(document\.body\)/);
@@ -79,19 +86,33 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
   assert.doesNotMatch(css, /--site-trace-progress/);
   assert.match(component, /prefers-reduced-motion: reduce/);
   assert.match(component, /visibilitychange/);
-  assert.match(component, /window\.removeEventListener\("scroll", scheduleProgress\)/);
+  assert.match(component, /window\.clearTimeout\(idleTimer\)/);
+  assert.match(component, /window\.removeEventListener\("scroll", handleScroll\)/);
   assert.match(beamCss, /position:\s*fixed/);
   assert.match(beamCss, /left:\s*calc\(env\(safe-area-inset-left, 0px\) \+ var\(--site-trace-edge-gap\)\)/);
   assert.match(beamCss, /right:\s*auto/);
   assert.match(beamCss, /pointer-events:\s*none/);
+  assert.match(beamCss, /opacity:\s*0/);
+  assert.match(beamCss, /transform:\s*translate3d\(-2px, 0, 0\)/);
+  assert.match(beamCss, /opacity 300ms var\(--ease-out\)/);
+  assert.match(beamCss, /transform 300ms var\(--ease-out\)/);
+  assert.doesNotMatch(beamCss, /transition:\s*all/);
+  assert.match(activeBeamCss, /opacity:\s*1/);
+  assert.match(activeBeamCss, /transition-duration:\s*150ms/);
   assert.match(css, /--site-trace-lane-width:\s*calc\(/);
-  assert.match(component, /const TRACE_PATH = "M 10 0 V 4 L 1 7 V 80 L 19 83 V 100"/);
-  assert.equal((component.match(/d=\{TRACE_PATH\}/g) ?? []).length, 2);
+  assert.match(css, /--site-trace-edge-gap:\s*4px/);
+  assert.match(css, /--site-trace-width:\s*12px/);
+  assert.match(component, /import \{ SITE_TRACE_PATH, pointOnSiteTrace \}/);
+  assert.equal((component.match(/d=\{SITE_TRACE_PATH\}/g) ?? []).length, 2);
   assert.match(component, /gradientUnits="userSpaceOnUse"/);
+  assert.match(component, /gradientCenter - 16/);
+  assert.match(component, /gradientCenter \+ 12/);
   assert.match(component, /gradientRef\.current\?\.setAttribute\("y1"/);
   assert.match(component, /stopColor="var\(--color-accent\)" stopOpacity="0"/);
   assert.match(component, /stopColor="var\(--color-accent-signal\)"/);
   assert.match(component, /stopColor="var\(--color-trace-terminal\)" stopOpacity="0"/);
+  assert.match(css, /\.site-tracing-beam__track\s*\{[\s\S]*?stroke-opacity:\s*\.09/);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.site-tracing-beam\s*\{[\s\S]*?transition:\s*none !important/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.site-tracing-beam__progress/);
   assert.doesNotMatch(packageJson, /["'](?:motion|framer-motion)["']/);
   await assert.rejects(
@@ -149,7 +170,10 @@ test("keeps portrait motion cheap and the Experience guide fully static", async 
   assert.doesNotMatch(pixelCanvasRenderer, /if \(sample\.drop \|\| sample\.a <= 0\)/);
   assert.match(page, /<div className="experience-log">/);
   assert.doesNotMatch(`${page}\n${css}\n${controller}`, /experience-scan-(?:track|fill|cursor)/);
-  assert.doesNotMatch(`${css}\n${controller}`, /--experience-trace-|data-trace-/);
+  assert.doesNotMatch(
+    `${css}\n${controller}`,
+    /--experience-trace-|#experience[^\n{]*\[data-trace-|\.experience-[^\n{]*\[data-trace-/,
+  );
   assert.doesNotMatch(controller, /useExperienceTrace|scheduleTrace|updateTrace/);
   assert.doesNotMatch(css, /active-node-pulse|timeline-node::before/);
   assert.match(css, /\.experience-log::before\s*\{[^}]*background:\s*var\(--guide-rail-vertical\)/s);

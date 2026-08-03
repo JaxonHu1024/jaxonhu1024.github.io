@@ -107,12 +107,14 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         headDisplay: getComputedStyle(
           element.querySelector(".site-tracing-beam__head"),
         ).display,
+        opacity: Number.parseFloat(getComputedStyle(element).opacity),
         pointerEvents: getComputedStyle(element).pointerEvents,
         position: getComputedStyle(element).position,
         progress: Number(element.getAttribute("data-trace-progress")),
         trackVisibility: getComputedStyle(
           element.querySelector(".site-tracing-beam__track"),
         ).visibility,
+        visibility: element.getAttribute("data-trace-visibility"),
       }));
       const portraitLayout = await page.locator(".hero-pixel-portrait").evaluate((portrait) => {
         const canvas = portrait.querySelector(".hero-pixel-canvas");
@@ -385,10 +387,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       assert.deepEqual(beamPresentation, {
         count: 1,
         headDisplay: "grid",
+        opacity: 0,
         pointerEvents: "none",
         position: "fixed",
         progress: 0,
         trackVisibility: "visible",
+        visibility: "idle",
       });
       assert.equal(
         sectionRhythm.alignmentShells.length,

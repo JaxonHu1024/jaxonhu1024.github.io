@@ -4,12 +4,20 @@ const RESEARCH_MOBILE_MAX_WIDTH = 700;
 const FRAME_TIME_TOLERANCE_MS = 0.5;
 const SITE_TRACE_POINTS: readonly SiteTracePoint[] = [
   { x: 10, y: 0 },
-  { x: 10, y: 4 },
-  { x: 1, y: 7 },
-  { x: 1, y: 80 },
-  { x: 19, y: 83 },
-  { x: 19, y: 100 },
+  { x: 10, y: 5 },
+  { x: 6, y: 8 },
+  { x: 6, y: 78 },
+  { x: 14, y: 82 },
+  { x: 14, y: 100 },
 ];
+export const SITE_TRACE_PATH = SITE_TRACE_POINTS.map((point, index) => {
+  if (index === 0) return `M ${point.x} ${point.y}`;
+
+  const previous = SITE_TRACE_POINTS[index - 1];
+  if (point.x === previous.x) return `V ${point.y}`;
+  if (point.y === previous.y) return `H ${point.x}`;
+  return `L ${point.x} ${point.y}`;
+}).join(" ");
 const SITE_TRACE_SEGMENTS = SITE_TRACE_POINTS.slice(1).map((end, index) => {
   const start = SITE_TRACE_POINTS[index];
   return {

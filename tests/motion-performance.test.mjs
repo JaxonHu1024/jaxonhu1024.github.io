@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  SITE_TRACE_PATH,
   createFrameRateGate,
   getResearchFrameRate,
   pointOnSiteTrace,
@@ -36,15 +37,16 @@ test("the frame gate restarts cleanly after an offscreen pause", () => {
 });
 
 test("the tracing-beam head follows the bent SVG route", () => {
+  assert.equal(SITE_TRACE_PATH, "M 10 0 V 5 L 6 8 V 78 L 14 82 V 100");
   assert.deepEqual(pointOnSiteTrace(0), { x: 10, y: 0 });
-  assert.deepEqual(pointOnSiteTrace(1), { x: 19, y: 100 });
+  assert.deepEqual(pointOnSiteTrace(1), { x: 14, y: 100 });
 
   const midpoint = pointOnSiteTrace(0.5);
-  assert.equal(midpoint.x, 1);
-  assert.ok(Math.abs(midpoint.y - 54.3807) < 0.0001, midpoint.y);
+  assert.equal(midpoint.x, 6);
+  assert.ok(Math.abs(midpoint.y - 51.4721) < 0.0001, midpoint.y);
 });
 
 test("tracing-beam progress is clamped to the route endpoints", () => {
   assert.deepEqual(pointOnSiteTrace(-1), { x: 10, y: 0 });
-  assert.deepEqual(pointOnSiteTrace(2), { x: 19, y: 100 });
+  assert.deepEqual(pointOnSiteTrace(2), { x: 14, y: 100 });
 });

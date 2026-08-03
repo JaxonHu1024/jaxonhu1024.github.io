@@ -14,6 +14,14 @@ import {
 before(setupReleaseHarness);
 after(teardownReleaseHarness);
 
+async function waitForTracingBeamIdle(page, timeout = 2_500) {
+  await page.waitForFunction(() => {
+    const element = document.querySelector(".site-tracing-beam");
+    return element?.getAttribute("data-trace-visibility") === "idle"
+      && Number.parseFloat(getComputedStyle(element).opacity) <= 0.01;
+  }, null, { timeout });
+}
+
 test("research canvas reports its viewport and page motion lifecycle", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
@@ -1283,7 +1291,7 @@ test("desktop active navigation brackets hug the label without changing its name
   }
 });
 
-test("left-side tracing beam follows whole-document scroll and stays static for reduced motion", { timeout: 20_000 }, async () => {
+test("left-side tracing beam wakes while scrolling, rests when idle, and stays static for reduced motion", { timeout: 25_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
   });
@@ -1299,20 +1307,26 @@ test("left-side tracing beam follows whole-document scroll and stays static for 
       ariaHidden: element.getAttribute("aria-hidden"),
       count: document.querySelectorAll(".site-tracing-beam").length,
       leftGap: element.getBoundingClientRect().left,
+      opacity: Number.parseFloat(getComputedStyle(element).opacity),
       pointerEvents: getComputedStyle(element).pointerEvents,
       progress: Number(element.getAttribute("data-trace-progress")),
       rightGap: innerWidth - element.getBoundingClientRect().right,
+      visibility: element.getAttribute("data-trace-visibility"),
     }));
     assert.deepEqual({
       ariaHidden: initial.ariaHidden,
       count: initial.count,
+      opacity: initial.opacity,
       pointerEvents: initial.pointerEvents,
       progress: initial.progress,
+      visibility: initial.visibility,
     }, {
       ariaHidden: "true",
       count: 1,
+      opacity: 0,
       pointerEvents: "none",
       progress: 0,
+      visibility: "idle",
     });
     assert.ok(initial.leftGap <= 24, `tracing beam left gap was ${initial.leftGap}px`);
     assert.ok(initial.leftGap < initial.rightGap, "tracing beam remained on the right side");
@@ -1322,16 +1336,25 @@ test("left-side tracing beam follows whole-document scroll and stays static for 
       window.scrollTo(0, maxScroll * 0.55);
     });
     await page.waitForFunction(() => (
-      Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress"))
-        >= 0.5
+      document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-visibility") === "active"
+      && Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress")) >= 0.5
+      && Number.parseFloat(getComputedStyle(document.querySelector(".site-tracing-beam")).opacity) >= 0.99
     ));
     const middleProgress = Number(await beam.getAttribute("data-trace-progress"));
     assert.ok(middleProgress >= 0.5 && middleProgress < 0.8);
+    const activeHeadBounds = await beam.locator(".site-tracing-beam__head").boundingBox();
+    assert.ok(activeHeadBounds, "active tracing head was missing");
+    assert.ok(
+      activeHeadBounds.x >= 0
+        && activeHeadBounds.x + activeHeadBounds.width <= 1280,
+      `active tracing head escaped the viewport: ${JSON.stringify(activeHeadBounds)}`,
+    );
+    await waitForTracingBeamIdle(page);
 
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await page.waitForFunction(() => (
-      Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress"))
-        >= 0.995
+      document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-visibility") === "active"
+      && Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress")) >= 0.995
     ));
     assert.ok(Number(await beam.getAttribute("data-trace-progress")) >= 0.995);
   } finally {
@@ -1346,6 +1369,7 @@ test("left-side tracing beam follows whole-document scroll and stays static for 
     await reducedSession.page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await reducedSession.page.waitForFunction(() => (
       document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-motion") === "reduced"
+      && document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-visibility") === "idle"
     ));
     const reducedBeam = reducedSession.page.locator(".site-tracing-beam");
     const reducedState = await reducedBeam.evaluate((element) => ({
@@ -1360,9 +1384,11 @@ test("left-side tracing beam follows whole-document scroll and stays static for 
       trackVisibility: getComputedStyle(
         element.querySelector(".site-tracing-beam__track"),
       ).visibility,
+      opacity: Number.parseFloat(getComputedStyle(element).opacity),
     }));
     assert.deepEqual(reducedState, {
       headDisplay: "none",
+      opacity: 0,
       progressDisplay: "none",
       runningAnimations: 0,
       trackVisibility: "visible",
@@ -1371,9 +1397,14 @@ test("left-side tracing beam follows whole-document scroll and stays static for 
       window.scrollTo(0, document.documentElement.scrollHeight)
     ));
     await reducedSession.page.waitForFunction(() => (
-      Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress"))
-        >= 0.995
+      document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-visibility") === "active"
+      && Number(document.querySelector(".site-tracing-beam")?.getAttribute("data-trace-progress")) >= 0.995
     ));
+    assert.equal(
+      await reducedBeam.evaluate((element) => Number.parseFloat(getComputedStyle(element).opacity)),
+      1,
+    );
+    await waitForTracingBeamIdle(reducedSession.page, 2_000);
   } finally {
     await reducedSession.context.close();
   }

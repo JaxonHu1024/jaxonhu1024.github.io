@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 
-import { pointOnSiteTrace } from "@/app/lib/motion-performance";
+import { SITE_TRACE_PATH, pointOnSiteTrace } from "@/app/lib/motion-performance";
 
 const TRACE_EPSILON = 0.0005;
 const TRACE_EASING = 0.18;
-const TRACE_PATH = "M 10 0 V 4 L 1 7 V 80 L 19 83 V 100";
+const TRACE_IDLE_DELAY_MS = 900;
 
 function clampProgress(value: number) {
   return Math.max(0, Math.min(1, value));
@@ -25,6 +25,7 @@ export function SiteTracingBeam() {
     let currentProgress = 0;
     let targetProgress = 0;
     let animationFrame: number | null = null;
+    let idleTimer: number | null = null;
     let pageVisible = document.visibilityState === "visible";
     let beamSize = { width: 1, height: 1 };
 
@@ -50,8 +51,8 @@ export function SiteTracingBeam() {
       const normalizedProgress = clampProgress(progress);
       const tracePoint = pointOnSiteTrace(normalizedProgress);
       const gradientCenter = tracePoint.y;
-      const gradientStart = Math.max(0, gradientCenter - 24);
-      const gradientEnd = Math.min(100, gradientCenter + 18);
+      const gradientStart = Math.max(0, gradientCenter - 16);
+      const gradientEnd = Math.min(100, gradientCenter + 12);
       beam.dataset.traceProgress = normalizedProgress.toFixed(4);
       beam.dataset.traceMotion = motion;
       gradientRef.current?.setAttribute("y1", gradientStart.toFixed(2));
@@ -68,6 +69,28 @@ export function SiteTracingBeam() {
         window.cancelAnimationFrame(animationFrame);
         animationFrame = null;
       }
+    };
+
+    const clearIdleTimer = () => {
+      if (idleTimer !== null) {
+        window.clearTimeout(idleTimer);
+        idleTimer = null;
+      }
+    };
+
+    const settleIdle = () => {
+      idleTimer = null;
+      stopAnimation();
+      currentProgress = targetProgress;
+      renderProgress(currentProgress, motionQuery.matches ? "reduced" : "idle");
+      beam.dataset.traceVisibility = "idle";
+    };
+
+    const revealForScroll = () => {
+      if (!pageVisible) return;
+      clearIdleTimer();
+      beam.dataset.traceVisibility = "active";
+      idleTimer = window.setTimeout(settleIdle, TRACE_IDLE_DELAY_MS);
     };
 
     const animate = () => {
@@ -106,13 +129,23 @@ export function SiteTracingBeam() {
       }
     };
 
+    const handleScroll = () => {
+      revealForScroll();
+      scheduleProgress();
+    };
+
     const handleVisibilityChange = () => {
       pageVisible = document.visibilityState === "visible";
       if (!pageVisible) {
+        clearIdleTimer();
         stopAnimation();
+        beam.dataset.traceVisibility = "idle";
         renderProgress(currentProgress, "paused");
       } else {
-        scheduleProgress();
+        targetProgress = readProgress();
+        currentProgress = targetProgress;
+        beam.dataset.traceVisibility = "idle";
+        renderProgress(currentProgress, motionQuery.matches ? "reduced" : "idle");
       }
     };
 
@@ -125,16 +158,19 @@ export function SiteTracingBeam() {
     });
     resizeObserver.observe(document.body);
     resizeObserver.observe(beam);
-    window.addEventListener("scroll", scheduleProgress, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     window.addEventListener("resize", scheduleProgress);
     document.addEventListener("visibilitychange", handleVisibilityChange);
     motionQuery.addEventListener("change", scheduleProgress);
-    scheduleProgress();
+    targetProgress = readProgress();
+    currentProgress = targetProgress;
+    renderProgress(currentProgress, motionQuery.matches ? "reduced" : "idle");
 
     return () => {
+      clearIdleTimer();
       stopAnimation();
       resizeObserver.disconnect();
-      window.removeEventListener("scroll", scheduleProgress);
+      window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", scheduleProgress);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       motionQuery.removeEventListener("change", scheduleProgress);
@@ -148,6 +184,7 @@ export function SiteTracingBeam() {
       aria-hidden="true"
       data-trace-motion="pending"
       data-trace-progress="0.0000"
+      data-trace-visibility="idle"
     >
       <svg
         className="site-tracing-beam__path"
@@ -163,25 +200,30 @@ export function SiteTracingBeam() {
             x1="0"
             x2="0"
             y1="0"
-            y2="23"
+            y2="12"
           >
             <stop offset="0" stopColor="var(--color-accent)" stopOpacity="0" />
-            <stop offset="0" stopColor="var(--color-accent)" />
-            <stop offset="0.325" stopColor="var(--color-accent-signal)" />
+            <stop offset="0.18" stopColor="var(--color-accent)" stopOpacity="0.76" />
+            <stop offset="0.54" stopColor="var(--color-accent-signal)" />
+            <stop
+              offset="0.82"
+              stopColor="var(--color-trace-terminal)"
+              stopOpacity="0.72"
+            />
             <stop offset="1" stopColor="var(--color-trace-terminal)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path className="site-tracing-beam__track" d={TRACE_PATH} />
+        <path className="site-tracing-beam__track" d={SITE_TRACE_PATH} />
         <path
           className="site-tracing-beam__progress"
-          d={TRACE_PATH}
+          d={SITE_TRACE_PATH}
           stroke="url(#site-tracing-beam-gradient)"
         />
       </svg>
       <span
         ref={headRef}
         className="site-tracing-beam__head"
-        style={{ left: 0, top: 0, willChange: "transform" }}
+        style={{ left: 0, top: 0 }}
       >
         <span />
       </span>

@@ -61,7 +61,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.equal((html.match(/class="site-tracing-beam"/g) ?? []).length, 1);
   assert.match(
     html,
-    /<aside(?=[^>]*class="site-tracing-beam")(?=[^>]*aria-hidden="true")(?=[^>]*data-trace-progress="0\.0000")[^>]*>/,
+    /<aside(?=[^>]*class="site-tracing-beam")(?=[^>]*aria-hidden="true")(?=[^>]*data-trace-progress="0\.0000")(?=[^>]*data-trace-visibility="idle")[^>]*>/,
   );
   assert.match(
     html,
