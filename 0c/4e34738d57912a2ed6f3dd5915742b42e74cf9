@@ -1,0 +1,81 @@
+.gitignore
+  s_b4f417c6002d5e::t_91e68c45996053 46-49
+README.md
+  s_b8fe5d151693ee::t_74750b815ec666 35-36,64-65,83-101,116,122
+README_zh.md
+  s_b8fe5d151693ee::t_a3db776919f84e 33-34,62-63,80-95,110,116
+app/components/TravelMap.tsx
+  s_b8fe5d151693ee::t_f2cc6aedb7f4fe 1-264
+app/data/travel.generated.json
+  s_b8fe5d151693ee::t_caca0d7df32985 1-730
+app/globals.css
+  s_b8fe5d151693ee::t_782504f045a00b 468-469,471,474-484,487,497-539,544-550,553,555-556,758-759,761-762,766-808,812-829,831-833,835-909,911-912,915-926,928-943,946-1027,1030-1073,2261,2646-2678,2828-2831,2840-2841
+app/page.tsx
+  s_b8fe5d151693ee::t_0466d00c23c240 4,89-113,134-135,139
+data/private/README.md
+  s_b8fe5d151693ee::t_7e894f8f0c95d9 1-35
+package.json
+  s_b4f417c6002d5e::t_ba20ec59997fc5 14,19-20
+public/assets/travel-world-solid.svg
+  s_b8fe5d151693ee::t_ad4367fc532d9a 1
+scripts/build-airport-catalog.mjs
+  s_b4f417c6002d5e::t_b12db737a46de5 1-22
+scripts/data/airports.iata.v1.json
+  s_b8fe5d151693ee::t_c4076abc732fdc 1
+scripts/generate-travel-map-base.mjs
+  s_b8fe5d151693ee::t_7bd2eef01dca48 1-55
+scripts/lib/airport-catalog.mjs
+  s_b4f417c6002d5e::t_ea4fdaf29a5e28 1-76
+scripts/lib/airport-schema.mjs
+  s_b8fe5d151693ee::t_d27ab53d9f86a0 1-10
+scripts/lib/csv-table.mjs
+  s_b4f417c6002d5e::t_bdebb5f3d415eb 1-42
+scripts/lib/rfc4180.mjs
+  s_b4f417c6002d5e::t_938e8c971aac90 1-129
+scripts/lib/travel-data.mjs
+  s_b8fe5d151693ee::t_a4bcc376d804bb 1-244
+scripts/sync-travel-data.mjs
+  s_b4f417c6002d5e::t_37fd7a8b9453e4 1-23
+tests/browser-interactions.test.mjs
+  s_b8fe5d151693ee::t_80651d26adce7b 13-17,169-241,428-436,440,444-445,467-472,595,600-601,604-610,659,661-663,665-669,704-709,711,719-731,739-763,770-771,782-814,821-912,1038
+tests/browser-release-gate.test.mjs
+  s_b8fe5d151693ee::t_9a7e36b681f1a4 15-19,229-231,289,294-295,303-377,531-536,538-592,595-596,598,987
+tests/browser-resilience.test.mjs
+  s_b8fe5d151693ee::t_36340999cc5157 14-17,291,302,307-308,318-349,423-427,436-451
+tests/generated-travel-contract.mjs
+  s_b8fe5d151693ee::t_68a9e622e1277b 1-13
+tests/github-pages-export.test.mjs
+  s_b8fe5d151693ee::t_3450a1cd1e3618 78
+tests/rendered-html.test.mjs
+  s_b8fe5d151693ee::t_f8daa5ff9404d8 5-6,207-212,217-223,239,273-351,408
+tests/scroll-performance-contract.test.mjs
+  s_b8fe5d151693ee::t_0bad08aaae6bc9 12-13,16-20,25-34,39-42,56,58-62,65-68,70-85,87
+tests/travel-data.test.mjs
+  s_b8fe5d151693ee::t_51f744f2780732 1-269
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "0c4e34738d57912a2ed6f3dd5915742b42e74cf9",
+  "prompts": {},
+  "sessions": {
+    "s_b4f417c6002d5e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc6fb-cc5e-78f2-8cd8-d13553a47804",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_b8fe5d151693ee": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc6f4-f44e-7e01-bf64-f8af0f3a1ee5",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
