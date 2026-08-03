@@ -32,6 +32,7 @@ export function Navigation() {
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const firstNavLinkRef = useRef<HTMLAnchorElement>(null);
+  const focusFirstLinkOnOpenRef = useRef(false);
 
   const syncActiveFromViewport = useCallback(() => {
     if (navigationTargetRef.current) return;
@@ -249,9 +250,17 @@ export function Navigation() {
   }, [menuOpen]);
 
   useEffect(() => {
-    if (!menuOpen) return;
+    if (!menuOpen || !focusFirstLinkOnOpenRef.current) return;
     const frame = window.requestAnimationFrame(() => firstNavLinkRef.current?.focus({ preventScroll: true }));
     return () => window.cancelAnimationFrame(frame);
+  }, [menuOpen]);
+
+  const toggleMenu = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    const nextOpen = !menuOpen;
+    // Keyboard and assistive-technology clicks report detail=0. Pointer users
+    // keep their current focus instead of receiving a synthetic link focus.
+    focusFirstLinkOnOpenRef.current = nextOpen && event.detail === 0;
+    setMenuOpen(nextOpen);
   }, [menuOpen]);
 
   return (
@@ -295,7 +304,7 @@ export function Navigation() {
         aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
         aria-expanded={menuOpen}
         aria-controls="primary-navigation"
-        onClick={() => setMenuOpen((open) => !open)}
+        onClick={toggleMenu}
       >
         <span className="system-mark-dots" aria-hidden="true"><i /><i /><i /><i /></span>
       </button>

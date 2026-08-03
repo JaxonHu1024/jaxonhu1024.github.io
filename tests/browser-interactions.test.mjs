@@ -826,6 +826,78 @@ test("touch-only users return to the resting control style after tapping", { tim
   }
 });
 
+test("mobile navigation separates pointer focus from keyboard focus", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 440, height: 956 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
+    ));
+
+    const menuButton = page.locator('button[aria-controls="primary-navigation"]');
+    const aboutLink = page.locator('#primary-navigation a[href="#about"]');
+
+    await menuButton.tap();
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "true"
+    ));
+    assert.equal(
+      await page.locator("#primary-navigation a:focus").count(),
+      0,
+      "pointer-open moved focus into the navigation",
+    );
+    assert.equal(
+      await page.locator("#primary-navigation a:focus-visible").count(),
+      0,
+      "pointer-open exposed a navigation focus ring",
+    );
+
+    await menuButton.tap();
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "false"
+    ));
+
+    await menuButton.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "true"
+      && document.activeElement?.getAttribute("href") === "#about"
+    ));
+    const keyboardFocus = await aboutLink.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return {
+        boxShadow: style.boxShadow,
+        focusVisible: element.matches(":focus-visible"),
+        outlineStyle: style.outlineStyle,
+      };
+    });
+    assert.equal(keyboardFocus.focusVisible, true, "keyboard-open did not focus the first link visibly");
+    assert.equal(keyboardFocus.outlineStyle, "none", "mobile link kept the clipped external outline");
+    assert.match(
+      keyboardFocus.boxShadow,
+      /rgb\(79, 247, 213\).*0px 0px 0px 2px inset/,
+      "mobile link did not receive the inset focus ring",
+    );
+
+    await page.keyboard.press("Escape");
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "false"
+      && document.activeElement?.getAttribute("aria-controls") === "primary-navigation"
+    ));
+  } finally {
+    await context.close();
+  }
+});
+
 test("keyboard section navigation keeps logical focus without a full-width landmark outline", { timeout: 10_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },

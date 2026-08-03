@@ -2033,6 +2033,10 @@ html[data-page-active="false"] .contact-marquee-track {
     transition: none;
     white-space: normal;
   }
+  .nav-scroll a:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px var(--color-accent);
+  }
   .nav-scroll a:nth-child(2n) { border-right: 0; }
   .nav-scroll a:last-of-type {
     grid-column: 1 / -1;
