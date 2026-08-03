@@ -35,9 +35,10 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
     /AI Engineer specializing in AI agents, AIGC, VLMs, LLMs, and autonomous driving\./,
   );
   assert.match(html, /property="og:title" content="Jaxon \| AI Engineer"/);
-  assert.match(html, /name="twitter:card" content="summary"/);
+  assert.match(html, /name="twitter:card" content="summary_large_image"/);
   assert.match(html, /name="twitter:title" content="Jaxon \| AI Engineer"/);
-  assert.doesNotMatch(html, /og:image|twitter:image|og\.png|summary_large_image/);
+  assert.match(html, /property="og:image" content="https:\/\/jaxonhu1024\.github\.io\/assets\/jaxon-signal-og\.png"/);
+  assert.match(html, /name="twitter:image" content="https:\/\/jaxonhu1024\.github\.io\/assets\/jaxon-signal-og\.png"/);
   assert.match(html, /<meta name="theme-color" content="#05070B"\/>/);
   assert.match(
     html,
@@ -51,8 +52,8 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
     ],
     "Vinext's default viewport must be followed by the documented viewport-fit compatibility override",
   );
-  assert.match(html, /rel="canonical" href="http:\/\/localhost:3000\/"/);
-  assert.match(html, /property="og:url" content="http:\/\/localhost:3000"/);
+  assert.match(html, /rel="canonical" href="https:\/\/jaxonhu1024\.github\.io\/"/);
+  assert.match(html, /property="og:url" content="https:\/\/jaxonhu1024\.github\.io"/);
   assert.doesNotMatch(
     html,
     /AI ALGORITHM ENGINEER|The body achieves what the mind believes|Turning model capability|Models, tools, and decisions connected|View research/,
@@ -62,7 +63,10 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
     html,
     /<aside(?=[^>]*class="site-tracing-beam")(?=[^>]*aria-hidden="true")(?=[^>]*data-trace-progress="0\.0000")[^>]*>/,
   );
-  assert.match(html, /<main class="site-canvas" id="content">/);
+  assert.match(
+    html,
+    /<main(?=[^>]*class="site-canvas")(?=[^>]*id="content")(?=[^>]*tabindex="-1")[^>]*>/,
+  );
   assert.doesNotMatch(html, /hero-terminal|agentctl compile|BUILD READY/);
   assert.doesNotMatch(html, /terminal-button|class="button-arrow"/);
   assert.equal((html.match(/class="paper-link"/g) ?? []).length, 2);
@@ -80,6 +84,8 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /DAMO Academy/);
   assert.match(html, /FOUNDATIONS/);
   assert.match(html, /FOUNDATIONS\.INDEX/);
+  assert.match(html, /section-kicker section-kicker--compact reveal/);
+  assert.doesNotMatch(html, /section-footer|EXPERIENCE LAYER|FOUNDATION LAYER|RESEARCH LAYER/);
   for (const id of ["hero", "about", "experience", "research", "foundations", "contact"]) {
     assert.match(
       html,
@@ -97,6 +103,7 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
     /For project collaborations, technical consulting, or career opportunities, feel free to reach out\./,
   );
   assert.doesNotMatch(html, /OPEN CHANNEL|SEND A|DIRECT CONTACT/);
+  assert.match(html, new RegExp(`JAXON \/ (?:<!-- -->)?${new Date().getUTCFullYear()}`));
   assert.match(html, /https:\/\/github\.com\/JaxonHu1024/);
   assert.match(html, /https:\/\/x\.com\/HuEnzo33232/);
   assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jaxon-hu-10977a221/);
@@ -149,9 +156,12 @@ test("renders an exportable 404 route with dedicated metadata", async () => {
   assert.equal(response.status, 200);
 
   const html = await response.text();
-  assert.match(html, /<title>404 — Signal Lost \| JAXON<\/title>/);
+  assert.match(html, /<title>404 - Signal Lost \| JAXON<\/title>/);
   assert.match(html, /<meta name="description" content="The requested route could not be found on JAXON\."\/>/);
   assert.match(html, /<meta name="robots" content="noindex, nofollow"\/>/);
+  assert.doesNotMatch(html, /rel="canonical"/);
+  assert.doesNotMatch(html, /property="og:/);
+  assert.doesNotMatch(html, /name="twitter:/);
   assert.match(html, /ROUTE NOT FOUND_/);
 });
 
@@ -376,7 +386,7 @@ test("groups both Alibaba organizations under one company heading", async () => 
   );
 });
 
-test("orders About, Experience, Foundations, and Research with distinct layer indices", async () => {
+test("orders About, Experience, Foundations, and Research with distinct section rhythms", async () => {
   const response = await render();
   const html = await response.text();
 
@@ -392,9 +402,17 @@ test("orders About, Experience, Foundations, and Research with distinct layer in
       < html.indexOf('class="section research"'),
   );
   assert.doesNotMatch(html, /OPERATING CONTEXT/);
-  assert.match(html, /<b>02<\/b>\s*(?:<!-- -->)?\s*\/\/ EXPERIENCE LAYER/);
-  assert.match(html, /<b>03<\/b>\s*(?:<!-- -->)?\s*\/\/ FOUNDATION LAYER/);
-  assert.match(html, /<b>04<\/b>\s*(?:<!-- -->)?\s*\/\/ RESEARCH LAYER/);
+  assert.match(html, /<h2 class="section-kicker reveal" id="experience-title">/);
+  assert.match(
+    html,
+    /<h2 class="section-kicker section-kicker--compact reveal" id="foundations-title">/,
+  );
+  assert.match(html, /<h2 class="section-kicker reveal" id="research-title">/);
+  assert.match(
+    html,
+    /<h2 class="section-kicker section-kicker--compact reveal" id="contact-title">/,
+  );
+  assert.doesNotMatch(html, /section-footer|EXPERIENCE LAYER|FOUNDATION LAYER|RESEARCH LAYER/);
   for (const group of ["AI SPECIALTIES", "LANGUAGES", "PLATFORM"]) {
     assert.match(html, new RegExp(`<dt>${group.replace("/", "\\/")}<\\/dt>`));
   }
@@ -451,19 +469,19 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
     "--violet",
     "--coral",
     "--color-background",
-    "--color-surface",
     "--color-foreground",
     "--color-foreground-secondary",
     "--color-foreground-muted",
     "--color-foreground-weak",
-    "--color-muted",
     "--color-line",
     "--color-line-strong",
     "--color-line-medium",
     "--color-line-subtle",
     "--color-accent",
     "--color-accent-signal",
-    "--color-status-active",
+    "--color-sequence-verify",
+    "--color-trace-terminal",
+    "--color-danger",
     "--surface-header",
     "--surface-panel",
     "--surface-feedback",
@@ -475,7 +493,6 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
     "--duration-instant",
     "--duration-fast",
     "--duration-normal",
-    "--duration-reveal",
     "--layout-max-width",
     "--layout-gutter",
     "--layout-inline-start",
@@ -535,7 +552,6 @@ test("defines semantic visual tokens and safe-area-aware dark theming", async ()
     [".site-header", "--surface-header"],
     [".paper-link", "--color-accent"],
     [".hero-portrait-frame", "--color-background"],
-    [".section-footer-index", "--color-foreground-weak"],
     [".contact-socials a", "--color-foreground"],
     [".mobile-load-feedback", "--surface-feedback"],
   ]) {

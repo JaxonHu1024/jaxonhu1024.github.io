@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
 import { HeroInteractionController } from "./components/HeroInteractionController";
 import { MobileLoadFeedback } from "./components/MobileLoadFeedback";
 import { SiteTracingBeam } from "./components/SiteTracingBeam";
@@ -15,34 +14,38 @@ export const viewport: Viewport = {
   width: "device-width",
 };
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const origin = `${protocol}://${host}`;
-  const title = "Jaxon | AI Engineer";
-  const description = "AI Engineer specializing in AI agents, AIGC, VLMs, LLMs, and autonomous driving.";
+const siteOrigin = "https://jaxonhu1024.github.io";
+const title = "Jaxon | AI Engineer";
+const description = "AI Engineer specializing in AI agents, AIGC, VLMs, LLMs, and autonomous driving.";
 
-  return {
-    metadataBase: new URL(origin),
+export const metadata: Metadata = {
+  metadataBase: new URL(siteOrigin),
+  title,
+  description,
+  alternates: { canonical: "/" },
+  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  robots: { index: true, follow: true },
+  openGraph: {
     title,
     description,
-    alternates: { canonical: "/" },
-    icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
-    robots: { index: true, follow: true },
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      url: origin,
-    },
-    twitter: {
-      card: "summary",
-      title,
-      description,
-    },
-  };
-}
+    images: [
+      {
+        url: "/assets/jaxon-signal-og.png",
+        width: 1732,
+        height: 908,
+        alt: "JAXON signal field",
+      },
+    ],
+    type: "website",
+    url: siteOrigin,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title,
+    description,
+    images: ["/assets/jaxon-signal-og.png"],
+  },
+};
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (

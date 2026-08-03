@@ -88,6 +88,13 @@ export function Navigation() {
   }, [syncActiveFromViewport]);
 
   useEffect(() => {
+    const header = headerRef.current;
+    header?.setAttribute("data-navigation-ready", "true");
+
+    return () => header?.removeAttribute("data-navigation-ready");
+  }, []);
+
+  useEffect(() => {
     let frame = 0;
     const updateActiveSection = () => {
       frame = 0;
@@ -292,61 +299,6 @@ export function Navigation() {
       >
         <span className="system-mark-dots" aria-hidden="true"><i /><i /><i /><i /></span>
       </button>
-      <noscript>
-        <style>{`
-          @media (max-width: 900px) {
-            .site-header .system-mark-trigger {
-              display: none !important;
-            }
-
-            .site-header .nav-scroll {
-              position: absolute !important;
-              top: calc(100% + 6px) !important;
-              right: 0 !important;
-              left: 0 !important;
-              display: grid !important;
-              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-              max-height: none !important;
-              overflow-x: hidden !important;
-              overflow-y: hidden !important;
-              border: 1px solid rgba(233, 255, 249, .19) !important;
-              background: var(--color-background) !important;
-              clip-path: none !important;
-              opacity: 1 !important;
-              pointer-events: auto !important;
-              transform: none !important;
-              visibility: visible !important;
-              scrollbar-width: thin;
-            }
-
-            .site-header .nav-scroll a {
-              min-height: 44px !important;
-              padding: 0 14px !important;
-              border-right: 1px solid rgba(233, 255, 249, .1) !important;
-              border-bottom: 0 !important;
-              font-size: 10px !important;
-              opacity: 1 !important;
-              transform: none !important;
-              transition: none !important;
-              white-space: normal;
-            }
-
-            .site-header .nav-scroll a:nth-child(-n + 4) {
-              border-bottom: 1px solid rgba(233, 255, 249, .1) !important;
-            }
-
-            .site-header .nav-scroll a:nth-child(2n) {
-              border-right: 0 !important;
-            }
-
-            .site-header .nav-scroll a:last-of-type {
-              grid-column: 1 / -1;
-              border-right: 0 !important;
-              border-bottom: 0 !important;
-            }
-          }
-        `}</style>
-      </noscript>
     </header>
   );
 }

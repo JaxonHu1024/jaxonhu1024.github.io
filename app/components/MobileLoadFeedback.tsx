@@ -13,6 +13,10 @@ const feedbackCopy: Record<FeedbackState, string> = {
   error: "Some visuals failed. Content remains available.",
 };
 
+const isCriticalImage = (image: HTMLImageElement) => (
+  image.getAttribute("fetchpriority")?.toLowerCase() === "high"
+);
+
 export function MobileLoadFeedback() {
   const [state, setState] = useState<FeedbackState>("loading");
   const [visible, setVisible] = useState(false);
@@ -52,7 +56,7 @@ export function MobileLoadFeedback() {
     };
 
     const handleResourceError = (event: Event) => {
-      if (event.target instanceof HTMLImageElement) {
+      if (event.target instanceof HTMLImageElement && isCriticalImage(event.target)) {
         showError();
       }
     };
@@ -109,7 +113,7 @@ export function MobileLoadFeedback() {
 
     const fontReadiness = document.fonts?.ready ?? Promise.resolve();
     const imageReadiness = Array.from(document.images)
-      .filter((image) => image.loading !== "lazy")
+      .filter(isCriticalImage)
       .map(waitForImage);
 
     void Promise.all([fontReadiness, ...imageReadiness])

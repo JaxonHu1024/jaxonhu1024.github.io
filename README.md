@@ -16,8 +16,8 @@ intentionally never committed; everything ships from source.
 | UI           | React 19 + TypeScript                               |
 | Framework    | Next.js 16 App Router, compiled through **vinext**  |
 | Build        | Vite 8 on the Cloudflare Workers runtime (Wrangler) |
-| Styling      | Tailwind CSS 4 + hand-authored `globals.css`        |
-| Type         | Oxanium (variable) · IBM Plex Mono                  |
+| Styling      | Tailwind CSS 4 + hand-authored component CSS        |
+| Type         | Oxanium Variable · Geist Variable · IBM Plex Mono   |
 | Deploy       | Static export → GitHub Actions → GitHub Pages       |
 
 ## Highlights
@@ -30,8 +30,8 @@ intentionally never committed; everything ships from source.
   input (wheel / touch / key) instantly cancels, with active-section tracking.
 - **Considered a11y.** Skip link, focusable landmark sections, and ARIA labelling
   throughout.
-- **Dynamic metadata.** SEO and Open Graph tags are derived per request from the
-  forwarded host, so the same source serves any origin.
+- **Static release metadata.** Canonical, Open Graph, Twitter Card, robots, and
+  sitemap output are deterministic for the GitHub Pages origin.
 
 ## Prerequisites
 
@@ -53,11 +53,14 @@ Open <http://localhost:3000>.
 | `npm run dev`                   | Start the local dev server at `http://localhost:3000`.        |
 | `npm run build`                 | Produce a production build.                                   |
 | `npm run start`                 | Serve the production build locally.                           |
+| `npm run typecheck`             | Run the repository-wide TypeScript contract.                  |
 | `npm run lint`                  | Run ESLint across the source.                                 |
-| `npm test`                      | Build, then run rendered-HTML and cancellable-scroll tests.   |
+| `npm test`                      | Build, then run source, SSR, navigation, and motion tests.    |
 | `npm run export:github-pages`   | Build and export the static Pages bundle to `github-pages-dist/`. |
 | `npm run test:export`           | Check the exported bundle's integrity.                        |
-| `npm run verify`                | Full gate: lint → test → export → export checks.              |
+| `npm run test:browser`          | Run browser, eight-viewport, and Web Vitals release checks.   |
+| `npm run optimize:svg`          | Re-run deterministic SVGO compression for organization marks. |
+| `npm run verify`                | Full gate: typecheck → lint → tests → export → browser checks. |
 
 ## Verification
 
@@ -65,9 +68,9 @@ Open <http://localhost:3000>.
 npm run verify
 ```
 
-This runs linting, a production build, server-rendered HTML checks, a static
-GitHub Pages export, and export-integrity checks. To create only the deployable
-artifact:
+This runs TypeScript and lint checks, a production build, server-rendered HTML
+checks, a static GitHub Pages export, eight exact viewport checks, and mobile
+Core Web Vitals validation. To create only the deployable artifact:
 
 ```bash
 npm run export:github-pages
@@ -85,10 +88,10 @@ Every push to `main` runs [`.github/workflows/deploy-pages.yml`](./.github/workf
 ## Project structure
 
 ```
-app/                 Page source, React components, and styling
-├─ components/        Navigation, HeroSignalGraphic, ResearchVisual
-├─ lib/               Cancellable-scroll helper
-├─ layout.tsx         Root layout + dynamic metadata
+app/                  Page source, React components, and styling
+├─ components/        Navigation, pixel portrait, and research visuals
+├─ lib/               Cancellable-scroll and motion helpers
+├─ layout.tsx         Root layout + static release metadata
 ├─ page.tsx           Single-page portfolio content
 └─ globals.css        Dark signal design system
 public/               Source-controlled images and metadata assets

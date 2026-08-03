@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { pointOnSiteTrace } from "@/app/lib/motion-performance";
+
 const TRACE_EPSILON = 0.0005;
 const TRACE_EASING = 0.18;
 const TRACE_PATH = "M 10 0 V 4 L 1 7 V 80 L 19 83 V 100";
@@ -13,6 +15,7 @@ function clampProgress(value: number) {
 export function SiteTracingBeam() {
   const beamRef = useRef<HTMLElement>(null);
   const gradientRef = useRef<SVGLinearGradientElement>(null);
+  const headRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     const beam = beamRef.current;
@@ -23,6 +26,17 @@ export function SiteTracingBeam() {
     let targetProgress = 0;
     let animationFrame: number | null = null;
     let pageVisible = document.visibilityState === "visible";
+    let beamSize = { width: 1, height: 1 };
+
+    const syncBeamSize = (width: number, height: number) => {
+      beamSize = {
+        width: Math.max(1, width),
+        height: Math.max(1, height),
+      };
+    };
+
+    const initialRect = beam.getBoundingClientRect();
+    syncBeamSize(initialRect.width, initialRect.height);
 
     const readProgress = () => {
       const scrollRange = Math.max(
@@ -34,14 +48,19 @@ export function SiteTracingBeam() {
 
     const renderProgress = (progress: number, motion: "idle" | "responsive" | "reduced" | "paused") => {
       const normalizedProgress = clampProgress(progress);
-      const gradientCenter = 5 + normalizedProgress * 90;
+      const tracePoint = pointOnSiteTrace(normalizedProgress);
+      const gradientCenter = tracePoint.y;
       const gradientStart = Math.max(0, gradientCenter - 24);
       const gradientEnd = Math.min(100, gradientCenter + 18);
-      beam.style.setProperty("--site-trace-progress", normalizedProgress.toFixed(4));
       beam.dataset.traceProgress = normalizedProgress.toFixed(4);
       beam.dataset.traceMotion = motion;
       gradientRef.current?.setAttribute("y1", gradientStart.toFixed(2));
       gradientRef.current?.setAttribute("y2", gradientEnd.toFixed(2));
+      const headX = tracePoint.x / 20 * beamSize.width;
+      const headY = tracePoint.y / 100 * beamSize.height;
+      if (headRef.current) {
+        headRef.current.style.transform = `translate3d(${headX.toFixed(2)}px, ${headY.toFixed(2)}px, 0) translate(-50%, -50%)`;
+      }
     };
 
     const stopAnimation = () => {
@@ -97,8 +116,15 @@ export function SiteTracingBeam() {
       }
     };
 
-    const resizeObserver = new ResizeObserver(scheduleProgress);
+    const resizeObserver = new ResizeObserver((entries) => {
+      const beamEntry = entries.find((entry) => entry.target === beam);
+      if (beamEntry) {
+        syncBeamSize(beamEntry.contentRect.width, beamEntry.contentRect.height);
+      }
+      scheduleProgress();
+    });
     resizeObserver.observe(document.body);
+    resizeObserver.observe(beam);
     window.addEventListener("scroll", scheduleProgress, { passive: true });
     window.addEventListener("resize", scheduleProgress);
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -142,7 +168,7 @@ export function SiteTracingBeam() {
             <stop offset="0" stopColor="var(--color-accent)" stopOpacity="0" />
             <stop offset="0" stopColor="var(--color-accent)" />
             <stop offset="0.325" stopColor="var(--color-accent-signal)" />
-            <stop offset="1" stopColor="var(--color-status-active)" stopOpacity="0" />
+            <stop offset="1" stopColor="var(--color-trace-terminal)" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path className="site-tracing-beam__track" d={TRACE_PATH} />
@@ -152,7 +178,11 @@ export function SiteTracingBeam() {
           stroke="url(#site-tracing-beam-gradient)"
         />
       </svg>
-      <span className="site-tracing-beam__head">
+      <span
+        ref={headRef}
+        className="site-tracing-beam__head"
+        style={{ left: 0, top: 0, willChange: "transform" }}
+      >
         <span />
       </span>
     </aside>

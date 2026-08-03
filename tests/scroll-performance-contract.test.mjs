@@ -69,7 +69,14 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
   assert.match(component, /aria-hidden="true"/);
   assert.match(component, /window\.addEventListener\("scroll", scheduleProgress, \{ passive: true \}\)/);
   assert.match(component, /window\.requestAnimationFrame\(animate\)/);
-  assert.match(component, /new ResizeObserver\(scheduleProgress\)/);
+  assert.match(component, /new ResizeObserver\(\(entries\) =>/);
+  assert.match(component, /resizeObserver\.observe\(document\.body\)/);
+  assert.match(component, /resizeObserver\.observe\(beam\)/);
+  assert.match(component, /beamEntry\.contentRect/);
+  assert.match(component, /pointOnSiteTrace\(normalizedProgress\)/);
+  assert.match(component, /headRef\.current\.style\.transform/);
+  assert.doesNotMatch(component, /style\.setProperty\("--site-trace-progress"/);
+  assert.doesNotMatch(css, /--site-trace-progress/);
   assert.match(component, /prefers-reduced-motion: reduce/);
   assert.match(component, /visibilitychange/);
   assert.match(component, /window\.removeEventListener\("scroll", scheduleProgress\)/);
@@ -84,7 +91,7 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
   assert.match(component, /gradientRef\.current\?\.setAttribute\("y1"/);
   assert.match(component, /stopColor="var\(--color-accent\)" stopOpacity="0"/);
   assert.match(component, /stopColor="var\(--color-accent-signal\)"/);
-  assert.match(component, /stopColor="var\(--color-status-active\)" stopOpacity="0"/);
+  assert.match(component, /stopColor="var\(--color-trace-terminal\)" stopOpacity="0"/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.site-tracing-beam__progress/);
   assert.doesNotMatch(packageJson, /["'](?:motion|framer-motion)["']/);
   await assert.rejects(
@@ -98,6 +105,14 @@ test("keeps portrait motion cheap and the Experience guide fully static", async 
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const pixelCanvas = await readFile(
     new URL("../app/components/PixelatedCanvas.tsx", import.meta.url),
+    "utf8",
+  );
+  const pixelCanvasRuntime = await readFile(
+    new URL("../app/components/usePixelatedCanvas.ts", import.meta.url),
+    "utf8",
+  );
+  const pixelCanvasRenderer = await readFile(
+    new URL("../app/components/pixelated-canvas-renderer.ts", import.meta.url),
     "utf8",
   );
   const controller = await readFile(
@@ -114,22 +129,24 @@ test("keeps portrait motion cheap and the Experience guide fully static", async 
 
   assert.match(portraitCanvas, /touch-action:\s*pan-y pinch-zoom/);
   assert.doesNotMatch(css, /hero-terminal|agentctl|@keyframes\s+hero-terminal/);
-  assert.match(pixelCanvas, /new IntersectionObserver/);
-  assert.match(pixelCanvas, /document\.addEventListener\("visibilitychange"/);
-  assert.match(pixelCanvas, /event\.pointerType === "touch" && touchHandle !== null/);
-  assert.match(pixelCanvas, /touchHandle\?\.setPointerCapture\(event\.pointerId\)/);
-  assert.match(pixelCanvas, /touchHandle\?\.addEventListener\("pointercancel"/);
-  assert.match(pixelCanvas, /touchHandle\?\.addEventListener\("lostpointercapture"/);
-  assert.match(pixelCanvas, /touchHandle\?\.removeEventListener\("pointercancel"/);
-  assert.match(pixelCanvas, /touchHandle\?\.removeEventListener\("lostpointercapture"/);
+  assert.match(pixelCanvas, /usePixelatedCanvas\(\{ \.\.\.props, canvasRef \}\)/);
+  assert.match(pixelCanvasRuntime, /new IntersectionObserver/);
+  assert.match(pixelCanvasRuntime, /document\.addEventListener\("visibilitychange"/);
+  assert.match(pixelCanvasRuntime, /event\.pointerType === "touch" && touchHandle !== null/);
+  assert.match(pixelCanvasRuntime, /touchHandle\?\.setPointerCapture\(event\.pointerId\)/);
+  assert.match(pixelCanvasRuntime, /touchHandle\?\.addEventListener\("pointercancel"/);
+  assert.match(pixelCanvasRuntime, /touchHandle\?\.addEventListener\("lostpointercapture"/);
+  assert.match(pixelCanvasRuntime, /touchHandle\?\.removeEventListener\("pointercancel"/);
+  assert.match(pixelCanvasRuntime, /touchHandle\?\.removeEventListener\("lostpointercapture"/);
   assert.match(css, /\.hero-portrait-touch-handle\s*\{[^}]*min-height:\s*44px[^}]*touch-action:\s*none/s);
-  assert.match(pixelCanvas, /new ResizeObserver/);
-  assert.match(pixelCanvas, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
-  assert.match(pixelCanvas, /function timeAdjustedFactor/);
-  assert.match(pixelCanvas, /const nextBaseLayer = document\.createElement\("canvas"\)/);
-  assert.match(pixelCanvas, /context\.drawImage\(\s*baseLayer/s);
-  assert.match(pixelCanvas, /sample\.drop \? 1 - influence : 1/);
-  assert.doesNotMatch(pixelCanvas, /if \(sample\.drop \|\| sample\.a <= 0\)/);
+  assert.match(pixelCanvasRuntime, /new ResizeObserver/);
+  assert.match(pixelCanvasRuntime, /function timeAdjustedFactor/);
+  assert.match(pixelCanvasRuntime, /createPixelatedCanvasRenderer\(\{/);
+  assert.match(pixelCanvasRenderer, /Math\.min\(window\.devicePixelRatio \|\| 1, 2\)/);
+  assert.match(pixelCanvasRenderer, /const nextBaseLayer = document\.createElement\("canvas"\)/);
+  assert.match(pixelCanvasRenderer, /context\.drawImage\(\s*baseLayer/s);
+  assert.match(pixelCanvasRenderer, /sample\.drop \? 1 - influence : 1/);
+  assert.doesNotMatch(pixelCanvasRenderer, /if \(sample\.drop \|\| sample\.a <= 0\)/);
   assert.match(page, /<div className="experience-log">/);
   assert.doesNotMatch(`${page}\n${css}\n${controller}`, /experience-scan-(?:track|fill|cursor)/);
   assert.doesNotMatch(`${css}\n${controller}`, /--experience-trace-|data-trace-/);
@@ -153,6 +170,10 @@ test("renders the Aceternity pixel portrait and removes the signal and CLI imple
     new URL("../app/components/PixelatedCanvas.tsx", import.meta.url),
     "utf8",
   );
+  const pixelCanvasRuntime = await readFile(
+    new URL("../app/components/usePixelatedCanvas.ts", import.meta.url),
+    "utf8",
+  );
   const portrait = await readFile(
     new URL("../app/components/HeroPixelPortrait.tsx", import.meta.url),
     "utf8",
@@ -162,9 +183,9 @@ test("renders the Aceternity pixel portrait and removes the signal and CLI imple
 
   assert.match(pixelCanvas, /^"use client";/);
   assert.match(pixelCanvas, /export function PixelatedCanvas/);
-  assert.match(pixelCanvas, /requestAnimationFrame/);
-  assert.match(pixelCanvas, /prefers-reduced-motion: reduce/);
-  assert.doesNotMatch(pixelCanvas, /setInterval|<animate/);
+  assert.match(pixelCanvasRuntime, /requestAnimationFrame/);
+  assert.match(pixelCanvasRuntime, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(pixelCanvasRuntime, /setInterval|<animate/);
   assert.match(portrait, /\/assets\/jaxon-sea-portrait\.webp/);
   assert.match(portrait, /<PixelatedCanvas/);
   assert.match(portrait, /width="1200"/);

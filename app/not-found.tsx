@@ -1,4 +1,4 @@
-import Link from "next/link";
+/* eslint-disable @next/next/no-html-link-for-pages -- The exported 404 must use document navigation because GitHub Pages does not serve RSC routes. */
 
 export default function NotFound() {
   return (
@@ -9,10 +9,10 @@ export default function NotFound() {
         <p className="not-found-copy">
           The requested coordinate is outside this system.
         </p>
-        <Link className="not-found-link" href="/">
+        <a className="not-found-link" href="/">
           <span>RETURN HOME</span>
           <span className="not-found-link-arrow" aria-hidden="true">→</span>
-        </Link>
+        </a>
       </div>
       <p className="not-found-signature" aria-hidden="true">JAXON / RECOVERY CHANNEL</p>
     </main>

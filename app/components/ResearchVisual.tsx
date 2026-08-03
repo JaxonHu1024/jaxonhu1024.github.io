@@ -2,6 +2,8 @@
 
 import { useEffect, useRef } from "react";
 
+import { createFrameRateGate, getResearchFrameRate } from "@/app/lib/motion-performance";
+
 type Variant = "road" | "wave";
 type Point = readonly [number, number];
 
@@ -66,25 +68,49 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
     if (!canvas) return;
 
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
     let frame = 0;
     let visible = true;
     let reducedMotion = motionQuery.matches;
+    let frameRate = getResearchFrameRate(window.innerWidth);
+    let frameRateGate = createFrameRateGate(frameRate);
+    let canvasSize = { width: 1, height: 1, dpr: 1 };
+
+    const syncCanvasSize = (width: number, height: number) => {
+      const nextFrameRate = getResearchFrameRate(window.innerWidth);
+      if (nextFrameRate !== frameRate) {
+        frameRate = nextFrameRate;
+        frameRateGate = createFrameRateGate(frameRate);
+      }
+      canvas.dataset.maxFps = String(frameRate);
+
+      const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
+      const nextWidth = Math.max(1, width);
+      const nextHeight = Math.max(1, height);
+      const nextBitmapWidth = Math.max(1, Math.floor(nextWidth * nextDpr));
+      const nextBitmapHeight = Math.max(1, Math.floor(nextHeight * nextDpr));
+      if (canvas.width !== nextBitmapWidth || canvas.height !== nextBitmapHeight) {
+        canvas.width = nextBitmapWidth;
+        canvas.height = nextBitmapHeight;
+      }
+      canvasSize = { width: nextWidth, height: nextHeight, dpr: nextDpr };
+    };
+
+    const initialRect = canvas.getBoundingClientRect();
+    syncCanvasSize(initialRect.width, initialRect.height);
 
     const render = (time = 0) => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const nextWidth = Math.max(1, Math.floor(rect.width * dpr));
-      const nextHeight = Math.max(1, Math.floor(rect.height * dpr));
-      if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
-        canvas.width = nextWidth;
-        canvas.height = nextHeight;
+      const shouldAnimate = visible && !reducedMotion && !document.hidden;
+      if (shouldAnimate && !frameRateGate.shouldRender(time)) {
+        frame = window.requestAnimationFrame(render);
+        return;
       }
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
+
+      const { width: w, height: h, dpr } = canvasSize;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.clearRect(0, 0, rect.width, rect.height);
-      const w = rect.width;
-      const h = rect.height;
+      ctx.clearRect(0, 0, w, h);
       const phase = reducedMotion ? 0 : time * 0.001;
 
       ctx.strokeStyle = canvasPalette.mint13;
@@ -178,7 +204,7 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
         });
       }
 
-      if (visible && !reducedMotion && !document.hidden) {
+      if (shouldAnimate) {
         frame = window.requestAnimationFrame(render);
       }
     };
@@ -195,16 +221,22 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
 
     const scheduleRender = () => {
       window.cancelAnimationFrame(frame);
+      frameRateGate.reset();
       if (syncMotionState() === "paused") return;
       frame = window.requestAnimationFrame(render);
     };
-    const observer = new ResizeObserver(scheduleRender);
-    observer.observe(canvas.parentElement ?? canvas);
+    const observer = new ResizeObserver(([entry]) => {
+      if (!entry) return;
+      syncCanvasSize(entry.contentRect.width, entry.contentRect.height);
+      scheduleRender();
+    });
+    observer.observe(canvas);
     const visibilityObserver = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
       if (visible) scheduleRender();
       else {
         window.cancelAnimationFrame(frame);
+        frameRateGate.reset();
         syncMotionState();
       }
     }, { threshold: 0.05 });
@@ -219,6 +251,7 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
       if (!document.hidden && visible) scheduleRender();
       else {
         window.cancelAnimationFrame(frame);
+        frameRateGate.reset();
         syncMotionState();
       }
     };

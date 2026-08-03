@@ -38,6 +38,7 @@ const papers = [
 ];
 
 const contactMessage = "For project collaborations, technical consulting, or career opportunities, feel free to reach out.";
+const currentYear = new Date().getUTCFullYear();
 
 const aboutFocus = {
   label: "Focus",
@@ -78,7 +79,7 @@ export default function Home() {
         Skip to content
       </a>
       <Navigation />
-      <main className="site-canvas" id="content">
+      <main className="site-canvas" id="content" tabIndex={-1}>
         <section className="section hero" id="hero" aria-labelledby="hero-title" tabIndex={-1}>
           <div className="hero-layout">
             <header className="hero-copy">
@@ -216,10 +217,6 @@ export default function Home() {
               </div>
             </section>
           </div>
-          <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>02</b> {"// EXPERIENCE LAYER"}</span>
-            <span className="section-footer-rule" />
-          </p>
         </section>
 
         <section
@@ -228,10 +225,8 @@ export default function Home() {
           aria-labelledby="foundations-title"
           tabIndex={-1}
         >
-          <h2 className="section-kicker reveal" id="foundations-title">
+          <h2 className="section-kicker section-kicker--compact reveal" id="foundations-title">
             <span>FOUNDATIONS.INDEX</span>
-            <span className="kicker-rule" aria-hidden="true" />
-            <span className="square-end" aria-hidden="true" />
           </h2>
           <div className="foundations-grid reveal">
             <div className="education-column">
@@ -296,10 +291,6 @@ export default function Home() {
               </dl>
             </div>
           </div>
-          <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>03</b> {"// FOUNDATION LAYER"}</span>
-            <span className="section-footer-rule" />
-          </p>
         </section>
 
         <section
@@ -336,10 +327,6 @@ export default function Home() {
               </article>
             ))}
           </div>
-          <p className="section-footer reveal" aria-hidden="true">
-            <span className="section-footer-index"><b>04</b> {"// RESEARCH LAYER"}</span>
-            <span className="section-footer-rule" />
-          </p>
         </section>
 
         <section
@@ -349,10 +336,8 @@ export default function Home() {
           tabIndex={-1}
         >
           <div className="contact-inner">
-            <h2 className="section-kicker reveal" id="contact-title">
+            <h2 className="section-kicker section-kicker--compact reveal" id="contact-title">
               <span>CONTACT.CHANNEL</span>
-              <span className="kicker-rule" aria-hidden="true" />
-              <span className="square-end" aria-hidden="true" />
             </h2>
 
             <div className="contact-marquee reveal">
@@ -423,7 +408,7 @@ export default function Home() {
               </ul>
             </nav>
 
-            <footer className="site-footer reveal">JAXON / 2026</footer>
+            <footer className="site-footer reveal">JAXON / {currentYear}</footer>
           </div>
         </section>
       </main>
