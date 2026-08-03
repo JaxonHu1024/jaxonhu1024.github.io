@@ -1,0 +1,113 @@
+README.md
+  s_b79b46e6a5d249::t_f4a3a672f86eb1 19-20,33-34,56,58,61-63,71-73,91-94
+README_zh.md
+  s_b79b46e6a5d249::t_3be101b2ccbe4b 18-19,31-32,54,56,59-61,69-70,88-91
+app/404/page.tsx
+  s_b79b46e6a5d249::t_3925f33134d615 6,9-11
+app/components/MobileLoadFeedback.tsx
+  s_8715349e63e861::t_7d87a8f4309585 16-19,59,116
+app/components/Navigation.tsx
+  s_8715349e63e861::t_f67ba1035f718c 90-96
+app/components/PixelatedCanvas.tsx
+  s_b79b46e6a5d249::t_d444c637f57a5a 3-7,9,11-12,14,19-20,23
+app/components/ResearchVisual.tsx
+  s_57badc646883b4::t_e438f361e5d9f0 5-6,71-73,77-102,105-108,110-111,113,207,224,228-233,239,254
+app/components/SiteTracingBeam.tsx
+  s_b79b46e6a5d249::t_5aaf4e3b047967 5-6,18,29-39,51-52,59-63,119-125,127,171,181-185
+app/components/pixelated-canvas-renderer.ts
+  s_b79b46e6a5d249::t_8a48d5a971aa50 1-486
+app/components/usePixelatedCanvas.ts
+  s_b79b46e6a5d249::t_d0d5e889f56f25 1-516
+app/fonts.css
+  s_b79b46e6a5d249::t_30d73f7e470c61 1-9
+app/globals.css
+  s_b79b46e6a5d249::t_deb1cfcbc21a17 21-23,44,264-265,595,673,825,845,855,891-897,927-929,1068,1167,1218,1356,1412,1467,1505-1507,1572,1714,1788,1801-1807,1855,1951-1952,1957-1958,1961,1965,1970-1973,1975,1982,1984,1986-1987,1989-2020,2024-2025,2036,2047,2072,2336,2380-2381,2402,2419,2421,2430,2432,2446-2447,2465-2482
+app/layout.tsx
+  s_b79b46e6a5d249::t_14db1076b81a04 17-19,21-28,31-48
+app/lib/motion-performance.ts
+  s_57badc646883b4::t_c83927c015cd07 1-71
+app/not-found.tsx
+  s_57badc646883b4::t_3497b20f5a15ed 1,12,15
+app/page.tsx
+  s_b79b46e6a5d249::t_7d1ea98589d08a 41,82,228,339,411
+app/scroll-performance.css
+  s_b79b46e6a5d249::t_af5c9b7a5695f8 22-23,26,28-30
+package-lock.json
+  s_b79b46e6a5d249::t_e1c860fa318391 11,30,449-451,1045-1053,2185-2196,2208-2218,3308-3319,3331-3341,4026-4032,4326-4342,4355-4417,4570-4628,4682-4694,5176,6998-7004,7316-7328,8053-8062,8620-8655,9828
+package.json
+  s_b79b46e6a5d249::t_7608cb7a8135d9 12,14,18-20,23,42
+public/assets/logo-alibaba-color.svg
+  s_b79b46e6a5d249::t_1c7e30eb980855 1
+public/assets/logo-bytedance-color.svg
+  s_b79b46e6a5d249::t_f7e1f391a124f0 1
+public/assets/logo-ntu.svg
+  s_b79b46e6a5d249::t_e7af19f2a54ef3 1
+public/assets/logo-seu-color.svg
+  s_b79b46e6a5d249::t_45df5dfca15897 1
+public/robots.txt
+  s_b79b46e6a5d249::t_cdb9592d91c919 1-4
+public/sitemap.xml
+  s_b79b46e6a5d249::t_1068d1d05b2d28 1-6
+scripts/export-github-pages.mjs
+  s_b79b46e6a5d249::t_904c418763fad6 57-58
+tests/browser-release-gate.test.mjs
+  s_b79b46e6a5d249::t_84ac55b1157c74 4-17,247-253,279,395,398-402,413-418,543,653-658
+tests/browser-release-harness.mjs
+  s_b79b46e6a5d249::t_a525fad0db35f6 1-9,17-388
+tests/ci-contract.test.mjs
+  s_b79b46e6a5d249::t_2c63c266d4d3f7 5-53
+tests/github-pages-export.test.mjs
+  s_b79b46e6a5d249::t_c23403f76570db 19,22-26,30-31,33-38,44,46-48,71-85,95,100-101
+tests/motion-performance.test.mjs
+  s_57badc646883b4::t_d58d2ed827d81f 1-50
+tests/rendered-html.test.mjs
+  s_b79b46e6a5d249::t_09aafe58854254 38,40-41,55-56,66-69,87-88,106,159,162-164,389,405-415,482-484
+tests/scroll-performance-contract.test.mjs
+  s_b79b46e6a5d249::t_5586f35b815041 72-79,94,110-117,132-140,142-149,173-176,186-188
+tsconfig.json
+  s_e07aadeb0ea703::t_125093ff06281b 14
+worker/index.ts
+  s_e07aadeb0ea703::t_768a809d4563ff 9-12,14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "03f09d4beee5dedea004ce49da9edca3afa42fcb",
+  "prompts": {},
+  "sessions": {
+    "s_57badc646883b4": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc63b-e551-7620-b390-5dc874778fcc",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_8715349e63e861": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc63b-ca33-76b2-b649-2736af22abfa",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_b79b46e6a5d249": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc5ab-ec8e-72e1-97ee-2675a3558b32",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_e07aadeb0ea703": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fc63b-a86c-7163-8a10-e40c02d9d4af",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
