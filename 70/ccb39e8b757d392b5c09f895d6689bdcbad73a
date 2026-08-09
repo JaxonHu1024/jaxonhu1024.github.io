@@ -1,0 +1,31 @@
+app/components/HeroPixelPortrait.tsx
+  s_e0c9f677c19826::t_7205e547281836 16-17
+tests/browser-release-gate.test.mjs
+  s_e0c9f677c19826::t_e5a8c0976639dd 1025,1027
+tests/browser-resilience.test.mjs
+  s_e0c9f677c19826::t_e4adaefe589bc2 568-569,571
+tests/github-pages-export.test.mjs
+  s_e0c9f677c19826::t_5d3f1b66c6b658 71,78
+tests/rendered-html.test.mjs
+  s_e0c9f677c19826::t_53afe0e8761cda 421
+tests/scroll-performance-contract.test.mjs
+  s_e0c9f677c19826::t_256b8ac82e9287 292-293
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "70ccb39e8b757d392b5c09f895d6689bdcbad73a",
+  "prompts": {},
+  "sessions": {
+    "s_e0c9f677c19826": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe660-1688-7b63-b946-7c1c9c75a539",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
