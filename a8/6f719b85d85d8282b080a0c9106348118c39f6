@@ -1,0 +1,37 @@
+app/components/SignalHeading.tsx
+  s_0a91a5f6068a5c::t_82fb28e5ac2b4f 1-25
+app/components/TravelMap.tsx
+  s_0a91a5f6068a5c::t_9cdac69f7e1821 2,126-128,227-230
+app/globals.css
+  s_0a91a5f6068a5c::t_63b4847b89f399 96-97,499-503,707-744,757,760,768,770-772,776,780-781,795,813,825-826,971,973-976,1035,1041-1042,1099-1100,1113,1246,1508,1620,1627,1681,1856,2140-2141,2143-2144,2226-2231,2234-2235,2558,2591-2594,2621,2644
+app/page.tsx
+  s_0a91a5f6068a5c::t_89daf5c02f67c0 4,128,144-146,175-177,244-246,249-251,287-289,314-316,349-351
+tests/browser-interactions.test.mjs
+  s_0a91a5f6068a5c::t_202f8ccde7243d 804-807
+tests/browser-release-gate.test.mjs
+  s_0a91a5f6068a5c::t_40bf07f53dbbd3 240,245,256-361,388,403-404,415-417,431-439,589,602-637,639-659,718,740,802-807
+tests/browser-resilience.test.mjs
+  s_0a91a5f6068a5c::t_3dd6c0585858df 449-452
+tests/rendered-html.test.mjs
+  s_0a91a5f6068a5c::t_c6361b233fd750 89-96,237-240,255-258,298,300,303,307,313,357,499-507,509,511
+tests/scroll-performance-contract.test.mjs
+  s_0a91a5f6068a5c::t_2e35f45a56b512 43-46,75-85,97-102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a86f719b85d85d8282b080a0c9106348118c39f6",
+  "prompts": {},
+  "sessions": {
+    "s_0a91a5f6068a5c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fe518-c83b-7c43-9132-38cf506b4c1c",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
