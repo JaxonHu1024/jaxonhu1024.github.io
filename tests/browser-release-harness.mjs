@@ -295,6 +295,12 @@ export async function runPerformanceSample(sampleNumber) {
       document.querySelector('[aria-controls="primary-navigation"]')
         ?.getAttribute("aria-expanded") === "false"
     ));
+    const chinaFilter = page.getByRole("button", { exact: true, name: "China" });
+    await chinaFilter.click({ timeout: 3_000 });
+    await page.waitForFunction(() => (
+      document.querySelector('[data-country-code="CN"] .travel-map-flag-button')
+        ?.getAttribute("aria-pressed") === "true"
+    ), null, { timeout: 3_000 });
     await page.evaluate(() => new Promise((resolvePaint) => {
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {

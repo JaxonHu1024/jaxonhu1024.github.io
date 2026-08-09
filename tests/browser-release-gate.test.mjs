@@ -78,6 +78,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       await page.waitForFunction(() => (
         document.querySelector(".hero-pixel-canvas")?.getAttribute("data-pixelated-ready") === "true"
       ), null, { timeout: 3_000 });
+      await page.waitForFunction((expectedView) => (
+        document.querySelector(".travel-map-canvas")?.getAttribute("data-map-view") === expectedView
+      ), viewport.width <= 600 ? "focus" : "world", { timeout: 3_000 });
 
       const geometry = await measurePageGeometry(page, {
         beam: ".site-tracing-beam",
@@ -85,6 +88,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         heroCta: ".hero-cta",
         heroName: ".hero-name",
         heroPortrait: ".hero-pixel-portrait",
+        heroPositioning: ".hero-positioning",
       });
       const {
         beam,
@@ -92,6 +96,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         heroCta,
         heroName,
         heroPortrait,
+        heroPositioning,
       } = geometry.boxes;
       const initialLayout = {
         beam,
@@ -105,6 +110,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         heroCta,
         heroName,
         heroPortrait,
+        heroPositioning,
         scrollWidth: geometry.scrollWidth,
       };
       const beamPresentation = await page.locator(".site-tracing-beam").evaluate((element) => ({
@@ -177,9 +183,17 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         const ctaLabel = cta?.querySelector(":scope > span:first-child");
         const ctaRange = document.createRange();
         if (ctaLabel) ctaRange.selectNodeContents(ctaLabel);
+        const ctaRect = cta?.getBoundingClientRect();
+        const ctaLabelRect = ctaLabel?.getBoundingClientRect();
 
         return {
+          ctaLabelContained: Boolean(ctaRect && ctaLabelRect)
+            && ctaLabelRect.left >= ctaRect.left - .5
+            && ctaLabelRect.right <= ctaRect.right + .5
+            && ctaLabelRect.top >= ctaRect.top - .5
+            && ctaLabelRect.bottom <= ctaRect.bottom + .5,
           ctaLineCount: ctaLabel ? ctaRange.getClientRects().length : 0,
+          ctaText: ctaLabel?.textContent?.trim() ?? "",
         };
       });
       const contactPresentation = await page.evaluate(() => {
@@ -421,10 +435,30 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                       ).map((flag) => flag.getAttribute("data-country-code") ?? "").sort(),
                       flagListTagName: travelMapElement.querySelector(".travel-map-flags")
                         ?.tagName ?? null,
+                      flagButtonCount: travelMapElement.querySelectorAll(
+                        ".travel-map-flag-button",
+                      ).length,
+                      flagButtonsValid: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-flag-button"),
+                      ).every((button) => (
+                        button.tagName === "BUTTON"
+                        && button.getAttribute("type") === "button"
+                        && button.getAttribute("aria-controls") === "travel-map-canvas"
+                        && button.getAttribute("aria-pressed") === "false"
+                        && Boolean(button.querySelector(".sr-only")?.textContent?.trim())
+                      )),
+                      flagButtonTargets: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-flag-button"),
+                      ).map((button) => {
+                        const rect = button.getBoundingClientRect();
+                        return { height: rect.height, width: rect.width };
+                      }),
                       flagsHaveDockStructure: Array.from(
                         travelMapElement.querySelectorAll(".travel-map-flags > li"),
                       ).every((flag) => (
                         Boolean(flag.getAttribute("data-country-code"))
+                        && flag.getAttribute("data-selected") === "false"
+                        && Boolean(flag.querySelector(".travel-map-flag-button"))
                         && Boolean(flag.querySelector(".travel-map-flag-icon"))
                         && Boolean(flag.querySelector(".travel-map-flag-tooltip"))
                       )),
@@ -437,17 +471,42 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                           && style.borderTopWidth === "0px"
                           && style.boxShadow === "none";
                       }),
-                      flagsClipped: (() => {
-                        const list = travelMapElement.querySelector(".travel-map-flags");
-                        const listRect = list?.getBoundingClientRect();
-                        return !list || !listRect || Array.from(list.children).some((flag) => {
-                          const rect = flag.getBoundingClientRect();
-                          return rect.left < listRect.left - .5 || rect.right > listRect.right + .5;
-                        });
+                      flagScroll: (() => {
+                        const scroll = travelMapElement.querySelector(".travel-map-flags-scroll");
+                        const items = Array.from(
+                          travelMapElement.querySelectorAll(".travel-map-flags > li"),
+                        );
+                        if (!scroll || items.length === 0) return null;
+                        const originalScrollLeft = scroll.scrollLeft;
+                        scroll.scrollLeft = 0;
+                        const scrollRect = scroll.getBoundingClientRect();
+                        const firstRect = items[0].getBoundingClientRect();
+                        const firstReachable = firstRect.left >= scrollRect.left - 1
+                          && firstRect.right <= scrollRect.right + 1;
+                        scroll.scrollLeft = scroll.scrollWidth;
+                        const lastRect = items.at(-1).getBoundingClientRect();
+                        const lastReachable = lastRect.left >= scrollRect.left - 1
+                          && lastRect.right <= scrollRect.right + 1;
+                        scroll.scrollLeft = originalScrollLeft;
+                        return {
+                          clientWidth: scroll.clientWidth,
+                          firstReachable,
+                          hasInternalOverflow: scroll.scrollWidth > scroll.clientWidth + 1,
+                          lastReachable,
+                          listWidth: scroll.querySelector(".travel-map-flags")
+                            ?.getBoundingClientRect().width ?? 0,
+                          scrollWidth: scroll.scrollWidth,
+                        };
                       })(),
                       imageCount: travelMapElement.querySelectorAll(
                         'image[href="/assets/travel-world-solid.svg"]',
                       ).length,
+                      initialAirportEmphasis: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-airport"),
+                      ).map((airport) => airport.getAttribute("data-emphasis")),
+                      initialRouteEmphasis: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-route"),
+                      ).map((route) => route.getAttribute("data-emphasis")),
                       leftDelta: travelMapRect.left - aboutShellRect.left,
                       lineRoutesOnly: Array.from(
                         travelMapElement.querySelectorAll(".travel-map-route-path"),
@@ -475,6 +534,36 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                       })(),
                       role: travelMapElement.querySelector(".travel-map-canvas")
                         ?.getAttribute("role"),
+                      mapView: travelMapElement.querySelector(".travel-map-canvas")
+                        ?.getAttribute("data-map-view") ?? null,
+                      viewBox: travelMapElement.querySelector(".travel-map-canvas")
+                        ?.getAttribute("viewBox") ?? null,
+                      airportViewportCoverage: (() => {
+                        const centers = Array.from(
+                          travelMapElement.querySelectorAll(".travel-map-airport-point"),
+                        ).map((point) => {
+                          const rect = point.getBoundingClientRect();
+                          return {
+                            x: rect.left + rect.width / 2,
+                            y: rect.top + rect.height / 2,
+                          };
+                        });
+                        if (centers.length === 0) return null;
+                        const xs = centers.map(({ x }) => x);
+                        const ys = centers.map(({ y }) => y);
+                        return {
+                          allCentersSafe: centers.every(({ x, y }) => (
+                            x >= travelMapViewportRect.left + 6
+                            && x <= travelMapViewportRect.right - 6
+                            && y >= travelMapViewportRect.top + 6
+                            && y <= travelMapViewportRect.bottom - 6
+                          )),
+                          heightRatio: (Math.max(...ys) - Math.min(...ys))
+                            / travelMapViewportRect.height,
+                          widthRatio: (Math.max(...xs) - Math.min(...xs))
+                            / travelMapViewportRect.width,
+                        };
+                      })(),
                       statsClipped: Array.from(
                         travelMapElement.querySelectorAll(".travel-map-stats > div"),
                       ).some((element) => (
@@ -690,8 +779,8 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       assert.equal(sectionRhythm.aboutPresentation.contextCount, 0);
       assert.equal(
         sectionRhythm.aboutPresentation.introductionText,
-        "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet the "
-          + "real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
+        "I'm Jaxon. I build agents and multimodal systems whose behavior can be observed, "
+          + "tested, and improved.",
       );
       assert.equal(sectionRhythm.aboutPresentation.steps.length, 4);
       assert.ok(
@@ -714,11 +803,35 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       assert.equal(travelMap.flagCount, generatedTravelData.counts.countries);
       assert.deepEqual(travelMap.flagCountryCodes, generatedCountryCodes);
       assert.equal(travelMap.flagListTagName, "UL");
+      assert.equal(travelMap.flagButtonCount, generatedTravelData.counts.countries);
+      assert.equal(travelMap.flagButtonsValid, true);
+      assert.equal(
+        travelMap.flagButtonTargets.every(({ height, width }) => height >= 44 && width >= 44),
+        true,
+        `${viewport.width}x${viewport.height} flag buttons missed the 44px target: `
+          + JSON.stringify(travelMap.flagButtonTargets),
+      );
       assert.equal(travelMap.flagsHaveDockStructure, true);
       assert.equal(travelMap.flagIconsHaveNoBackdrop, true);
-      assert.equal(travelMap.flagsClipped, false);
+      assert.ok(travelMap.flagScroll);
+      assert.equal(travelMap.flagScroll.firstReachable, true);
+      assert.equal(travelMap.flagScroll.lastReachable, true);
+      assert.equal(
+        travelMap.flagScroll.hasInternalOverflow,
+        viewport.width <= 600,
+        `${viewport.width}x${viewport.height} flag scroller state was `
+          + JSON.stringify(travelMap.flagScroll),
+      );
       assert.equal(travelMap.imageCount, 1);
       assert.equal(travelMap.role, "img");
+      assert.equal(
+        travelMap.initialAirportEmphasis.every((value) => value === "idle"),
+        true,
+      );
+      assert.equal(
+        travelMap.initialRouteEmphasis.every((value) => value === "idle"),
+        true,
+      );
       assert.equal(travelMap.statsClipped, false);
       assert.ok(
         travelMap.routePresentation.length >= generatedTravelData.counts.routes,
@@ -735,11 +848,26 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           + JSON.stringify(travelMap.routePresentation),
       );
       assert.deepEqual(travelMap.statValues, [
-        String(generatedTravelData.counts.countries),
+        String(generatedTravelData.counts.countries).padStart(2, "0"),
       ]);
       assert.equal(travelMap.distancePresent, false);
-      assert.ok(travelMap.descriptionLength > 200);
-      const expectedMapRatio = viewport.width <= 600 ? 4 / 3 : 2;
+      assert.ok(travelMap.descriptionLength >= 120 && travelMap.descriptionLength <= 240);
+      assert.equal(travelMap.mapView, viewport.width <= 600 ? "focus" : "world");
+      assert.equal(
+        travelMap.viewBox === "0 0 800 400",
+        viewport.width > 600,
+        `${viewport.width}x${viewport.height} rendered the wrong map camera ${travelMap.viewBox}`,
+      );
+      assert.ok(travelMap.airportViewportCoverage?.allCentersSafe);
+      if (viewport.width <= 600) {
+        assert.ok(
+          travelMap.airportViewportCoverage.widthRatio >= .3
+            && travelMap.airportViewportCoverage.heightRatio >= .45,
+          `${viewport.width}x${viewport.height} focused map underused its viewport: `
+            + JSON.stringify(travelMap.airportViewportCoverage),
+        );
+      }
+      const expectedMapRatio = viewport.width <= 600 ? 6 / 5 : 2;
       assert.ok(
         Math.abs(travelMap.viewportWidth / travelMap.viewportHeight - expectedMapRatio) <= 0.02,
         `${viewport.width}x${viewport.height} travel map ratio was `
@@ -747,10 +875,10 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       );
       if (viewport.width <= 430) {
         assert.ok(
-          sectionRhythm.aboutPresentation.sectionHeight >= 1_350
-            && sectionRhythm.aboutPresentation.sectionHeight <= 2_000,
+          sectionRhythm.aboutPresentation.sectionHeight >= 1_200
+            && sectionRhythm.aboutPresentation.sectionHeight <= 1_850,
           `${viewport.width}x${viewport.height} About height=`
-            + `${sectionRhythm.aboutPresentation.sectionHeight}px; expected 1350-2000px`,
+            + `${sectionRhythm.aboutPresentation.sectionHeight}px; expected 1200-1850px`,
         );
       }
       assert.equal(
@@ -783,16 +911,22 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       }
       assert.equal(
         await page.locator(".hero-positioning").count(),
-        0,
-        `${viewport.width}x${viewport.height} retained the removed hero positioning line`,
+        1,
+        `${viewport.width}x${viewport.height} did not render one hero positioning line`,
+      );
+      assert.equal(
+        await page.locator(".hero-positioning").textContent(),
+        "AI systems, made inspectable.",
       );
       assert.ok(heroPortrait.width > 0 && heroPortrait.height > 0);
       if (viewport.width <= 900) {
         assert.ok(
-          heroName.bottom <= heroPortrait.top + 1
+          heroName.bottom <= heroPositioning.top + 1
+            && heroPositioning.bottom <= heroPortrait.top + 1
             && heroPortrait.bottom <= heroCta.top + 1,
           `${viewport.width}x${viewport.height} mobile Hero order was not `
-            + `JAXON → portrait → CTA: ${JSON.stringify({ heroCta, heroName, heroPortrait })}`,
+            + `JAXON → positioning → portrait → CTA: `
+            + JSON.stringify({ heroCta, heroName, heroPortrait, heroPositioning }),
         );
       }
       assert.ok(
@@ -801,10 +935,16 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       );
       if (viewport.width <= 600) {
         assert.ok(
-          heroCta.width >= 151.5 && heroCta.width <= 176.5,
+          heroCta.width >= 187.5 && heroCta.width <= 208.5,
           `${viewport.width}x${viewport.height} hero CTA width=${heroCta.width}px`,
         );
       }
+      assert.equal(heroFlow.ctaText, "Explore context");
+      assert.equal(
+        heroFlow.ctaLabelContained,
+        true,
+        `${viewport.width}x${viewport.height} clipped the hero CTA label`,
+      );
       assert.equal(
         heroFlow.ctaLineCount,
         1,
@@ -1215,6 +1355,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             id: "hero",
             selectors: [
               ".hero-name",
+              ".hero-positioning",
               ".hero-pixel-portrait",
               ".hero-cta",
             ],
@@ -1336,6 +1477,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       const actionTargets = await page.evaluate(() => {
         const selectors = [
           ".hero-cta",
+          ".travel-map-flag-button",
           ".paper-link",
           ".contact-socials a",
           ".mobile-load-feedback__retry",

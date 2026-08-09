@@ -83,11 +83,12 @@ export default function Home() {
               <h1 className="hero-name" id="hero-title">
                 JAXON
               </h1>
+              <p className="hero-positioning">AI systems, made inspectable.</p>
             </header>
             <HeroPixelPortrait />
             <div className="hero-actions">
               <a className="signal-button hero-cta" href="#about">
-                <span className="hero-cta-label">About me</span>
+                <span className="hero-cta-label">Explore context</span>
                 <span className="hero-cta-border" aria-hidden="true">
                   <svg
                     viewBox="0 0 100 40"
@@ -131,9 +132,8 @@ export default function Home() {
                 <span>to system behavior.</span>
               </h2>
               <p className="about-introduction">
-                I&apos;m Jaxon. I build inspectable systems where models, tools, and
-                decisions meet the real world—with a focus on agents, multimodal
-                systems, and autonomous intelligence.
+                I&apos;m Jaxon. I build agents and multimodal systems whose behavior
+                can be observed, tested, and improved.
               </p>
             </header>
 

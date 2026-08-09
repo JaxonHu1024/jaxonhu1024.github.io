@@ -201,6 +201,7 @@ test("hero CTA border runs only while the Hero and page are active", { timeout: 
           )
           : null,
         labelText: label?.textContent?.trim(),
+        positioningText: document.querySelector(".hero-positioning")?.textContent?.trim(),
         svgFocusable: element.ownerSVGElement?.getAttribute("focusable"),
       };
     });
@@ -213,7 +214,8 @@ test("hero CTA border runs only while the Hero and page are active", { timeout: 
       containerHidden: "true",
       dashArray: "17px, 83px",
       justifyContent: "center",
-      labelText: "About me",
+      labelText: "Explore context",
+      positioningText: "AI systems, made inspectable.",
       svgFocusable: "false",
     });
     assert.ok(
@@ -467,8 +469,8 @@ test("reduced-motion mobile keeps the portrait, Context path, and contact ticker
     assert.equal(about.contextCount, 0);
     assert.equal(
       about.introductionText,
-      "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet the "
-        + "real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
+      "I'm Jaxon. I build agents and multimodal systems whose behavior can be observed, "
+        + "tested, and improved.",
     );
     await page.locator("#contact").scrollIntoViewIfNeeded();
     const contact = await page.locator("#contact").evaluate((section) => {
@@ -658,9 +660,8 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     assert.deepEqual(state.about, {
       contextCount: 0,
       forbiddenCount: 0,
-      introductionText: "I'm Jaxon. I build inspectable systems where models, tools, and "
-        + "decisions meet the real world—with a focus on agents, multimodal systems, and "
-        + "autonomous intelligence.",
+      introductionText: "I'm Jaxon. I build agents and multimodal systems whose behavior can "
+        + "be observed, tested, and improved.",
       stepLabels: ["FRAME", "CONNECT", "OBSERVE", "VERIFY"],
       travelMap: {
         routeAnimationNames: ["none"],
@@ -703,6 +704,7 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
 
         const introductionElement = section.querySelector(".about-introduction");
         const travelMapElement = section.querySelector(".about-travel");
+        const travelMapDock = section.querySelector(".travel-map-dock");
         const loopElement = section.querySelector(".about-working-loop");
         const routeKeys = Array.from(section.querySelectorAll(".travel-map-route"))
           .map((route) => route.getAttribute("data-route-key") ?? "");
@@ -711,7 +713,7 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
           contextCount: section.querySelectorAll(".about-context").length,
           forbiddenCount: section.querySelectorAll(
             "canvas, [class*='about-particle'], [role='tab'], [role='tablist'], "
-              + "[role='tabpanel'], [aria-selected], button",
+              + "[role='tabpanel'], [aria-selected], button:not(.travel-map-flag-button)",
           ).length,
           labelledBy: section.querySelector(".about-working-loop")
             ?.getAttribute("aria-labelledby"),
@@ -741,7 +743,26 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
             bidirectionalRouteCount: travelMapElement.querySelectorAll(
               '.travel-map-route[data-route-direction="both"]',
             ).length,
+            compactDock: Boolean(
+              travelMapDock
+              && travelMapDock.querySelector(".travel-map-dock-status")
+              && travelMapDock.querySelector(".travel-map-flags-scroll")
+            ),
             copy: travelMapElement.textContent?.replace(/\s+/g, " ").trim() ?? "",
+            filterStatus: {
+              label: travelMapElement.querySelector(".travel-map-filter-status span")
+                ?.textContent?.trim() ?? "",
+              value: travelMapElement.querySelector(".travel-map-filter-status strong")
+                ?.textContent?.trim() ?? "",
+            },
+            flagButtons: Array.from(
+              travelMapElement.querySelectorAll(".travel-map-flag-button"),
+            ).map((button) => ({
+              ariaControls: button.getAttribute("aria-controls"),
+              ariaPressed: button.getAttribute("aria-pressed"),
+              name: button.querySelector(".sr-only")?.textContent?.trim() ?? "",
+              type: button.getAttribute("type"),
+            })),
             flagCount: travelMapElement.querySelectorAll(".travel-map-flags > li").length,
             lineRoutesOnly: Array.from(
               travelMapElement.querySelectorAll(".travel-map-route-path"),
@@ -754,6 +775,8 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
             stats: Array.from(travelMapElement.querySelectorAll(".travel-map-stats > div"))
               .map((entry) => ({
                 label: entry.querySelector("dt")?.textContent?.trim() ?? "",
+                leadingZeroHidden: entry.querySelector(".travel-map-stat-leading-zero")
+                  ?.getAttribute("aria-hidden") ?? null,
                 value: entry.querySelector("dd")?.textContent?.trim() ?? "",
                 visible: visible(entry),
               })),
@@ -780,8 +803,8 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
       );
       assert.equal(ledger.steps.every(({ detail, visible }) => detail.length > 0 && visible), true);
       assert.deepEqual(ledger.introduction, {
-        text: "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet "
-          + "the real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
+        text: "I'm Jaxon. I build agents and multimodal systems whose behavior can be observed, "
+          + "tested, and improved.",
         visible: true,
       });
       assert.ok(ledger.travelMap);
@@ -790,6 +813,21 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
       assert.equal(ledger.travelMap.visible, true);
       assert.equal(ledger.travelMap.airportCount, generatedTravelData.counts.airports);
       assert.equal(ledger.travelMap.bidirectionalRouteCount, generatedBidirectionalCorridors);
+      assert.equal(ledger.travelMap.compactDock, true);
+      assert.deepEqual(ledger.travelMap.filterStatus, {
+        label: "Map filter",
+        value: "All signals",
+      });
+      assert.equal(ledger.travelMap.flagButtons.length, generatedTravelData.counts.countries);
+      assert.equal(
+        ledger.travelMap.flagButtons.every((button) => (
+          button.ariaControls === "travel-map-canvas"
+          && button.ariaPressed === "false"
+          && button.name.length > 0
+          && button.type === "button"
+        )),
+        true,
+      );
       assert.equal(ledger.travelMap.flagCount, generatedTravelData.counts.countries);
       assert.equal(ledger.travelMap.lineRoutesOnly, true);
       assert.equal(ledger.travelMap.routeCount, generatedTravelData.counts.routes);
@@ -797,7 +835,8 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
       assert.deepEqual(ledger.travelMap.stats, [
         {
           label: "Countries / regions",
-          value: String(generatedTravelData.counts.countries),
+          leadingZeroHidden: generatedTravelData.counts.countries < 10 ? "true" : null,
+          value: String(generatedTravelData.counts.countries).padStart(2, "0"),
           visible: true,
         },
       ]);
@@ -812,18 +851,20 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
   }
 });
 
-test("desktop travel flag dock magnifies countries and reveals their labels", { timeout: 15_000 }, async () => {
+test("desktop travel flag buttons magnify on hover and reveal labels on hover or focus", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1440, height: 900 },
   });
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
-    const flags = page.locator(".travel-map-flags > li[data-country-code]");
+    const flags = page.locator(".travel-map-flag-button");
     assert.equal(await flags.count(), generatedCountryCodes.length);
     assert.deepEqual(
       (await flags.evaluateAll((items) => (
-        items.map((item) => item.getAttribute("data-country-code") ?? "").sort()
+        items.map((button) => (
+          button.closest("li")?.getAttribute("data-country-code") ?? ""
+        )).sort()
       ))),
       generatedCountryCodes,
     );
@@ -833,29 +874,38 @@ test("desktop travel flag dock magnifies countries and reveals their labels", { 
     await page.mouse.move(0, 0);
     await page.waitForTimeout(250);
 
-    const snapshot = (element) => {
-      const rect = element.getBoundingClientRect();
-      const tooltip = element.querySelector(".travel-map-flag-tooltip");
+    const snapshot = (button) => {
+      const item = button.closest("li");
+      const rect = item?.getBoundingClientRect();
+      const tooltip = button.querySelector(".travel-map-flag-tooltip");
       const tooltipRect = tooltip?.getBoundingClientRect();
       const tooltipStyle = tooltip ? getComputedStyle(tooltip) : null;
 
       return {
-        code: element.getAttribute("data-country-code"),
-        height: rect.height,
-        left: rect.left,
+        ariaControls: button.getAttribute("aria-controls"),
+        ariaPressed: button.getAttribute("aria-pressed"),
+        code: item?.getAttribute("data-country-code"),
+        focused: document.activeElement === button,
+        height: rect?.height ?? 0,
+        left: rect?.left ?? 0,
         tooltip: tooltip && tooltipRect && tooltipStyle ? {
           height: tooltipRect.height,
           opacity: Number.parseFloat(tooltipStyle.opacity),
           visibility: tooltipStyle.visibility,
           width: tooltipRect.width,
         } : null,
-        top: rect.top,
-        width: rect.width,
+        top: rect?.top ?? 0,
+        type: button.getAttribute("type"),
+        width: rect?.width ?? 0,
       };
     };
 
     const resting = await flag.evaluate(snapshot);
     assert.ok(resting.code);
+    assert.equal(resting.ariaControls, "travel-map-canvas");
+    assert.equal(resting.ariaPressed, "false");
+    assert.equal(resting.focused, false);
+    assert.equal(resting.type, "button");
     assert.ok(resting.tooltip);
     assert.ok(
       resting.tooltip.visibility === "hidden" || resting.tooltip.opacity <= .05,
@@ -899,6 +949,279 @@ test("desktop travel flag dock magnifies countries and reveals their labels", { 
         && (restored.tooltip.visibility === "hidden" || restored.tooltip.opacity <= .05),
       `flag label remained visible after pointer exit: ${JSON.stringify(restored)}`,
     );
+
+    await flag.focus();
+    await page.waitForTimeout(250);
+    const focused = await flag.evaluate(snapshot);
+    assert.equal(focused.focused, true);
+    assert.ok(
+      focused.tooltip
+        && focused.tooltip.visibility !== "hidden"
+        && focused.tooltip.opacity >= .9
+        && focused.tooltip.width > 0
+        && focused.tooltip.height > 0,
+      `focused flag label was not visible: ${JSON.stringify(focused)}`,
+    );
+
+    await flag.evaluate((button) => button.blur());
+    await page.waitForTimeout(250);
+    const blurred = await flag.evaluate(snapshot);
+    assert.equal(blurred.focused, false);
+    assert.ok(
+      blurred.tooltip
+        && (blurred.tooltip.visibility === "hidden" || blurred.tooltip.opacity <= .05),
+      `flag label remained visible after focus left: ${JSON.stringify(blurred)}`,
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("430px travel map filters by flag without moving the focus view or overflowing the page", { timeout: 20_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 430, height: 932 },
+  });
+  const airportByIata = new Map(
+    generatedTravelData.airports.map((airport) => [airport.iata, airport]),
+  );
+  const expectedEmphasis = (countryCode) => {
+    const activeAirports = generatedTravelData.airports.filter(
+      (airport) => airport.countryCode === countryCode,
+    ).length;
+    const activeRoutes = generatedTravelData.routes.filter((route) => (
+      airportByIata.get(route.from)?.countryCode === countryCode
+      || airportByIata.get(route.to)?.countryCode === countryCode
+    )).length;
+
+    return {
+      airports: {
+        active: activeAirports,
+        idle: 0,
+        muted: generatedTravelData.counts.airports - activeAirports,
+      },
+      routes: {
+        active: activeRoutes,
+        idle: 0,
+        muted: generatedTravelData.counts.routes - activeRoutes,
+      },
+    };
+  };
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-canvas")?.getAttribute("data-map-view") === "focus"
+    ));
+
+    const dock = page.locator(".travel-map-dock");
+    const flagScroll = page.locator(".travel-map-flags-scroll");
+    const flagButtons = page.locator(".travel-map-flag-button");
+    const china = page.getByRole("button", { exact: true, name: "China" });
+    const australia = page.getByRole("button", { exact: true, name: "Australia" });
+    await dock.scrollIntoViewIfNeeded();
+
+    assert.equal(await flagButtons.count(), generatedTravelData.counts.countries);
+    assert.equal(await china.count(), 1);
+    assert.equal(await australia.count(), 1);
+
+    const mobileGeometry = await page.evaluate(() => {
+      const dockElement = document.querySelector(".travel-map-dock");
+      const scrollElement = document.querySelector(".travel-map-flags-scroll");
+      const dockRect = dockElement?.getBoundingClientRect();
+      const buttons = Array.from(document.querySelectorAll(".travel-map-flag-button"));
+
+      return {
+        buttonSizes: buttons.map((button) => {
+          const rect = button.getBoundingClientRect();
+          return { height: rect.height, width: rect.width };
+        }),
+        dockContained: Boolean(
+          dockRect
+          && dockRect.left >= -1
+          && dockRect.right <= innerWidth + 1
+        ),
+        pageClientWidth: document.documentElement.clientWidth,
+        pageScrollWidth: document.documentElement.scrollWidth,
+        scrollClientWidth: scrollElement?.clientWidth ?? 0,
+        scrollOverflowX: scrollElement ? getComputedStyle(scrollElement).overflowX : null,
+        scrollWidth: scrollElement?.scrollWidth ?? 0,
+        windowScrollX: scrollX,
+      };
+    });
+    assert.equal(mobileGeometry.dockContained, true);
+    assert.equal(mobileGeometry.scrollOverflowX, "auto");
+    assert.ok(
+      mobileGeometry.scrollWidth > mobileGeometry.scrollClientWidth,
+      `flag dock did not create internal overflow: ${JSON.stringify(mobileGeometry)}`,
+    );
+    assert.equal(
+      mobileGeometry.buttonSizes.every(({ height, width }) => height >= 44 && width >= 44),
+      true,
+      `flag buttons missed the 44px touch target: ${JSON.stringify(mobileGeometry.buttonSizes)}`,
+    );
+    assert.ok(
+      mobileGeometry.pageScrollWidth <= mobileGeometry.pageClientWidth + 1,
+      `flag dock leaked into page overflow: ${JSON.stringify(mobileGeometry)}`,
+    );
+    assert.equal(mobileGeometry.windowScrollX, 0);
+
+    await flagScroll.evaluate((element) => {
+      element.scrollLeft = element.scrollWidth - element.clientWidth;
+    });
+    await page.waitForFunction(() => (
+      (document.querySelector(".travel-map-flags-scroll")?.scrollLeft ?? 0) > 0
+    ));
+    const rightBoundary = await page.evaluate(() => {
+      const scrollElement = document.querySelector(".travel-map-flags-scroll");
+      const lastButton = document.querySelector(".travel-map-flags li:last-child button");
+      const scrollRect = scrollElement?.getBoundingClientRect();
+      const buttonRect = lastButton?.getBoundingClientRect();
+
+      return {
+        lastFlagContained: Boolean(
+          scrollRect
+          && buttonRect
+          && buttonRect.left >= scrollRect.left - 1
+          && buttonRect.right <= scrollRect.right + 1
+        ),
+        pageClientWidth: document.documentElement.clientWidth,
+        pageScrollWidth: document.documentElement.scrollWidth,
+        scrollLeft: scrollElement?.scrollLeft ?? 0,
+      };
+    });
+    assert.equal(rightBoundary.lastFlagContained, true);
+    assert.ok(rightBoundary.scrollLeft > 0);
+    assert.ok(rightBoundary.pageScrollWidth <= rightBoundary.pageClientWidth + 1);
+    await flagScroll.evaluate((element) => {
+      element.scrollLeft = 0;
+    });
+
+    const readMapState = () => page.locator(".about-travel").evaluate((figure) => {
+      const countEmphasis = (selector) => ({
+        active: figure.querySelectorAll(`${selector}[data-emphasis="active"]`).length,
+        idle: figure.querySelectorAll(`${selector}[data-emphasis="idle"]`).length,
+        muted: figure.querySelectorAll(`${selector}[data-emphasis="muted"]`).length,
+      });
+      const activeElement = document.activeElement;
+
+      return {
+        airports: countEmphasis(".travel-map-airport"),
+        buttonStates: Array.from(figure.querySelectorAll(".travel-map-flag-button"))
+          .map((button) => ({
+            ariaControls: button.getAttribute("aria-controls"),
+            ariaPressed: button.getAttribute("aria-pressed"),
+            code: button.closest("li")?.getAttribute("data-country-code") ?? "",
+            name: button.querySelector(".sr-only")?.textContent?.trim() ?? "",
+            type: button.getAttribute("type"),
+          })),
+        filterActive: figure.getAttribute("data-filter-active"),
+        filterStatus: figure.querySelector(".travel-map-filter-status strong")
+          ?.textContent?.trim() ?? "",
+        focusedCode: activeElement?.closest("li")?.getAttribute("data-country-code") ?? null,
+        mapView: figure.querySelector(".travel-map-canvas")?.getAttribute("data-map-view"),
+        routes: countEmphasis(".travel-map-route"),
+        selectedCodes: Array.from(figure.querySelectorAll('.travel-map-flags li[data-selected="true"]'))
+          .map((item) => item.getAttribute("data-country-code") ?? ""),
+        viewBox: figure.querySelector(".travel-map-canvas")?.getAttribute("viewBox"),
+      };
+    });
+    const initial = await readMapState();
+    assert.equal(initial.filterActive, "false");
+    assert.equal(initial.filterStatus, "All signals");
+    assert.equal(initial.mapView, "focus");
+    assert.notEqual(initial.viewBox, "0 0 800 400");
+    assert.deepEqual(initial.selectedCodes, []);
+    assert.deepEqual(initial.airports, {
+      active: 0,
+      idle: generatedTravelData.counts.airports,
+      muted: 0,
+    });
+    assert.deepEqual(initial.routes, {
+      active: 0,
+      idle: generatedTravelData.counts.routes,
+      muted: 0,
+    });
+    assert.deepEqual(
+      initial.buttonStates.map(({ code }) => code).sort(),
+      generatedCountryCodes,
+    );
+    assert.equal(
+      initial.buttonStates.every((button) => (
+        button.ariaControls === "travel-map-canvas"
+        && button.ariaPressed === "false"
+        && button.name.length > 0
+        && button.type === "button"
+      )),
+      true,
+    );
+
+    const assertSelectedCountry = (state, countryCode, countryName) => {
+      const expected = expectedEmphasis(countryCode);
+      assert.equal(state.filterActive, "true");
+      assert.equal(state.filterStatus, countryName);
+      assert.equal(state.mapView, "focus");
+      assert.equal(state.viewBox, initial.viewBox);
+      assert.deepEqual(state.selectedCodes, [countryCode]);
+      assert.deepEqual(
+        state.buttonStates.filter(({ ariaPressed }) => ariaPressed === "true")
+          .map(({ code }) => code),
+        [countryCode],
+      );
+      assert.deepEqual(state.airports, expected.airports);
+      assert.deepEqual(state.routes, expected.routes);
+    };
+    const assertCleared = (state) => {
+      assert.equal(state.filterActive, "false");
+      assert.equal(state.filterStatus, "All signals");
+      assert.equal(state.mapView, "focus");
+      assert.equal(state.viewBox, initial.viewBox);
+      assert.deepEqual(state.selectedCodes, []);
+      assert.equal(
+        state.buttonStates.every(({ ariaPressed }) => ariaPressed === "false"),
+        true,
+      );
+      assert.deepEqual(state.airports, initial.airports);
+      assert.deepEqual(state.routes, initial.routes);
+    };
+
+    await china.tap();
+    await page.waitForFunction(() => (
+      document.querySelector('.travel-map-flags li[data-country-code="CN"] button')
+        ?.getAttribute("aria-pressed") === "true"
+    ));
+    assertSelectedCountry(await readMapState(), "CN", "China");
+
+    await australia.scrollIntoViewIfNeeded();
+    await australia.tap();
+    await page.waitForFunction(() => (
+      document.querySelector('.travel-map-flags li[data-country-code="AU"] button')
+        ?.getAttribute("aria-pressed") === "true"
+    ));
+    assertSelectedCountry(await readMapState(), "AU", "Australia");
+
+    await australia.tap();
+    await page.waitForFunction(() => (
+      document.querySelector('.travel-map-flags li[data-country-code="AU"] button')
+        ?.getAttribute("aria-pressed") === "false"
+    ));
+    assertCleared(await readMapState());
+
+    await china.scrollIntoViewIfNeeded();
+    await china.tap();
+    await page.waitForFunction(() => (
+      document.querySelector('.travel-map-flags li[data-country-code="CN"] button')
+        ?.getAttribute("aria-pressed") === "true"
+    ));
+    await china.press("Escape");
+    await page.waitForFunction(() => (
+      document.querySelector('.travel-map-flags li[data-country-code="CN"] button')
+        ?.getAttribute("aria-pressed") === "false"
+    ));
+    const escaped = await readMapState();
+    assertCleared(escaped);
+    assert.equal(escaped.focusedCode, "CN");
   } finally {
     await context.close();
   }

@@ -16,6 +16,12 @@ import {
   generatedTravelData,
 } from "./generated-travel-contract.mjs";
 
+const generatedCountries = [...new Map(
+  generatedTravelData.airports.map(({ country, countryCode }) => [countryCode, country]),
+).entries()]
+  .map(([code, name]) => ({ code, name }))
+  .sort((a, b) => a.code.localeCompare(b.code));
+
 before(setupReleaseHarness);
 after(teardownReleaseHarness);
 
@@ -287,6 +293,8 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         const feedback = document.querySelector('[data-testid="mobile-load-feedback"]');
         const coreSelectors = [
           "#hero-title",
+          ".hero-positioning",
+          "a.hero-cta",
           "#about-title",
           "#travel-map-title",
           "#about-loop-title",
@@ -317,6 +325,10 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
             })),
             travelMap: (() => {
               const element = document.querySelector("#about .about-travel");
+              const flagItems = Array.from(
+                element?.querySelectorAll(".travel-map-flags > li") ?? [],
+              );
+              const map = element?.querySelector(".travel-map-canvas");
               const routeKeys = Array.from(
                 element?.querySelectorAll(".travel-map-route") ?? [],
               ).map((route) => route.getAttribute("data-route-key"));
@@ -324,27 +336,56 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
 
               return element && rect ? {
                 airportCount: element.querySelectorAll(".travel-map-airport").length,
+                airportEmphasis: Array.from(
+                  element.querySelectorAll(".travel-map-airport"),
+                ).map((airport) => airport.getAttribute("data-emphasis")),
                 copy: element.textContent?.replace(/\s+/g, " ").trim() ?? "",
-                flagCount: element.querySelectorAll(".travel-map-flags > li").length,
-                flagCountryCodes: Array.from(
-                  element.querySelectorAll(".travel-map-flags > li"),
-                ).map((flag) => flag.getAttribute("data-country-code") ?? "").sort(),
+                dockCount: element.querySelectorAll(".travel-map-dock").length,
+                filterActive: element.getAttribute("data-filter-active"),
+                filterStatus: Array.from(
+                  element.querySelector(".travel-map-filter-status")?.children ?? [],
+                ).map((entry) => entry.textContent?.trim() ?? "").filter(Boolean).join(" "),
+                flagButtons: flagItems.map((flag) => {
+                  const button = flag.querySelector(".travel-map-flag-button");
+
+                  return {
+                    accessibleName: button?.querySelector(".sr-only")?.textContent?.trim() ?? "",
+                    ariaControls: button?.getAttribute("aria-controls") ?? null,
+                    ariaPressed: button?.getAttribute("aria-pressed") ?? null,
+                    countryCode: flag.getAttribute("data-country-code") ?? "",
+                    selected: flag.getAttribute("data-selected") ?? null,
+                    tagName: button?.tagName ?? null,
+                    type: button?.getAttribute("type") ?? null,
+                  };
+                }),
+                flagCount: flagItems.length,
+                flagCountryCodes: flagItems
+                  .map((flag) => flag.getAttribute("data-country-code") ?? "")
+                  .sort(),
                 flagListTagName: element.querySelector(".travel-map-flags")?.tagName ?? null,
-                flagsHaveDockStructure: Array.from(
-                  element.querySelectorAll(".travel-map-flags > li"),
-                ).every((flag) => (
+                flagScrollCount: element.querySelectorAll(".travel-map-flags-scroll").length,
+                flagsHaveDockStructure: flagItems.every((flag) => (
                   Boolean(flag.getAttribute("data-country-code"))
+                  && Boolean(flag.querySelector("button.travel-map-flag-button"))
                   && Boolean(flag.querySelector(".travel-map-flag-icon"))
                   && Boolean(flag.querySelector(".travel-map-flag-tooltip"))
                 )),
+                legacySummaryCount: element.querySelectorAll(".travel-map-summary").length,
+                mapId: map?.id ?? null,
+                mapView: map?.getAttribute("data-map-view") ?? null,
+                preserveAspectRatio: map?.getAttribute("preserveAspectRatio") ?? null,
                 routeCount: routeKeys.length,
+                routeEmphasis: Array.from(
+                  element.querySelectorAll(".travel-map-route"),
+                ).map((route) => route.getAttribute("data-emphasis")),
                 routesUnique: routeKeys.every(Boolean) && new Set(routeKeys).size === routeKeys.length,
                 stats: Array.from(element.querySelectorAll(".travel-map-stats dd"))
                   .map((entry) => entry.textContent?.trim() ?? ""),
-                svgRole: element.querySelector(".travel-map-canvas")?.getAttribute("role"),
+                svgRole: map?.getAttribute("role"),
                 visible: rect.width > 0
                   && rect.height > 0
                   && getComputedStyle(element).visibility !== "hidden",
+                viewBox: map?.getAttribute("viewBox") ?? null,
               } : null;
             })(),
           },
@@ -366,6 +407,13 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
           }),
           documentOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
           feedbackDisplay: feedback ? getComputedStyle(feedback).display : "missing",
+          hero: {
+            ctaHref: document.querySelector("a.hero-cta")?.getAttribute("href") ?? null,
+            ctaText: document.querySelector("a.hero-cta")?.textContent
+              ?.replace(/\s+/g, " ").trim() ?? "",
+            positioningText: document.querySelector(".hero-positioning")
+              ?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+          },
           navigation: navigation
             ? {
                 clipPath: getComputedStyle(navigation).clipPath,
@@ -419,12 +467,17 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       }
       assert.equal(state.documentOverflow, 0);
       assert.equal(state.feedbackDisplay, "none");
+      assert.deepEqual(state.hero, {
+        ctaHref: "#about",
+        ctaText: "Explore context",
+        positioningText: "AI systems, made inspectable.",
+      });
       assert.equal(state.about.forbiddenCount, 0);
       assert.equal(state.about.contextCount, 0);
       assert.equal(
         state.about.introductionText,
-        "I'm Jaxon. I build inspectable systems where models, tools, and decisions meet the "
-          + "real world—with a focus on agents, multimodal systems, and autonomous intelligence.",
+        "I'm Jaxon. I build agents and multimodal systems whose behavior can be observed, "
+          + "tested, and improved.",
       );
       assert.deepEqual(
         state.about.loopSteps.map(({ label }) => label),
@@ -436,21 +489,59 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.ok(state.about.travelMap);
       assert.equal(state.about.travelMap.visible, true);
       assert.equal(state.about.travelMap.svgRole, "img");
+      assert.equal(state.about.travelMap.mapId, "travel-map-canvas");
+      assert.equal(state.about.travelMap.mapView, "world");
+      assert.equal(state.about.travelMap.viewBox, "0 0 800 400");
+      assert.equal(state.about.travelMap.preserveAspectRatio, "xMidYMid meet");
+      assert.equal(state.about.travelMap.filterActive, "false");
       assert.equal(state.about.travelMap.airportCount, generatedTravelData.counts.airports);
+      assert.equal(
+        state.about.travelMap.airportEmphasis.every((emphasis) => emphasis === "idle"),
+        true,
+      );
       assert.equal(state.about.travelMap.flagCount, generatedTravelData.counts.countries);
       assert.deepEqual(state.about.travelMap.flagCountryCodes, generatedCountryCodes);
       assert.equal(state.about.travelMap.flagListTagName, "UL");
+      assert.equal(state.about.travelMap.dockCount, 1);
+      assert.equal(state.about.travelMap.flagScrollCount, 1);
       assert.equal(state.about.travelMap.flagsHaveDockStructure, true);
+      assert.equal(state.about.travelMap.legacySummaryCount, 0);
+      assert.equal(state.about.travelMap.filterStatus, "Map filter All signals");
+      assert.deepEqual(
+        state.about.travelMap.flagButtons
+          .map(({ accessibleName, countryCode }) => ({ code: countryCode, name: accessibleName }))
+          .sort((a, b) => a.code.localeCompare(b.code)),
+        generatedCountries,
+      );
+      assert.equal(state.about.travelMap.flagButtons.every((button) => (
+        button.tagName === "BUTTON"
+        && button.type === "button"
+        && button.ariaControls === "travel-map-canvas"
+        && button.ariaPressed === "false"
+        && button.selected === "false"
+        && button.accessibleName.length > 0
+      )), true);
       assert.equal(state.about.travelMap.routeCount, generatedTravelData.counts.routes);
+      assert.equal(
+        state.about.travelMap.routeEmphasis.every((emphasis) => emphasis === "idle"),
+        true,
+      );
       assert.equal(state.about.travelMap.routesUnique, true);
       assert.deepEqual(state.about.travelMap.stats, [
-        String(generatedTravelData.counts.countries),
+        String(generatedTravelData.counts.countries).padStart(2, "0"),
       ]);
       assert.doesNotMatch(
         state.about.travelMap.copy,
         /Flight segments|Airports reached|Approximately [\d,]+ kilometers flown/i,
       );
       assert.doesNotMatch(state.about.travelMap.copy, /Trace window|DATA LAYER/i);
+      for (const { name } of generatedCountries) {
+        assert.equal(
+          await page.getByRole("button", { exact: true, name }).count(),
+          1,
+          `${viewport.width}x${viewport.height} no-JS flag button ${name} lost its accessible name`,
+        );
+      }
       assert.ok(state.navigation);
       assert.equal(state.navigation.clipPath, "none");
       assert.equal(state.navigation.opacity, "1");

@@ -13,7 +13,11 @@ test("wires the hero CTA to About through cancellable navigation without client-
   const packageJson = await readFile(new URL("../package.json", import.meta.url), "utf8");
 
   assert.match(page, /className="signal-button hero-cta" href="#about"/);
-  assert.match(page, /className="hero-cta-label">About me<\/span>/);
+  assert.match(page, /className="hero-cta-label">Explore context<\/span>/);
+  assert.match(
+    page,
+    /className="hero-positioning">AI systems, made inspectable\.<\/p>/,
+  );
   assert.doesNotMatch(page, /signal-button-arrow|↘/);
   assert.doesNotMatch(css, /signal-button-arrow/);
   assert.match(page, /className="hero-cta-border" aria-hidden="true"/);
@@ -34,7 +38,7 @@ test("wires the hero CTA to About through cancellable navigation without client-
   assert.doesNotMatch(packageJson, /["'](?:motion|framer-motion)["']/);
 });
 
-test("keeps the Context path server-rendered and prioritizes current context", async () => {
+test("keeps the Context path static-first and progressively enhances travel filtering", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const travelMap = await readFile(
     new URL("../app/components/TravelMap.tsx", import.meta.url),
@@ -61,7 +65,7 @@ test("keeps the Context path server-rendered and prioritizes current context", a
   assert.equal((page.match(/label: "(?:FRAME|CONNECT|OBSERVE|VERIFY)"/g) ?? []).length, 4);
   assert.match(
     page,
-    /decisions meet the real world—with a focus on agents, multimodal[\s\S]*?systems, and autonomous intelligence\./,
+    /I&apos;m Jaxon\. I build agents and multimodal systems whose behavior[\s\S]*?can be observed, tested, and improved\./,
   );
   assert.doesNotMatch(page, /aboutFocus|about-context|label: "Focus"/);
   assert.doesNotMatch(page, /Current threads|Core belief|YIELDS/);
@@ -71,7 +75,7 @@ test("keeps the Context path server-rendered and prioritizes current context", a
         < page.indexOf('<section className="about-working-loop"'),
     "introduction, travel map, and working loop should retain their reading order",
   );
-  assert.doesNotMatch(travelMap, /^"use client";/);
+  assert.match(travelMap, /^"use client";/);
   assert.doesNotMatch(signalHeading, /^"use client";/);
   assert.match(signalHeading, /"signal-heading"/);
   assert.match(signalHeading, /className="signal-heading__label"/);
@@ -85,13 +89,22 @@ test("keeps the Context path server-rendered and prioritizes current context", a
   );
   assert.match(travelMap, /role="img"/);
   assert.match(travelMap, /href="\/assets\/travel-world-solid\.svg"/);
-  assert.match(travelMap, /preserveAspectRatio="xMaxYMid slice"/);
+  assert.match(travelMap, /preserveAspectRatio="xMidYMid meet"/);
+  assert.match(travelMap, /MOBILE_MAP_ASPECT_RATIO = 6 \/ 5/);
+  assert.match(travelMap, /createFocusedViewBox\(travelData\.airports\)/);
+  assert.match(travelMap, /data-map-view=/);
   assert.match(travelMap, /Math\.abs\(horizontalDistance\) <= MAP_WIDTH \/ 2/);
   assert.match(travelMap, /travelData\.routes\.map\(\(route\) =>/);
   assert.match(travelMap, /data-route-key=\{routeKey\}/);
   assert.match(travelMap, /data-route-direction=\{route\.bidirectional \? "both" : "one-way"\}/);
-  assert.match(travelMap, /<ul className="travel-map-flags" aria-label="Visited countries and regions">/);
+  assert.match(travelMap, /className="travel-map-dock"/);
+  assert.match(travelMap, /className="travel-map-flags"/);
+  assert.match(travelMap, /aria-label="Filter flight footprint by country or region"/);
   assert.match(travelMap, /data-country-code=\{country\.code\}/);
+  assert.match(travelMap, /className="travel-map-flag-button"/);
+  assert.match(travelMap, /aria-pressed=\{isSelected\}/);
+  assert.match(travelMap, /aria-controls="travel-map-canvas"/);
+  assert.match(travelMap, /data-emphasis=/);
   assert.match(travelMap, /className="travel-map-flag-icon"/);
   assert.match(travelMap, /className="travel-map-flag-tooltip"/);
   assert.doesNotMatch(travelMap, /Flight segments|Airports reached|travel-map-distance|formatDistance/);
@@ -283,10 +296,12 @@ test("renders the Aceternity pixel portrait and removes the signal and CLI imple
   assert.match(page, /<HeroPixelPortrait \/>/);
   assert.ok(
     page.indexOf('className="hero-name"')
-      < page.indexOf("<HeroPixelPortrait />")
+      < page.indexOf('className="hero-positioning"')
+      && page.indexOf('className="hero-positioning"')
+        < page.indexOf("<HeroPixelPortrait />")
       && page.indexOf("<HeroPixelPortrait />")
         < page.indexOf('className="hero-actions"'),
-    "portrait should be between the name and CTA in source order",
+    "positioning line and portrait should lead into the CTA in source order",
   );
   assert.doesNotMatch(page, /HeroSignalGraphic|hero-signal-graphic/);
   assert.doesNotMatch(page, /HeroTerminal|hero-terminal|agentctl|CLI/);

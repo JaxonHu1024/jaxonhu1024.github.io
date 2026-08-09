@@ -72,7 +72,10 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.doesNotMatch(html, /hero-terminal|agentctl compile|BUILD READY/);
   assert.doesNotMatch(html, /terminal-button|class="button-arrow"/);
   assert.equal((html.match(/class="paper-link"/g) ?? []).length, 2);
-  assert.doesNotMatch(html, /hero-positioning/);
+  assert.match(
+    html,
+    /<p class="hero-positioning">AI systems, made inspectable\.<\/p>/,
+  );
   assert.doesNotMatch(
     html,
     /SENIOR AI ENGINEER \/\/ AI AGENTS · LLMs \/ VLMs · AUTONOMOUS DRIVING/,
@@ -223,7 +226,7 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.ok(aboutStart >= 0 && experienceStart > aboutStart);
   assert.match(
     html,
-    /href="#about"[^>]*>[\s\S]*?<span class="hero-cta-label">About me<\/span>/,
+    /href="#about"[^>]*>[\s\S]*?<span class="hero-cta-label">Explore context<\/span>/,
   );
   assert.doesNotMatch(html, /signal-button-arrow|>↘</);
   assert.match(html, /<span class="hero-cta-border" aria-hidden="true">/);
@@ -246,7 +249,7 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.match(about, /to system behavior\./);
   assert.match(
     about,
-    /I(?:&#x27;|')m Jaxon\. I build inspectable systems where models, tools, and decisions meet the real world—with a focus on agents, multimodal systems, and autonomous intelligence\./,
+    /I(?:&#x27;|')m Jaxon\. I build agents and multimodal systems whose behavior can be observed, tested, and improved\./,
   );
   assert.match(
     about,
@@ -291,7 +294,7 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.doesNotMatch(about, /about-context|<dt>Focus<\/dt>|Current context/);
   assert.match(
     about,
-    /<figure(?=[^>]*\bclass="about-travel")(?=[^>]*\baria-labelledby="travel-map-title")[^>]*>/,
+    /<figure(?=[^>]*\bclass="about-travel")(?=[^>]*\baria-labelledby="travel-map-title")(?=[^>]*\bdata-filter-active="false")[^>]*>/,
   );
   assert.match(
     about,
@@ -308,13 +311,26 @@ test("renders a distinct public-safe About system before Experience", async () =
   );
   assert.match(
     about,
-    new RegExp(`<dt>Countries \\/ regions<\\/dt>[\\s\\S]*?<dd>${travelData.counts.countries}<\\/dd>`),
+    /<div class="travel-map-dock"><div class="travel-map-dock-status">/,
   );
+  assert.match(
+    about,
+    new RegExp(
+      `<dt>Countries \\/ regions<\\/dt><dd>${travelData.counts.countries < 10
+        ? '<span class="travel-map-stat-leading-zero" aria-hidden="true">0<\\/span>(?:<!-- -->)?'
+        : ""}${travelData.counts.countries}<\\/dd>`,
+    ),
+  );
+  assert.match(
+    about,
+    /<p class="travel-map-filter-status" aria-live="polite" aria-atomic="true"><span>Map filter<\/span><strong>All signals<\/strong><\/p>/,
+  );
+  assert.match(about, /<div class="travel-map-flags-scroll">/);
   assert.doesNotMatch(about, /Flight segments|Airports reached|travel-map-distance/);
   assert.doesNotMatch(about, /Trace window|DATA LAYER/i);
   assert.match(
     about,
-    /<svg(?=[^>]*\bclass="travel-map-canvas")(?=[^>]*\bviewBox="0 0 800 400")(?=[^>]*\brole="img")[^>]*>/,
+    /<svg(?=[^>]*\bclass="travel-map-canvas")(?=[^>]*\bdata-map-view="world")(?=[^>]*\bid="travel-map-canvas")(?=[^>]*\bviewBox="0 0 800 400")(?=[^>]*\bpreserveAspectRatio="xMidYMid meet")(?=[^>]*\brole="img")[^>]*>/,
   );
   assert.match(
     about,
@@ -324,6 +340,10 @@ test("renders a distinct public-safe About system before Experience", async () =
     .map((match) => match[1]);
   assert.equal(renderedRouteKeys.length, travelData.counts.routes);
   assert.equal(new Set(renderedRouteKeys).size, renderedRouteKeys.length);
+  assert.equal(
+    (about.match(/<g(?=[^>]*\bclass="travel-map-route")(?=[^>]*\bdata-emphasis="idle")[^>]*>/g) ?? []).length,
+    travelData.counts.routes,
+  );
   assert.equal(
     (about.match(/data-route-direction="both"/g) ?? []).length,
     bidirectionalCorridors,
@@ -341,11 +361,26 @@ test("renders a distinct public-safe About system before Experience", async () =
     .map((match) => match[1]);
   assert.ok(renderedRoutePaths.length >= renderedRouteKeys.length);
   assert.equal(renderedRoutePaths.every((path) => path.includes(" L ") && !path.includes(" Q ")), true);
-  assert.match(about, /<ul class="travel-map-flags" aria-label="Visited countries and regions">/);
+  assert.equal(
+    (about.match(/<g(?=[^>]*\bclass="travel-map-airport")(?=[^>]*\bdata-emphasis="idle")[^>]*>/g) ?? []).length,
+    travelData.counts.airports,
+  );
+  assert.match(
+    about,
+    /<ul class="travel-map-flags" aria-label="Filter flight footprint by country or region">/,
+  );
   const renderedFlagCodes = [...about.matchAll(/<li[^>]*data-country-code="([^"]+)"[^>]*>/g)]
     .map((match) => match[1])
     .sort();
   assert.deepEqual(renderedFlagCodes, generatedCountryCodes);
+  assert.equal(
+    (about.match(/<li(?=[^>]*\bdata-country-code="[^"]+")(?=[^>]*\bdata-selected="false")[^>]*>/g) ?? []).length,
+    travelData.counts.countries,
+  );
+  assert.equal(
+    (about.match(/<button(?=[^>]*\bclass="travel-map-flag-button")(?=[^>]*\btype="button")(?=[^>]*\baria-controls="travel-map-canvas")(?=[^>]*\baria-pressed="false")[^>]*>/g) ?? []).length,
+    travelData.counts.countries,
+  );
   assert.equal(
     (about.match(/class="travel-map-flag-icon"/g) ?? []).length,
     travelData.counts.countries,
@@ -415,7 +450,7 @@ test("renders all public portfolio copy in English", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
 
   assert.match(html, /<html lang="en">/);
-  assert.match(html, /About me/);
+  assert.match(html, /Explore context/);
   assert.match(html, /<h3>ByteDance<\/h3>/);
   assert.match(html, /<p>Senior AI Engineer<\/p>/);
   assert.match(
@@ -531,6 +566,10 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
 
   const hero = page.slice(heroStart, heroEnd);
   assert.match(hero, /JAXON/);
+  assert.match(
+    hero,
+    /<p className="hero-positioning">AI systems, made inspectable\.<\/p>/,
+  );
   assert.doesNotMatch(
     hero,
     /AI ALGORITHM ENGINEER|The body achieves what the mind believes|Turning model capability|Models, tools, and decisions connected|View research|TextType/,
@@ -538,10 +577,12 @@ test("keeps the hero private, English-only, and decoupled from paper topics", as
   assert.match(hero, /HeroPixelPortrait/);
   assert.ok(
     hero.indexOf('className="hero-name"')
-      < hero.indexOf("<HeroPixelPortrait />")
+      < hero.indexOf('className="hero-positioning"')
+      && hero.indexOf('className="hero-positioning"')
+        < hero.indexOf("<HeroPixelPortrait />")
       && hero.indexOf("<HeroPixelPortrait />")
         < hero.indexOf('className="hero-actions"'),
-    "mobile source order should remain JAXON, portrait, then CTA",
+    "mobile source order should remain JAXON, positioning, portrait, then CTA",
   );
   assert.doesNotMatch(hero, /HeroTerminal|hero-terminal|agentctl|CLI/);
   assert.doesNotMatch(hero, /HeroSignalGraphic|hero-signal-/);
