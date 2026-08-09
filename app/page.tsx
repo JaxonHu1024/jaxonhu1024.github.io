@@ -1,6 +1,7 @@
 import { Navigation } from "./components/Navigation";
 import { HeroPixelPortrait } from "./components/HeroPixelPortrait";
 import { ResearchVisual } from "./components/ResearchVisual";
+import { SignalHeading } from "./components/SignalHeading";
 import { TravelMap } from "./components/TravelMap";
 
 const currentExperience = {
@@ -124,7 +125,7 @@ export default function Home() {
         >
           <div className="about-layout reveal">
             <header className="about-copy">
-              <p className="about-kicker">JAXON.CONTEXT</p>
+              <SignalHeading className="about-kicker">JAXON.CONTEXT</SignalHeading>
               <h2 className="about-statement" id="about-title">
                 <span>From model capability</span>
                 <span>to system behavior.</span>
@@ -140,7 +141,9 @@ export default function Home() {
 
             <section className="about-working-loop" aria-labelledby="about-loop-title">
               <header className="about-loop-header">
-                <p>Working loop</p>
+                <SignalHeading className="about-loop-kicker">
+                  WORKING.LOOP
+                </SignalHeading>
                 <h3 id="about-loop-title">How I work.</h3>
               </header>
 
@@ -169,11 +172,9 @@ export default function Home() {
           aria-labelledby="experience-title"
           tabIndex={-1}
         >
-          <h2 className="section-kicker reveal" id="experience-title">
-            <span>EXPERIENCE.LOG</span>
-            <span className="kicker-rule" aria-hidden="true" />
-            <span className="square-end" aria-hidden="true" />
-          </h2>
+          <SignalHeading as="h2" className="section-kicker reveal" id="experience-title">
+            EXPERIENCE.LOG
+          </SignalHeading>
           <div className="experience-log">
             <article className="experience-row is-current">
               <div className="timeline-cell" aria-hidden="true">
@@ -240,16 +241,14 @@ export default function Home() {
           aria-labelledby="foundations-title"
           tabIndex={-1}
         >
-          <h2 className="section-kicker section-kicker--compact reveal" id="foundations-title">
-            <span>FOUNDATIONS.INDEX</span>
-          </h2>
+          <SignalHeading as="h2" className="section-kicker reveal" id="foundations-title">
+            FOUNDATIONS.INDEX
+          </SignalHeading>
           <div className="foundations-grid reveal">
             <div className="education-column">
-              <div className="column-label">
-                <span>EDUCATION</span>
-                <span className="label-rule" aria-hidden="true" />
-                <span className="square-end" aria-hidden="true" />
-              </div>
+              <SignalHeading as="div" className="column-label">
+                EDUCATION
+              </SignalHeading>
               <div className="education-timeline">
                 <article className="education-item has-crest">
                   <span className="education-node" aria-hidden="true" />
@@ -285,11 +284,9 @@ export default function Home() {
               </div>
             </div>
             <div className="toolchain-column">
-              <div className="column-label">
-                <span>TOOLCHAIN</span>
-                <span className="label-rule" aria-hidden="true" />
-                <span className="square-end" aria-hidden="true" />
-              </div>
+              <SignalHeading as="div" className="column-label">
+                TOOLCHAIN
+              </SignalHeading>
               <dl className="toolchain-list" aria-label="Technical toolchain">
                 <div className="toolchain-module">
                   <dt>AI SPECIALTIES</dt>
@@ -314,11 +311,9 @@ export default function Home() {
           aria-labelledby="research-title"
           tabIndex={-1}
         >
-          <h2 className="section-kicker reveal" id="research-title">
-            <span>RESEARCH.INDEX</span>
-            <span className="kicker-rule" aria-hidden="true" />
-            <span className="square-end" aria-hidden="true" />
-          </h2>
+          <SignalHeading as="h2" className="section-kicker reveal" id="research-title">
+            RESEARCH.INDEX
+          </SignalHeading>
           <div className="research-frame reveal">
             {papers.map((paper) => (
               <article className={`research-packet is-${paper.visual}`} key={paper.id}>
@@ -351,9 +346,9 @@ export default function Home() {
           tabIndex={-1}
         >
           <div className="contact-inner">
-            <h2 className="section-kicker section-kicker--compact reveal" id="contact-title">
-              <span>CONTACT.CHANNEL</span>
-            </h2>
+            <SignalHeading as="h2" className="section-kicker reveal" id="contact-title">
+              CONTACT.CHANNEL
+            </SignalHeading>
 
             <div className="contact-marquee reveal">
               <p className="contact-marquee-summary">{contactMessage}</p>

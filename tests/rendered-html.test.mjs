@@ -86,7 +86,14 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /DAMO Academy/);
   assert.match(html, /FOUNDATIONS/);
   assert.match(html, /FOUNDATIONS\.INDEX/);
-  assert.match(html, /section-kicker section-kicker--compact reveal/);
+  assert.equal((html.match(/class="signal-heading(?:\s|\")/g) ?? []).length, 9);
+  assert.equal((html.match(/class="signal-heading__label"/g) ?? []).length, 9);
+  assert.equal((html.match(/class="signal-heading__rule" aria-hidden="true"/g) ?? []).length, 9);
+  assert.equal((html.match(/class="signal-heading__end" aria-hidden="true"/g) ?? []).length, 9);
+  assert.doesNotMatch(
+    html,
+    /signal-heading--nested|section-kicker--compact|kicker-rule|label-rule|square-end/,
+  );
   assert.doesNotMatch(html, /section-footer|EXPERIENCE LAYER|FOUNDATION LAYER|RESEARCH LAYER/);
   for (const id of ["hero", "about", "experience", "research", "foundations", "contact"]) {
     assert.match(
@@ -227,7 +234,10 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.match(about, /JAXON\.CONTEXT/);
   assert.match(about, /<div class="about-layout reveal">/);
   assert.match(about, /<header class="about-copy">/);
-  assert.match(about, /<p class="about-kicker">JAXON\.CONTEXT<\/p>/);
+  assert.match(
+    about,
+    /<p class="signal-heading about-kicker">[\s\S]*?<span class="signal-heading__label">JAXON\.CONTEXT<\/span>/,
+  );
   assert.match(
     about,
     /<h2(?=[^>]*\bclass="about-statement")(?=[^>]*\bid="about-title")[^>]*>/,
@@ -241,6 +251,10 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.match(
     about,
     /<section(?=[^>]*\bclass="about-working-loop")(?=[^>]*\baria-labelledby="about-loop-title")[^>]*>/,
+  );
+  assert.match(
+    about,
+    /<p class="signal-heading about-loop-kicker">[\s\S]*?<span class="signal-heading__label">WORKING\.LOOP<\/span>/,
   );
   assert.match(about, /<h3 id="about-loop-title">How I work\.<\/h3>/);
   assert.match(
@@ -279,25 +293,24 @@ test("renders a distinct public-safe About system before Experience", async () =
     about,
     /<figure(?=[^>]*\bclass="about-travel")(?=[^>]*\baria-labelledby="travel-map-title")[^>]*>/,
   );
-  assert.match(about, /<p class="travel-map-kicker">FLIGHT\.FOOTPRINT<\/p>/);
+  assert.match(
+    about,
+    /<p class="signal-heading travel-map-kicker">[\s\S]*?<span class="signal-heading__label">FLIGHT\.FOOTPRINT<\/span>/,
+  );
   assert.match(about, /<h3 id="travel-map-title">Places leave a signal\.<\/h3>/);
   assert.match(
     about,
     /Routes I(?:&#x27;|')ve flown—and the places that keep widening how I see,[\s\S]*?learn, and build\./,
   );
-  assert.match(about, /<dl class="travel-map-stats" aria-label="Flight footprint summary">/);
   assert.match(
     about,
-    new RegExp(`<dt>Flight segments<\\/dt>[\\s\\S]*?<dd>${travelData.counts.flights}<\\/dd>`),
-  );
-  assert.match(
-    about,
-    new RegExp(`<dt>Airports reached<\\/dt>[\\s\\S]*?<dd>${travelData.counts.airports}<\\/dd>`),
+    /<dl class="travel-map-stats" aria-label="Visited countries and regions summary">/,
   );
   assert.match(
     about,
     new RegExp(`<dt>Countries \\/ regions<\\/dt>[\\s\\S]*?<dd>${travelData.counts.countries}<\\/dd>`),
   );
+  assert.doesNotMatch(about, /Flight segments|Airports reached|travel-map-distance/);
   assert.doesNotMatch(about, /Trace window|DATA LAYER/i);
   assert.match(
     about,
@@ -341,10 +354,7 @@ test("renders a distinct public-safe About system before Experience", async () =
     (about.match(/class="travel-map-flag-tooltip"/g) ?? []).length,
     travelData.counts.countries,
   );
-  assert.match(
-    about,
-    new RegExp(`Approximately ${travelData.totalDistanceKm.toLocaleString("en-US")} kilometers flown`),
-  );
+  assert.doesNotMatch(about, /Approximately [\d,]+ kilometers flown/);
   assert.doesNotMatch(about, /travel-map-frame|travel-map-place-index|travel-map-caption/);
   assert.doesNotMatch(
     about,
@@ -486,15 +496,19 @@ test("orders About, Experience, Foundations, and Research with distinct section 
       < html.indexOf('class="section research"'),
   );
   assert.doesNotMatch(html, /OPERATING CONTEXT/);
-  assert.match(html, /<h2 class="section-kicker reveal" id="experience-title">/);
-  assert.match(
-    html,
-    /<h2 class="section-kicker section-kicker--compact reveal" id="foundations-title">/,
+  for (const id of ["experience", "foundations", "research", "contact"]) {
+    assert.match(
+      html,
+      new RegExp(`<h2 class="signal-heading section-kicker reveal" id="${id}-title">`),
+    );
+  }
+  assert.equal(
+    (html.match(/class="signal-heading column-label"/g) ?? []).length,
+    2,
   );
-  assert.match(html, /<h2 class="section-kicker reveal" id="research-title">/);
-  assert.match(
+  assert.doesNotMatch(
     html,
-    /<h2 class="section-kicker section-kicker--compact reveal" id="contact-title">/,
+    /signal-heading--nested|section-kicker--compact|kicker-rule|label-rule|square-end/,
   );
   assert.doesNotMatch(html, /section-footer|EXPERIENCE LAYER|FOUNDATION LAYER|RESEARCH LAYER/);
   for (const group of ["AI SPECIALTIES", "LANGUAGES", "PLATFORM"]) {

@@ -1,4 +1,5 @@
 import travelDataJson from "../data/travel.generated.json";
+import { SignalHeading } from "./SignalHeading";
 
 type TravelAirport = {
   city: string;
@@ -79,10 +80,6 @@ function createRoutePaths(start: ProjectedPoint, end: ProjectedPoint) {
   ];
 }
 
-function formatDistance(distance: number) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(distance);
-}
-
 function countryFlag(countryCode: string) {
   if (!/^[A-Z]{2}$/.test(countryCode)) return "•";
 
@@ -126,7 +123,9 @@ export function TravelMap() {
   return (
     <figure className="about-travel" aria-labelledby="travel-map-title">
       <figcaption className="travel-map-header">
-        <p className="travel-map-kicker">FLIGHT.FOOTPRINT</p>
+        <SignalHeading className="travel-map-kicker">
+          FLIGHT.FOOTPRINT
+        </SignalHeading>
         <h3 id="travel-map-title">Places leave a signal.</h3>
         <p>
           Routes I&apos;ve flown—and the places that keep widening how I see,
@@ -225,28 +224,15 @@ export function TravelMap() {
           </ul>
 
           <div className="travel-map-summary">
-            <dl className="travel-map-stats" aria-label="Flight footprint summary">
-              <div>
-                <dt>Flight segments</dt>
-                <dd>{travelData.counts.flights}</dd>
-              </div>
-              <div>
-                <dt>Airports reached</dt>
-                <dd>{travelData.counts.airports}</dd>
-              </div>
+            <dl
+              className="travel-map-stats"
+              aria-label="Visited countries and regions summary"
+            >
               <div>
                 <dt>Countries / regions</dt>
                 <dd>{travelData.counts.countries}</dd>
               </div>
             </dl>
-            <p
-              className="travel-map-distance"
-              aria-label={`Approximately ${formatDistance(travelData.totalDistanceKm)} kilometers flown`}
-            >
-              <span aria-hidden="true">≈</span>
-              <strong>{formatDistance(travelData.totalDistanceKm)}</strong>
-              <span>KM</span>
-            </p>
           </div>
 
           <p className="sr-only">

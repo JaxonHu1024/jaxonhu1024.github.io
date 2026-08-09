@@ -444,10 +444,12 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.about.travelMap.routeCount, generatedTravelData.counts.routes);
       assert.equal(state.about.travelMap.routesUnique, true);
       assert.deepEqual(state.about.travelMap.stats, [
-        String(generatedTravelData.counts.flights),
-        String(generatedTravelData.counts.airports),
         String(generatedTravelData.counts.countries),
       ]);
+      assert.doesNotMatch(
+        state.about.travelMap.copy,
+        /Flight segments|Airports reached|Approximately [\d,]+ kilometers flown/i,
+      );
       assert.doesNotMatch(state.about.travelMap.copy, /Trace window|DATA LAYER/i);
       assert.ok(state.navigation);
       assert.equal(state.navigation.clipPath, "none");

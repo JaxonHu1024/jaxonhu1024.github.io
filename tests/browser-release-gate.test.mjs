@@ -237,10 +237,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           ".about-layout",
           ".experience > .section-kicker",
           ".experience-log",
+          ".foundations > .section-kicker",
           ".foundations-grid",
           ".research > .section-kicker",
           ".research-frame",
           ".contact-inner",
+          ".contact-inner > .section-kicker",
         ];
         const alignmentShells = shellSelectors.map((selector) => {
           const rect = document.querySelector(selector)?.getBoundingClientRect();
@@ -251,12 +253,112 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             selector,
           } : null;
         }).filter((metric) => metric !== null);
-        const compactKickers = [
-          ".foundations > .section-kicker--compact",
-          ".contact-inner > .section-kicker--compact",
-        ].map((selector) => {
-          const rect = document.querySelector(selector)?.getBoundingClientRect();
-          return rect ? { left: rect.left, selector } : null;
+        const signalHeadingDefinitions = [
+          {
+            contentSelector: ".about-statement",
+            gapProperty: "marginTop",
+            gapSelector: ".about-statement",
+            name: "JAXON.CONTEXT",
+            selector: ".about-kicker",
+          },
+          {
+            contentSelector: ".travel-map-header h3",
+            gapProperty: "marginTop",
+            gapSelector: ".travel-map-header h3",
+            name: "FLIGHT.FOOTPRINT",
+            selector: ".travel-map-kicker",
+          },
+          {
+            contentSelector: ".about-loop-header h3",
+            gapProperty: "rowGap",
+            gapSelector: ".about-loop-header",
+            name: "WORKING.LOOP",
+            selector: ".about-loop-kicker",
+          },
+          {
+            contentSelector: ".experience-log",
+            gapProperty: "marginTop",
+            gapSelector: ".experience-log",
+            name: "EXPERIENCE.LOG",
+            selector: "#experience-title",
+          },
+          {
+            contentSelector: ".foundations-grid",
+            gapProperty: "marginTop",
+            gapSelector: ".foundations-grid",
+            name: "FOUNDATIONS.INDEX",
+            selector: "#foundations-title",
+          },
+          {
+            contentSelector: ".education-timeline",
+            gapProperty: "marginTop",
+            gapSelector: ".education-timeline",
+            name: "EDUCATION",
+            selector: ".education-column > .column-label",
+          },
+          {
+            contentSelector: ".toolchain-list",
+            gapProperty: "marginTop",
+            gapSelector: ".toolchain-list",
+            name: "TOOLCHAIN",
+            selector: ".toolchain-column > .column-label",
+          },
+          {
+            contentSelector: ".research-frame",
+            gapProperty: "marginBottom",
+            gapSelector: "#research-title",
+            name: "RESEARCH.INDEX",
+            selector: "#research-title",
+          },
+          {
+            contentSelector: ".contact-marquee",
+            gapProperty: "marginTop",
+            gapSelector: ".contact-marquee",
+            name: "CONTACT.CHANNEL",
+            selector: "#contact-title",
+          },
+        ];
+        const signalHeadings = signalHeadingDefinitions.map((definition) => {
+          const element = document.querySelector(definition.selector);
+          const content = document.querySelector(definition.contentSelector);
+          const gapElement = document.querySelector(definition.gapSelector);
+          if (!element || !content || !gapElement) return null;
+          const rect = element.getBoundingClientRect();
+          const label = element.querySelector(".signal-heading__label");
+          const labelRect = label?.getBoundingClientRect();
+          const rule = element.querySelector(".signal-heading__rule");
+          const end = element.querySelector(".signal-heading__end");
+          const ruleRect = rule?.getBoundingClientRect();
+          const endRect = end?.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            clipped: !labelRect
+              || labelRect.left < rect.left - .5
+              || labelRect.right > rect.right + .5
+              || labelRect.top < rect.top - .5
+              || labelRect.bottom > rect.bottom + .5,
+            contentGap: Number.parseFloat(
+              getComputedStyle(gapElement)[definition.gapProperty],
+            ),
+            display: style.display,
+            endHeight: endRect?.height ?? 0,
+            endWidth: endRect?.width ?? 0,
+            fontFamily: style.fontFamily,
+            fontSize: Number.parseFloat(style.fontSize),
+            fontWeight: style.fontWeight,
+            letterSpacing: style.letterSpacing,
+            left: rect.left,
+            lineHeight: style.lineHeight,
+            parts: {
+              end: element.querySelectorAll(":scope > .signal-heading__end").length,
+              label: element.querySelectorAll(":scope > .signal-heading__label").length,
+              rule: element.querySelectorAll(":scope > .signal-heading__rule").length,
+            },
+            ruleHeight: ruleRect?.height ?? 0,
+            right: rect.right,
+            text: label?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+            textTransform: style.textTransform,
+          };
         }).filter((metric) => metric !== null);
         const splitMetric = (selector) => {
           const element = document.querySelector(selector);
@@ -283,7 +385,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
 
         return {
           alignmentShells,
-          compactKickers,
+          signalHeadings,
           aboutPresentation: aboutShellRect && aboutLoopRect
             ? {
                 contextCount: document.querySelectorAll(".about-context").length,
@@ -298,6 +400,8 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                 loopRightDelta: aboutShellRect.right - aboutLoopRect.right,
                 loopWidth: aboutLoopRect.width,
                 sectionHeight: aboutSectionRect?.height ?? 0,
+                shellLeft: aboutShellRect.left,
+                shellRight: aboutShellRect.right,
                 shellWidth: aboutShellRect.width,
                 statementWidth: aboutStatementRect?.width ?? 0,
                 travelMap: travelMapRect && travelMapViewportRect
@@ -308,8 +412,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                       ).length,
                       descriptionLength: travelMapElement.querySelector(".travel-map-canvas desc")
                         ?.textContent?.trim().length ?? 0,
-                      distanceText: travelMapElement.querySelector(".travel-map-distance")
-                        ?.textContent?.replace(/\s+/g, " ").trim() ?? "",
+                      distancePresent: Boolean(
+                        travelMapElement.querySelector(".travel-map-distance"),
+                      ),
                       flagCount: travelMapElement.querySelectorAll(".travel-map-flags > li").length,
                       flagCountryCodes: Array.from(
                         travelMapElement.querySelectorAll(".travel-map-flags > li"),
@@ -323,6 +428,15 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
                         && Boolean(flag.querySelector(".travel-map-flag-icon"))
                         && Boolean(flag.querySelector(".travel-map-flag-tooltip"))
                       )),
+                      flagIconsHaveNoBackdrop: Array.from(
+                        travelMapElement.querySelectorAll(".travel-map-flag-icon"),
+                      ).every((icon) => {
+                        const style = getComputedStyle(icon);
+                        return style.backgroundColor === "rgba(0, 0, 0, 0)"
+                          && style.backgroundImage === "none"
+                          && style.borderTopWidth === "0px"
+                          && style.boxShadow === "none";
+                      }),
                       flagsClipped: (() => {
                         const list = travelMapElement.querySelector(".travel-map-flags");
                         const listRect = list?.getBoundingClientRect();
@@ -472,13 +586,8 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       });
       assert.equal(
         sectionRhythm.alignmentShells.length,
-        9,
+        11,
         `${viewport.width}x${viewport.height} did not render every alignment shell`,
-      );
-      assert.equal(
-        sectionRhythm.compactKickers.length,
-        2,
-        `${viewport.width}x${viewport.height} did not render both compact section labels`,
       );
       for (const edge of ["left", "center", "right"]) {
         const positions = sectionRhythm.alignmentShells.map((metric) => metric[edge]);
@@ -490,10 +599,64 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
               .join(", "),
         );
       }
-      for (const kicker of sectionRhythm.compactKickers) {
+      assert.equal(
+        sectionRhythm.signalHeadings.length,
+        9,
+        `${viewport.width}x${viewport.height} did not render every shared signal heading`,
+      );
+      assert.deepEqual(
+        sectionRhythm.signalHeadings.map(({ text }) => text),
+        [
+          "JAXON.CONTEXT",
+          "FLIGHT.FOOTPRINT",
+          "WORKING.LOOP",
+          "EXPERIENCE.LOG",
+          "FOUNDATIONS.INDEX",
+          "EDUCATION",
+          "TOOLCHAIN",
+          "RESEARCH.INDEX",
+          "CONTACT.CHANNEL",
+        ],
+      );
+      const headingTypography = sectionRhythm.signalHeadings.map((heading) => ({
+        fontFamily: heading.fontFamily,
+        fontSize: heading.fontSize,
+        fontWeight: heading.fontWeight,
+        letterSpacing: heading.letterSpacing,
+        lineHeight: heading.lineHeight,
+        textTransform: heading.textTransform,
+      }));
+      for (const [index, heading] of sectionRhythm.signalHeadings.entries()) {
+        assert.deepEqual(
+          headingTypography[index],
+          headingTypography[0],
+          `${viewport.width}x${viewport.height} ${heading.text} typography diverged`,
+        );
+        assert.equal(heading.display, "grid");
+        assert.equal(heading.clipped, false);
+        assert.deepEqual(heading.parts, { end: 1, label: 1, rule: 1 });
         assert.ok(
-          Math.abs(kicker.left - sectionRhythm.alignmentShells[0].left) <= 0.75,
-          `${viewport.width}x${viewport.height} ${kicker.selector} left alignment diverged`,
+          Math.abs(heading.ruleHeight - 1) <= .5
+            && Math.abs(heading.endWidth - 9) <= .5
+            && Math.abs(heading.endHeight - 9) <= .5,
+          `${viewport.width}x${viewport.height} ${heading.text} signal geometry diverged`,
+        );
+      }
+      const signalHeadingGaps = sectionRhythm.signalHeadings.map(({ contentGap }) => contentGap);
+      assert.ok(
+        Math.max(...signalHeadingGaps) - Math.min(...signalHeadingGaps) <= 1,
+        `${viewport.width}x${viewport.height} heading gaps diverged: `
+          + signalHeadingGaps.join(", "),
+      );
+      assert.ok(
+        sectionRhythm.aboutPresentation,
+        `${viewport.width}x${viewport.height} About presentation was missing`,
+      );
+      for (const heading of sectionRhythm.signalHeadings.slice(0, 3)) {
+        assert.ok(
+          Math.abs(heading.left - sectionRhythm.aboutPresentation.shellLeft) <= .75
+            && Math.abs(heading.right - sectionRhythm.aboutPresentation.shellRight) <= .75,
+          `${viewport.width}x${viewport.height} ${heading.text} did not span the About shell`,
         );
       }
       for (const split of sectionRhythm.centerSplits) {
@@ -513,10 +676,6 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
             + `${split.seam}px, shell center=${split.center}px`,
         );
       }
-      assert.ok(
-        sectionRhythm.aboutPresentation,
-        `${viewport.width}x${viewport.height} About presentation was missing`,
-      );
       assert.equal(sectionRhythm.aboutPresentation.forbiddenCount, 0);
       assert.ok(
         Math.abs(sectionRhythm.aboutPresentation.loopLeftDelta) <= 0.75
@@ -556,6 +715,7 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
       assert.deepEqual(travelMap.flagCountryCodes, generatedCountryCodes);
       assert.equal(travelMap.flagListTagName, "UL");
       assert.equal(travelMap.flagsHaveDockStructure, true);
+      assert.equal(travelMap.flagIconsHaveNoBackdrop, true);
       assert.equal(travelMap.flagsClipped, false);
       assert.equal(travelMap.imageCount, 1);
       assert.equal(travelMap.role, "img");
@@ -575,14 +735,9 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
           + JSON.stringify(travelMap.routePresentation),
       );
       assert.deepEqual(travelMap.statValues, [
-        String(generatedTravelData.counts.flights),
-        String(generatedTravelData.counts.airports),
         String(generatedTravelData.counts.countries),
       ]);
-      assert.match(
-        travelMap.distanceText,
-        new RegExp(generatedTravelData.totalDistanceKm.toLocaleString("en-US")),
-      );
+      assert.equal(travelMap.distancePresent, false);
       assert.ok(travelMap.descriptionLength > 200);
       const expectedMapRatio = viewport.width <= 600 ? 4 / 3 : 2;
       assert.ok(
@@ -644,6 +799,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         initialLayout.hero.ctaHeight >= 44,
         `${viewport.width}x${viewport.height} hero CTA height=${initialLayout.hero.ctaHeight}px`,
       );
+      if (viewport.width <= 600) {
+        assert.ok(
+          heroCta.width >= 151.5 && heroCta.width <= 176.5,
+          `${viewport.width}x${viewport.height} hero CTA width=${heroCta.width}px`,
+        );
+      }
       assert.equal(
         heroFlow.ctaLineCount,
         1,

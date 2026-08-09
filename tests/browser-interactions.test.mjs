@@ -796,21 +796,15 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
       assert.equal(ledger.travelMap.routesUnique, true);
       assert.deepEqual(ledger.travelMap.stats, [
         {
-          label: "Flight segments",
-          value: String(generatedTravelData.counts.flights),
-          visible: true,
-        },
-        {
-          label: "Airports reached",
-          value: String(generatedTravelData.counts.airports),
-          visible: true,
-        },
-        {
           label: "Countries / regions",
           value: String(generatedTravelData.counts.countries),
           visible: true,
         },
       ]);
+      assert.doesNotMatch(
+        ledger.travelMap.copy,
+        /Flight segments|Airports reached|Approximately [\d,]+ kilometers flown/i,
+      );
       assert.doesNotMatch(ledger.travelMap.copy, /Trace window|DATA LAYER/i);
     } finally {
       await context.close();

@@ -40,6 +40,10 @@ test("keeps the Context path server-rendered and prioritizes current context", a
     new URL("../app/components/TravelMap.tsx", import.meta.url),
     "utf8",
   );
+  const signalHeading = await readFile(
+    new URL("../app/components/SignalHeading.tsx", import.meta.url),
+    "utf8",
+  );
   const controller = await readFile(
     new URL("../app/components/HeroInteractionController.tsx", import.meta.url),
     "utf8",
@@ -68,6 +72,17 @@ test("keeps the Context path server-rendered and prioritizes current context", a
     "introduction, travel map, and working loop should retain their reading order",
   );
   assert.doesNotMatch(travelMap, /^"use client";/);
+  assert.doesNotMatch(signalHeading, /^"use client";/);
+  assert.match(signalHeading, /"signal-heading"/);
+  assert.match(signalHeading, /className="signal-heading__label"/);
+  assert.match(signalHeading, /className="signal-heading__rule" aria-hidden="true"/);
+  assert.match(signalHeading, /className="signal-heading__end" aria-hidden="true"/);
+  assert.doesNotMatch(signalHeading, /level|signal-heading--nested/);
+  assert.match(page, /WORKING\.LOOP/);
+  assert.doesNotMatch(
+    `${page}\n${css}`,
+    /signal-heading--nested|section-kicker--compact|kicker-rule|label-rule|square-end/,
+  );
   assert.match(travelMap, /role="img"/);
   assert.match(travelMap, /href="\/assets\/travel-world-solid\.svg"/);
   assert.match(travelMap, /preserveAspectRatio="xMaxYMid slice"/);
@@ -79,6 +94,12 @@ test("keeps the Context path server-rendered and prioritizes current context", a
   assert.match(travelMap, /data-country-code=\{country\.code\}/);
   assert.match(travelMap, /className="travel-map-flag-icon"/);
   assert.match(travelMap, /className="travel-map-flag-tooltip"/);
+  assert.doesNotMatch(travelMap, /Flight segments|Airports reached|travel-map-distance|formatDistance/);
+  assert.doesNotMatch(css, /\.travel-map-distance/);
+  assert.match(
+    css,
+    /\.travel-map-flag-icon\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/,
+  );
   assert.doesNotMatch(travelMap, /routeIndex|--travel-route-delay/);
   assert.doesNotMatch(travelMap, /createCurvedPath|selectRepresentativeRoutes|markerStart|markerEnd/);
   assert.doesNotMatch(travelMap, /Trace window|DATA LAYER/i);
