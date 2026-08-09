@@ -565,10 +565,10 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.portrait?.canvasCount, 1);
       assert.deepEqual(state.portrait?.fallback, {
         complete: true,
-        height: "1200",
-        naturalWidth: 1200,
+        height: "840",
+        naturalWidth: 840,
         src: "/assets/jaxon-sea-portrait.webp",
-        width: "1200",
+        width: "840",
       });
       assert.equal(state.terminalCount, 0);
 

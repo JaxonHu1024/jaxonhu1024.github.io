@@ -418,7 +418,7 @@ test("renders a terminal-free pixel portrait hero and defers organization logos"
   assert.match(hero, /class="hero-portrait-frame"/);
   assert.match(
     hero,
-    /<img(?=[^>]*class="hero-portrait-fallback")(?=[^>]*src="\/assets\/jaxon-sea-portrait\.webp")(?=[^>]*width="1200")(?=[^>]*height="1200")(?=[^>]*fetchPriority="high")[^>]*>/,
+    /<img(?=[^>]*class="hero-portrait-fallback")(?=[^>]*src="\/assets\/jaxon-sea-portrait\.webp")(?=[^>]*width="840")(?=[^>]*height="840")(?=[^>]*fetchPriority="high")[^>]*>/,
   );
   assert.match(
     hero,

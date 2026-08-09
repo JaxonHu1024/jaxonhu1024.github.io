@@ -289,8 +289,8 @@ test("renders the Aceternity pixel portrait and removes the signal and CLI imple
   assert.doesNotMatch(pixelCanvasRuntime, /setInterval|<animate/);
   assert.match(portrait, /\/assets\/jaxon-sea-portrait\.webp/);
   assert.match(portrait, /<PixelatedCanvas/);
-  assert.match(portrait, /width="1200"/);
-  assert.match(portrait, /height="1200"/);
+  assert.match(portrait, /width="840"/);
+  assert.match(portrait, /height="840"/);
   assert.match(portrait, /fetchPriority="high"/);
   assert.match(portrait, /maxFps=\{60\}/);
   assert.match(page, /<HeroPixelPortrait \/>/);

@@ -68,13 +68,14 @@ test("exports a complete static GitHub Pages artifact", async () => {
   }
 });
 
-test("keeps optimized organization marks within their checked-in budgets", async () => {
+test("keeps optimized visual assets within their checked-in budgets", async () => {
   const assets = resolve(root, "public/assets");
   const budgets = new Map([
     ["logo-bytedance-color.svg", 900],
     ["logo-alibaba-color.svg", 1_500],
     ["logo-ntu.svg", 83_000],
     ["logo-seu-color.svg", 60_000],
+    ["jaxon-sea-portrait.webp", 36_000],
     ["travel-world-solid.svg", 65_000],
   ]);
 

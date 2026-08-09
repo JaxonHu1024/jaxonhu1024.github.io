@@ -13,8 +13,8 @@ export function HeroPixelPortrait() {
         <img
           className="hero-portrait-fallback"
           src={portraitSource}
-          width="1200"
-          height="1200"
+          width="840"
+          height="840"
           alt=""
           aria-hidden="true"
           decoding="async"
