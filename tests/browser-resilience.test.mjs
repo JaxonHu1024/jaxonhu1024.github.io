@@ -278,6 +278,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
     { width: 360, height: 800 },
     { width: 390, height: 844 },
     { width: 430, height: 932 },
+    { width: 768, height: 1024 },
   ]) {
     const { context, page } = await createReleasePageSession(browser, {
       javaScriptEnabled: false,
@@ -325,11 +326,14 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
             })),
             travelMap: (() => {
               const element = document.querySelector("#about .about-travel");
-              const flagItems = Array.from(
+              const controlItems = Array.from(
                 element?.querySelectorAll(".travel-map-flags > li") ?? [],
               );
+              const controlGrid = element?.querySelector(".travel-map-flags");
+              const controlScroller = element?.querySelector(".travel-map-flags-scroll");
               const map = element?.querySelector(".travel-map-canvas");
               const loading = element?.querySelector(".travel-map-loading");
+              const rail = element?.querySelector(".travel-map-dock");
               const routeKeys = Array.from(
                 element?.querySelectorAll(".travel-map-route") ?? [],
               ).map((route) => route.getAttribute("data-route-key"));
@@ -341,38 +345,64 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                   element.querySelectorAll(".travel-map-airport"),
                 ).map((airport) => airport.getAttribute("data-emphasis")),
                 copy: element.textContent?.replace(/\s+/g, " ").trim() ?? "",
-                dockCount: element.querySelectorAll(".travel-map-dock").length,
-                filterActive: element.getAttribute("data-filter-active"),
-                filterStatus: Array.from(
-                  element.querySelector(".travel-map-filter-status")?.children ?? [],
-                ).map((entry) => entry.textContent?.trim() ?? "").filter(Boolean).join(" "),
-                flagButtons: flagItems.map((flag) => {
-                  const button = flag.querySelector(".travel-map-flag-button");
+                controlCount: controlItems.length,
+                controlGrid: controlGrid ? {
+                  columnCount: new Set(controlItems.map((item) => (
+                    item.getBoundingClientRect().left.toFixed(1)
+                  ))).size,
+                  display: getComputedStyle(controlGrid).display,
+                  flexWrap: getComputedStyle(controlGrid).flexWrap,
+                  rowCount: new Set(controlItems.map((item) => (
+                    item.getBoundingClientRect().top.toFixed(1)
+                  ))).size,
+                  singleRow: controlItems.every((item) => (
+                    Math.abs(
+                      item.getBoundingClientRect().top
+                        - controlItems[0].getBoundingClientRect().top,
+                    ) <= 1
+                  )),
+                  tagName: controlGrid.tagName,
+                } : null,
+                controlScroller: controlScroller ? {
+                  clientWidth: controlScroller.clientWidth,
+                  count: element.querySelectorAll(".travel-map-flags-scroll").length,
+                  overflowX: getComputedStyle(controlScroller).overflowX,
+                  railMotion: controlScroller.getAttribute("data-rail-motion"),
+                  scrollWidth: controlScroller.scrollWidth,
+                } : null,
+                controls: controlItems.map((item) => {
+                  const button = item.querySelector(".travel-map-flag-button");
 
                   return {
                     accessibleName: button?.querySelector(".sr-only")?.textContent?.trim() ?? "",
                     ariaControls: button?.getAttribute("aria-controls") ?? null,
                     ariaDisabled: button?.getAttribute("aria-disabled") ?? null,
                     ariaPressed: button?.getAttribute("aria-pressed") ?? null,
-                    countryCode: flag.getAttribute("data-country-code") ?? "",
+                    countryCode: item.getAttribute("data-country-code"),
                     disabled: button?.disabled ?? null,
-                    selected: flag.getAttribute("data-selected") ?? null,
+                    filterValue: item.getAttribute("data-filter-value"),
+                    selected: item.getAttribute("data-selected") ?? null,
                     tagName: button?.tagName ?? null,
                     type: button?.getAttribute("type") ?? null,
                   };
                 }),
-                flagCount: flagItems.length,
-                flagCountryCodes: flagItems
-                  .map((flag) => flag.getAttribute("data-country-code") ?? "")
-                  .sort(),
-                flagListTagName: element.querySelector(".travel-map-flags")?.tagName ?? null,
-                flagScrollCount: element.querySelectorAll(".travel-map-flags-scroll").length,
-                flagsHaveDockStructure: flagItems.every((flag) => (
-                  Boolean(flag.getAttribute("data-country-code"))
-                  && Boolean(flag.querySelector("button.travel-map-flag-button"))
-                  && Boolean(flag.querySelector(".travel-map-flag-icon"))
-                  && Boolean(flag.querySelector(".travel-map-flag-tooltip"))
-                )),
+                controlsHaveRailStructure: controlItems.every((item) => {
+                  const button = item.querySelector("button.travel-map-flag-button");
+                  const filterValue = item.getAttribute("data-filter-value");
+
+                  return Boolean(
+                    filterValue
+                    && filterValue === item.getAttribute("data-country-code")
+                    && button
+                    && button.querySelector(".travel-map-flag-icon")
+                    && button.querySelector(".travel-map-region-code")
+                    && button.querySelector(".travel-map-country-name")
+                  );
+                }),
+                filterActive: element.getAttribute("data-filter-active"),
+                filterStatus: Array.from(
+                  element.querySelector(".travel-map-filter-status")?.children ?? [],
+                ).map((entry) => entry.textContent?.trim() ?? "").filter(Boolean).join(" "),
                 legacySummaryCount: element.querySelectorAll(".travel-map-summary").length,
                 loading: loading ? {
                   display: getComputedStyle(loading).display,
@@ -386,6 +416,15 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                 mapReady: element.getAttribute("data-map-ready"),
                 mapView: map?.getAttribute("data-map-view") ?? null,
                 preserveAspectRatio: map?.getAttribute("preserveAspectRatio") ?? null,
+                rail: rail ? {
+                  ariaLabel: rail.getAttribute("aria-label"),
+                  display: getComputedStyle(rail).display,
+                  role: rail.getAttribute("role"),
+                } : null,
+                regionCountryCodes: controlItems
+                  .map((item) => item.getAttribute("data-country-code"))
+                  .filter(Boolean)
+                  .sort(),
                 routeCount: routeKeys.length,
                 routeEmphasis: Array.from(
                   element.querySelectorAll(".travel-map-route"),
@@ -518,21 +557,69 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         state.about.travelMap.airportEmphasis.every((emphasis) => emphasis === "idle"),
         true,
       );
-      assert.equal(state.about.travelMap.flagCount, generatedTravelData.counts.countries);
-      assert.deepEqual(state.about.travelMap.flagCountryCodes, generatedCountryCodes);
-      assert.equal(state.about.travelMap.flagListTagName, "UL");
-      assert.equal(state.about.travelMap.dockCount, 1);
-      assert.equal(state.about.travelMap.flagScrollCount, 1);
-      assert.equal(state.about.travelMap.flagsHaveDockStructure, true);
+      assert.equal(state.about.travelMap.controlCount, 9);
+      assert.equal(
+        state.about.travelMap.controlCount,
+        generatedTravelData.counts.countries,
+      );
+      assert.deepEqual(state.about.travelMap.regionCountryCodes, generatedCountryCodes);
+      assert.equal(state.about.travelMap.controlGrid?.tagName, "UL");
+      assert.equal(state.about.travelMap.controlScroller?.count, 1);
+      if (viewport.width <= 600) {
+        assert.equal(state.about.travelMap.controlGrid?.display, "flex");
+        assert.equal(state.about.travelMap.controlGrid?.flexWrap, "nowrap");
+        assert.equal(state.about.travelMap.controlGrid?.singleRow, true);
+        assert.equal(state.about.travelMap.controlGrid?.columnCount, 9);
+        assert.equal(state.about.travelMap.controlGrid?.rowCount, 1);
+        assert.equal(state.about.travelMap.controlScroller?.overflowX, "auto");
+        assert.equal(state.about.travelMap.controlScroller?.railMotion, "static");
+        assert.ok(
+          state.about.travelMap.controlScroller.scrollWidth
+            > state.about.travelMap.controlScroller.clientWidth,
+          `${viewport.width}x${viewport.height} no-JS signal rail was not internally scrollable`,
+        );
+        const manualRailScrollLeft = await page.locator(".travel-map-flags-scroll")
+          .evaluate((rail) => {
+            rail.scrollLeft = Math.min(96, rail.scrollWidth - rail.clientWidth);
+            return rail.scrollLeft;
+          });
+        assert.ok(
+          manualRailScrollLeft > 0,
+          `${viewport.width}x${viewport.height} no-JS signal rail rejected manual scrolling`,
+        );
+        await page.locator(".travel-map-flags-scroll").evaluate((rail) => {
+          rail.scrollLeft = 0;
+        });
+      } else {
+        assert.equal(state.about.travelMap.controlGrid?.display, "grid");
+        assert.equal(state.about.travelMap.controlGrid?.columnCount, 9);
+        assert.equal(state.about.travelMap.controlGrid?.rowCount, 1);
+        assert.equal(state.about.travelMap.controlScroller?.overflowX, "visible");
+        assert.ok(
+          state.about.travelMap.controlScroller.scrollWidth
+            <= state.about.travelMap.controlScroller.clientWidth + 1,
+          `${viewport.width}x${viewport.height} no-JS signal rail overflowed internally`,
+        );
+      }
+      assert.equal(state.about.travelMap.controlsHaveRailStructure, true);
+      assert.deepEqual(state.about.travelMap.rail, {
+        ariaLabel: "Flight footprint controls",
+        display: "flex",
+        role: "group",
+      });
       assert.equal(state.about.travelMap.legacySummaryCount, 0);
       assert.equal(state.about.travelMap.filterStatus, "Map filter All signals");
+      assert.equal(
+        state.about.travelMap.controls.some(({ filterValue }) => filterValue === "all"),
+        false,
+      );
       assert.deepEqual(
-        state.about.travelMap.flagButtons
+        state.about.travelMap.controls
           .map(({ accessibleName, countryCode }) => ({ code: countryCode, name: accessibleName }))
           .sort((a, b) => a.code.localeCompare(b.code)),
         generatedCountries,
       );
-      assert.equal(state.about.travelMap.flagButtons.every((button) => (
+      assert.equal(state.about.travelMap.controls.every((button) => (
         button.tagName === "BUTTON"
         && button.type === "button"
         && button.ariaControls === "travel-map-canvas"
@@ -540,6 +627,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         && button.ariaPressed === "false"
         && button.disabled === true
         && button.selected === "false"
+        && button.filterValue === button.countryCode
         && button.accessibleName.length > 0
       )), true);
       assert.equal(state.about.travelMap.routeCount, generatedTravelData.counts.routes);
@@ -560,9 +648,14 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         assert.equal(
           await page.getByRole("button", { exact: true, name }).count(),
           1,
-          `${viewport.width}x${viewport.height} no-JS flag button ${name} lost its accessible name`,
+          `${viewport.width}x${viewport.height} no-JS region control ${name} lost its accessible name`,
         );
       }
+      assert.equal(
+        await page.getByRole("button", { exact: true, name: "All signals" }).count(),
+        0,
+        `${viewport.width}x${viewport.height} no-JS fallback retained the removed ALL control`,
+      );
       assert.ok(state.navigation);
       assert.equal(state.navigation.clipPath, "none");
       assert.equal(state.navigation.opacity, "1");
@@ -603,6 +696,177 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
     } finally {
       await context.close();
     }
+  }
+});
+
+test("reduced-motion mobile keeps the travel signal rail still and Dock glyphs unscaled", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    reducedMotion: "reduce",
+    viewport: { width: 390, height: 844 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const rail = page.locator(".travel-map-flags-scroll");
+    await rail.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+      && document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-rail-motion") === "reduced"
+      && document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-dock-proximity") === "reduced"
+    ), null, { timeout: 3_000 });
+    await page.waitForTimeout(250);
+
+    assert.equal(
+      await rail.getAttribute("data-rail-motion"),
+      "reduced",
+    );
+
+    await page.getByRole("button", { exact: true, name: "China" }).hover();
+
+    const before = await rail.evaluate((element) => ({
+      allControlCount: element.querySelectorAll('[data-filter-value="all"]').length,
+      clientWidth: element.clientWidth,
+      dockProximity: element.getAttribute("data-dock-proximity"),
+      filterStatus: document.querySelector(".travel-map-filter-status strong")
+        ?.textContent?.trim() ?? "",
+      glyphs: Array.from(element.querySelectorAll(".travel-map-flag-icon")).map((glyph) => {
+        const transform = getComputedStyle(glyph).transform;
+        const matrix = transform === "none"
+          ? new DOMMatrixReadOnly()
+          : new DOMMatrixReadOnly(transform);
+        return { scaleX: matrix.a, scaleY: matrix.d, transform };
+      }),
+      motion: element.getAttribute("data-rail-motion"),
+      pressedCount: element.querySelectorAll('[aria-pressed="true"]').length,
+      scrollLeft: element.scrollLeft,
+      scrollWidth: element.scrollWidth,
+      selectedCount: element.querySelectorAll('[data-selected="true"]').length,
+    }));
+    assert.equal(before.allControlCount, 0);
+    assert.equal(before.motion, "paused");
+    assert.equal(before.dockProximity, "reduced");
+    assert.equal(before.filterStatus, "All signals");
+    assert.equal(before.glyphs.length, generatedTravelData.counts.countries);
+    assert.equal(before.pressedCount, 0);
+    assert.equal(before.selectedCount, 0);
+    assert.equal(
+      before.glyphs.every(({ scaleX, scaleY, transform }) => (
+        transform === "none"
+        && Math.abs(scaleX - 1) <= .001
+        && Math.abs(scaleY - 1) <= .001
+      )),
+      true,
+      `reduced-motion Dock glyphs were transformed: ${JSON.stringify(before.glyphs)}`,
+    );
+    assert.ok(before.scrollWidth > before.clientWidth);
+
+    await page.waitForTimeout(1_000);
+    const after = await rail.evaluate((element) => ({
+      dockProximity: element.getAttribute("data-dock-proximity"),
+      glyphsUnscaled: Array.from(element.querySelectorAll(".travel-map-flag-icon"))
+        .every((glyph) => {
+          const transform = getComputedStyle(glyph).transform;
+          const matrix = transform === "none"
+            ? new DOMMatrixReadOnly()
+            : new DOMMatrixReadOnly(transform);
+          return transform === "none"
+            && Math.abs(matrix.a - 1) <= .001
+            && Math.abs(matrix.d - 1) <= .001;
+        }),
+      motion: element.getAttribute("data-rail-motion"),
+      scrollLeft: element.scrollLeft,
+    }));
+    assert.equal(after.motion, "paused");
+    assert.equal(after.dockProximity, "reduced");
+    assert.equal(after.glyphsUnscaled, true);
+    assert.ok(
+      Math.abs(after.scrollLeft - before.scrollLeft) <= .5,
+      `reduced-motion signal rail drifted from ${before.scrollLeft}px to ${after.scrollLeft}px`,
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("coarse-pointer touch keeps travel Dock proximity idle", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 390, height: 844 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const rail = page.locator(".travel-map-flags-scroll");
+    await rail.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+      && document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-dock-proximity") === "idle"
+    ), null, { timeout: 3_000 });
+
+    assert.deepEqual(await page.evaluate(() => ({
+      coarsePointer: matchMedia("(pointer: coarse)").matches,
+      fineHover: matchMedia("(hover: hover) and (pointer: fine)").matches,
+    })), {
+      coarsePointer: true,
+      fineHover: false,
+    });
+
+    assert.deepEqual(await rail.evaluate((element) => ({
+      allControlCount: element.querySelectorAll('[data-filter-value="all"]').length,
+      controlCount: element.querySelectorAll(".travel-map-flags > li").length,
+      filterStatus: document.querySelector(".travel-map-filter-status strong")
+        ?.textContent?.trim() ?? "",
+      pressedCount: element.querySelectorAll('[aria-pressed="true"]').length,
+      selectedCount: element.querySelectorAll('[data-selected="true"]').length,
+    })), {
+      allControlCount: 0,
+      controlCount: generatedTravelData.counts.countries,
+      filterStatus: "All signals",
+      pressedCount: 0,
+      selectedCount: 0,
+    });
+
+    const china = page.getByRole("button", { exact: true, name: "China" });
+    await china.tap();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-travel")?.getAttribute("data-filter-active") === "true"
+      && document.querySelector('[data-country-code="CN"]')
+        ?.getAttribute("data-selected") === "true"
+      && document.querySelector('[data-country-code="CN"] .travel-map-flag-button')
+        ?.getAttribute("aria-pressed") === "true"
+      && document.querySelector(".travel-map-filter-status strong")
+        ?.textContent?.trim() === "China"
+    ));
+
+    await china.tap();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-travel")?.getAttribute("data-filter-active") === "false"
+      && document.querySelector('[data-country-code="CN"]')
+        ?.getAttribute("data-selected") === "false"
+      && document.querySelector('[data-country-code="CN"] .travel-map-flag-button')
+        ?.getAttribute("aria-pressed") === "false"
+      && document.querySelector(".travel-map-filter-status strong")
+        ?.textContent?.trim() === "All signals"
+      && Array.from(document.querySelectorAll(".travel-map-airport, .travel-map-route"))
+        .every((element) => element.getAttribute("data-emphasis") === "idle")
+    ));
+    await page.evaluate(() => new Promise((resolveFrame) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolveFrame));
+    }));
+
+    const proximity = await rail.evaluate((element) => ({
+      influences: Array.from(element.querySelectorAll(".travel-map-flags > li"))
+        .map((item) => item.style.getPropertyValue("--travel-dock-influence")),
+      state: element.getAttribute("data-dock-proximity"),
+    }));
+    assert.equal(proximity.state, "idle");
+    assert.equal(proximity.influences.every((value) => value === ""), true);
+  } finally {
+    await context.close();
   }
 });
 
@@ -708,14 +972,26 @@ test("mobile travel map masks its fallback camera until enhancement is ready", {
 
     const fallback = await page.locator(".about-travel").evaluate((figure) => {
       const canvas = figure.querySelector(".travel-map-canvas");
+      const controls = Array.from(figure.querySelectorAll(".travel-map-flags > li"));
       const loading = figure.querySelector(".travel-map-loading");
+      const rail = figure.querySelector(".travel-map-flags-scroll");
       const viewport = figure.querySelector(".travel-map-viewport")?.getBoundingClientRect();
       const loadingRect = loading?.getBoundingClientRect();
 
       return {
+        allControlCount: figure.querySelectorAll('[data-filter-value="all"]').length,
         canvasOpacity: canvas
           ? Number.parseFloat(getComputedStyle(canvas).opacity)
           : null,
+        controlCount: controls.length,
+        controlsDisabled: controls.every((item) => {
+          const button = item.querySelector(".travel-map-flag-button");
+          return button?.disabled === true
+            && button.getAttribute("aria-disabled") === "true";
+        }),
+        filterActive: figure.getAttribute("data-filter-active"),
+        filterStatus: figure.querySelector(".travel-map-filter-status strong")
+          ?.textContent?.trim() ?? "",
         loading: loading ? {
           display: getComputedStyle(loading).display,
           role: loading.getAttribute("role"),
@@ -726,15 +1002,33 @@ test("mobile travel map masks its fallback camera until enhancement is ready", {
           && loadingRect
           && Math.abs(viewport.left - loadingRect.left) <= 1
           && Math.abs(viewport.top - loadingRect.top) <= 1
-          && Math.abs(viewport.width - loadingRect.width) <= 1
-          && Math.abs(viewport.height - loadingRect.height) <= 1
+          && Math.abs(viewport.width - loadingRect.width) <= 2
+          && Math.abs(viewport.height - loadingRect.height) <= 2
         ),
         mapReady: figure.getAttribute("data-map-ready"),
         mapView: canvas?.getAttribute("data-map-view") ?? null,
+        pressedCount: figure.querySelectorAll('[aria-pressed="true"]').length,
+        railHasHorizontalOverflow: rail
+          ? rail.scrollWidth > rail.clientWidth + 1
+          : null,
+        railMotion: rail?.getAttribute("data-rail-motion") ?? null,
+        railOverflowX: rail ? getComputedStyle(rail).overflowX : null,
+        railScrollLeft: rail?.scrollLeft ?? null,
+        selectedCount: figure.querySelectorAll('[data-selected="true"]').length,
+        singleRow: controls.every((item) => (
+          Math.abs(
+            item.getBoundingClientRect().top - controls[0].getBoundingClientRect().top,
+          ) <= 1
+        )),
       };
     });
 
     assert.ok(stalledTravelMapRequests > 0, "TravelMap enhancement chunk was not requested");
+    assert.equal(fallback.allControlCount, 0);
+    assert.equal(fallback.controlCount, generatedTravelData.counts.countries);
+    assert.equal(fallback.controlsDisabled, true);
+    assert.equal(fallback.filterActive, "false");
+    assert.equal(fallback.filterStatus, "All signals");
     assert.equal(fallback.mapReady, "false");
     assert.equal(fallback.mapView, "world");
     assert.equal(fallback.canvasOpacity, 0);
@@ -744,6 +1038,13 @@ test("mobile travel map masks its fallback camera until enhancement is ready", {
       text: "ACQUIRING MAP SIGNAL",
     });
     assert.equal(fallback.loadingFillsViewport, true);
+    assert.equal(fallback.pressedCount, 0);
+    assert.equal(fallback.railHasHorizontalOverflow, true);
+    assert.equal(fallback.railMotion, "static");
+    assert.equal(fallback.railOverflowX, "auto");
+    assert.equal(fallback.railScrollLeft, 0);
+    assert.equal(fallback.selectedCount, 0);
+    assert.equal(fallback.singleRow, true);
   } finally {
     await context.close();
   }

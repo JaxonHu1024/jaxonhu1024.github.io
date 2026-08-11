@@ -357,7 +357,7 @@ test("renders a distinct public-safe About system before Experience", async () =
   );
   assert.match(
     about,
-    /<div class="travel-map-dock"><div class="travel-map-dock-status">/,
+    /<div(?=[^>]*class="travel-map-dock")(?=[^>]*role="group")(?=[^>]*aria-label="Flight footprint controls")[^>]*><div class="travel-map-dock-status">/,
   );
   assert.match(
     about,
@@ -371,7 +371,17 @@ test("renders a distinct public-safe About system before Experience", async () =
     about,
     /<p class="travel-map-filter-status" aria-live="polite" aria-atomic="true"><span>Map filter<\/span><strong>All signals<\/strong><\/p>/,
   );
-  assert.match(about, /<div class="travel-map-flags-scroll">/);
+  assert.match(
+    about,
+    /<div(?=[^>]*class="travel-map-flags-scroll")(?=[^>]*data-rail-motion="static")[^>]*>/,
+  );
+  assert.match(about, /<ul class="travel-map-legend" aria-label="Map legend">/);
+  assert.match(about, /Hub node/);
+  assert.match(about, /Route signal/);
+  assert.match(
+    about,
+    /<p class="travel-map-privacy">Build-time aggregate\. Exact itinerary details are omitted\.<\/p>/,
+  );
   assert.doesNotMatch(about, /Flight segments|Airports reached|travel-map-distance/);
   assert.doesNotMatch(about, /Trace window|DATA LAYER/i);
   assert.match(
@@ -419,10 +429,20 @@ test("renders a distinct public-safe About system before Experience", async () =
     about,
     /<ul class="travel-map-flags" aria-label="Filter flight footprint by country or region">/,
   );
+  assert.match(
+    about,
+    /class="travel-map-flags-scroll" data-dock-proximity="idle" data-rail-motion="static"/,
+  );
   const renderedFlagCodes = [...about.matchAll(/<li[^>]*data-country-code="([^"]+)"[^>]*>/g)]
     .map((match) => match[1])
     .sort();
   assert.deepEqual(renderedFlagCodes, generatedCountryCodes);
+  assert.equal(renderedFlagCodes.length, 9);
+  assert.doesNotMatch(about, /data-filter-value="all"|Reset view/);
+  assert.equal(
+    (about.match(/<li(?=[^>]*\bdata-country-code="[^"]+")(?=[^>]*\bdata-selected="true")[^>]*>/g) ?? []).length,
+    0,
+  );
   assert.equal(
     (about.match(/<li(?=[^>]*\bdata-country-code="[^"]+")(?=[^>]*\bdata-selected="false")[^>]*>/g) ?? []).length,
     travelData.counts.countries,
@@ -432,13 +452,26 @@ test("renders a distinct public-safe About system before Experience", async () =
     travelData.counts.countries,
   );
   assert.equal(
+    (about.match(/<button(?=[^>]*\bclass="travel-map-flag-button")(?=[^>]*\baria-pressed="true")[^>]*>/g) ?? []).length,
+    0,
+  );
+  assert.equal(
+    (about.match(/class="travel-map-flag-button"/g) ?? []).length,
+    travelData.counts.countries,
+  );
+  assert.equal(
     (about.match(/class="travel-map-flag-icon"/g) ?? []).length,
     travelData.counts.countries,
   );
   assert.equal(
-    (about.match(/class="travel-map-flag-tooltip"/g) ?? []).length,
+    (about.match(/class="travel-map-region-code"/g) ?? []).length,
     travelData.counts.countries,
   );
+  assert.equal(
+    (about.match(/class="travel-map-country-name"/g) ?? []).length,
+    travelData.counts.countries,
+  );
+  assert.doesNotMatch(about, /travel-map-flag-tooltip/);
   assert.doesNotMatch(about, /Approximately [\d,]+ kilometers flown/);
   assert.doesNotMatch(about, /travel-map-frame|travel-map-place-index|travel-map-caption/);
   assert.doesNotMatch(

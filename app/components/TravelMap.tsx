@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import travelDataJson from "../data/travel.generated.json";
 import { SignalHeading } from "./SignalHeading";
 
@@ -46,10 +46,17 @@ type CountrySignal = {
 const travelData: TravelData = travelDataJson;
 const MAP_WIDTH = 800;
 const MAP_HEIGHT = 400;
+const WIDE_MAP_ASPECT_RATIO = 3 / 2;
 const MOBILE_MAP_ASPECT_RATIO = 6 / 5;
 const MIN_FOCUSED_VIEW_WIDTH = 216;
 const MIN_FOCUSED_VIEW_HEIGHT = 180;
 const MOBILE_MAP_QUERY = "(max-width: 600px)";
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+const DOCK_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
+const DOCK_INFLUENCE_DISTANCE_PX = 112;
+const MOBILE_RAIL_SPEED_PX_PER_MS = .018;
+const MOBILE_RAIL_EDGE_PAUSE_MS = 900;
+const MOBILE_RAIL_INTERACTION_PAUSE_MS = 1_600;
 const WORLD_VIEW_BOX = `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`;
 const COUNTRY_DISPLAY_ORDER = ["CN", "HK", "SG", "TH", "AU", "MY", "KR", "JP", "PH"];
 const subscribeToHydration = () => () => undefined;
@@ -95,7 +102,7 @@ function clampValue(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
-function createFocusedViewBox(airports: TravelAirport[]) {
+function createFocusedViewBox(airports: TravelAirport[], aspectRatio: number) {
   if (airports.length === 0) return WORLD_VIEW_BOX;
 
   const points = airports.map(projectPoint);
@@ -116,10 +123,10 @@ function createFocusedViewBox(airports: TravelAirport[]) {
   let width = Math.max(MIN_FOCUSED_VIEW_WIDTH, horizontalSpan + padding * 2);
   let height = Math.max(MIN_FOCUSED_VIEW_HEIGHT, verticalSpan + padding * 2);
 
-  if (width / height < MOBILE_MAP_ASPECT_RATIO) {
-    width = height * MOBILE_MAP_ASPECT_RATIO;
+  if (width / height < aspectRatio) {
+    width = height * aspectRatio;
   } else {
-    height = width / MOBILE_MAP_ASPECT_RATIO;
+    height = width / aspectRatio;
   }
 
   if (width > MAP_WIDTH || height > MAP_HEIGHT) return WORLD_VIEW_BOX;
@@ -142,7 +149,8 @@ function countryFlag(countryCode: string) {
 
 const airportByIata = new Map(travelData.airports.map((airport) => [airport.iata, airport]));
 const bidirectionalCorridors = travelData.routes.filter((route) => route.bidirectional).length;
-const focusedViewBox = createFocusedViewBox(travelData.airports);
+const mobileFocusedViewBox = createFocusedViewBox(travelData.airports, MOBILE_MAP_ASPECT_RATIO);
+const wideFocusedViewBox = createFocusedViewBox(travelData.airports, WIDE_MAP_ASPECT_RATIO);
 const hubCodes = new Set(
   [...travelData.airports]
     .sort((left, right) => right.visits - left.visits || left.iata.localeCompare(right.iata))
@@ -176,8 +184,12 @@ export function TravelMap() {
   );
   const [isMobileMap, setIsMobileMap] = useState<boolean | null>(null);
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
+  const filterRailRef = useRef<HTMLDivElement>(null);
   const selectedCountry = countrySignals.find(({ code }) => code === selectedCountryCode) ?? null;
   const isMapReady = isHydrated && isMobileMap !== null;
+  const activeViewBox = isMobileMap === null
+    ? WORLD_VIEW_BOX
+    : isMobileMap ? mobileFocusedViewBox : wideFocusedViewBox;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_MAP_QUERY);
@@ -187,6 +199,323 @@ export function TravelMap() {
     mediaQuery.addEventListener("change", syncMapView);
     return () => mediaQuery.removeEventListener("change", syncMapView);
   }, []);
+
+  useEffect(() => {
+    const rail = filterRailRef.current;
+    if (!rail || !isHydrated || isMobileMap !== true) return;
+
+    const reducedMotionQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+    let animationFrame: number | null = null;
+    let direction: 1 | -1 = 1;
+    let focusWithin = false;
+    let isVisible = false;
+    let lastTimestamp = performance.now();
+    let pointerDown = false;
+    let pointerOver = false;
+    let resumeAt = lastTimestamp + MOBILE_RAIL_EDGE_PAUSE_MS;
+    let scrollPosition = rail.scrollLeft;
+
+    const setMotionState = (state: "paused" | "reduced" | "running" | "waiting") => {
+      if (rail.dataset.railMotion !== state) rail.dataset.railMotion = state;
+    };
+
+    const pageCanAnimate = () => (
+      document.visibilityState === "visible"
+      && document.documentElement.dataset.pageActive !== "false"
+      && !reducedMotionQuery.matches
+    );
+
+    const interactionPaused = () => pointerDown || pointerOver || focusWithin;
+
+    const queueFrame = () => {
+      if (animationFrame === null && isVisible && pageCanAnimate()) {
+        animationFrame = window.requestAnimationFrame(tick);
+      }
+    };
+
+    const stopFrames = () => {
+      if (animationFrame === null) return;
+      window.cancelAnimationFrame(animationFrame);
+      animationFrame = null;
+    };
+
+    const tick = (timestamp: number) => {
+      animationFrame = null;
+      const elapsed = Math.min(Math.max(timestamp - lastTimestamp, 0), 64);
+      lastTimestamp = timestamp;
+      const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
+
+      if (!isVisible || !pageCanAnimate() || maxScroll <= 1) {
+        setMotionState(reducedMotionQuery.matches ? "reduced" : "paused");
+        return;
+      }
+
+      if (interactionPaused()) {
+        scrollPosition = rail.scrollLeft;
+        setMotionState("paused");
+      } else if (timestamp < resumeAt) {
+        setMotionState("waiting");
+      } else {
+        if (Math.abs(rail.scrollLeft - scrollPosition) > 2) {
+          scrollPosition = rail.scrollLeft;
+        }
+        const nextScroll = scrollPosition
+          + elapsed * MOBILE_RAIL_SPEED_PX_PER_MS * direction;
+
+        if (direction === 1 && nextScroll >= maxScroll - .5) {
+          rail.scrollLeft = maxScroll;
+          scrollPosition = maxScroll;
+          direction = -1;
+          resumeAt = timestamp + MOBILE_RAIL_EDGE_PAUSE_MS;
+          setMotionState("waiting");
+        } else if (direction === -1 && nextScroll <= .5) {
+          rail.scrollLeft = 0;
+          scrollPosition = 0;
+          direction = 1;
+          resumeAt = timestamp + MOBILE_RAIL_EDGE_PAUSE_MS;
+          setMotionState("waiting");
+        } else {
+          rail.scrollLeft = nextScroll;
+          scrollPosition = nextScroll;
+          setMotionState("running");
+        }
+      }
+
+      queueFrame();
+    };
+
+    const pauseForInteraction = () => {
+      setMotionState("paused");
+    };
+
+    const resumeAfterInteraction = () => {
+      resumeAt = performance.now() + MOBILE_RAIL_INTERACTION_PAUSE_MS;
+      lastTimestamp = performance.now();
+      setMotionState("waiting");
+      queueFrame();
+    };
+
+    const handlePointerEnter = () => {
+      pointerOver = true;
+      pauseForInteraction();
+    };
+    const handlePointerLeave = () => {
+      pointerOver = false;
+      if (!interactionPaused()) resumeAfterInteraction();
+    };
+    const handlePointerDown = () => {
+      pointerDown = true;
+      scrollPosition = rail.scrollLeft;
+      pauseForInteraction();
+    };
+    const handlePointerUp = () => {
+      pointerDown = false;
+      if (!interactionPaused()) resumeAfterInteraction();
+    };
+    const handleFocusIn = () => {
+      focusWithin = true;
+      pauseForInteraction();
+    };
+    const handleFocusOut = () => {
+      window.requestAnimationFrame(() => {
+        focusWithin = rail.contains(document.activeElement);
+        if (!interactionPaused()) resumeAfterInteraction();
+      });
+    };
+    const handleManualScrollIntent = () => {
+      scrollPosition = rail.scrollLeft;
+      resumeAt = performance.now() + MOBILE_RAIL_INTERACTION_PAUSE_MS;
+      setMotionState("waiting");
+    };
+
+    const syncAnimation = () => {
+      if (reducedMotionQuery.matches) {
+        stopFrames();
+        direction = 1;
+        rail.scrollLeft = 0;
+        scrollPosition = 0;
+        setMotionState("reduced");
+        return;
+      }
+
+      if (isVisible && pageCanAnimate()) {
+        lastTimestamp = performance.now();
+        queueFrame();
+      } else {
+        stopFrames();
+        setMotionState("paused");
+      }
+    };
+
+    const visibilityObserver = "IntersectionObserver" in window
+      ? new IntersectionObserver(([entry]) => {
+        isVisible = entry?.isIntersecting ?? false;
+        syncAnimation();
+      }, { threshold: .1 })
+      : null;
+    const pageStateObserver = new MutationObserver(syncAnimation);
+
+    rail.addEventListener("pointerenter", handlePointerEnter);
+    rail.addEventListener("pointerleave", handlePointerLeave);
+    rail.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerUp);
+    rail.addEventListener("focusin", handleFocusIn);
+    rail.addEventListener("focusout", handleFocusOut);
+    rail.addEventListener("wheel", handleManualScrollIntent, { passive: true });
+    document.addEventListener("visibilitychange", syncAnimation);
+    reducedMotionQuery.addEventListener("change", syncAnimation);
+    pageStateObserver.observe(document.documentElement, {
+      attributeFilter: ["data-page-active"],
+      attributes: true,
+    });
+
+    if (visibilityObserver) {
+      visibilityObserver.observe(rail);
+    } else {
+      isVisible = true;
+      syncAnimation();
+    }
+
+    return () => {
+      stopFrames();
+      visibilityObserver?.disconnect();
+      pageStateObserver.disconnect();
+      rail.removeEventListener("pointerenter", handlePointerEnter);
+      rail.removeEventListener("pointerleave", handlePointerLeave);
+      rail.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerUp);
+      rail.removeEventListener("focusin", handleFocusIn);
+      rail.removeEventListener("focusout", handleFocusOut);
+      rail.removeEventListener("wheel", handleManualScrollIntent);
+      document.removeEventListener("visibilitychange", syncAnimation);
+      reducedMotionQuery.removeEventListener("change", syncAnimation);
+      rail.scrollLeft = 0;
+      rail.dataset.railMotion = "static";
+    };
+  }, [isHydrated, isMobileMap]);
+
+  useEffect(() => {
+    const rail = filterRailRef.current;
+    if (!rail || !isHydrated) return;
+
+    const dockPointerQuery = window.matchMedia(DOCK_POINTER_QUERY);
+    const reducedMotionQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+    const items = Array.from(
+      rail.querySelectorAll<HTMLElement>(".travel-map-flags > li"),
+    );
+    let animationFrame: number | null = null;
+    let pointerX: number | null = null;
+    let pointerY: number | null = null;
+    let layout: "grid" | "horizontal" | "vertical" = "grid";
+    let itemCenters: Array<{ item: HTMLElement; x: number; y: number }> = [];
+
+    const clearInfluence = () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+        animationFrame = null;
+      }
+      pointerX = null;
+      pointerY = null;
+      items.forEach((item) => item.style.removeProperty("--travel-dock-influence"));
+      rail.dataset.dockProximity = reducedMotionQuery.matches ? "reduced" : "idle";
+    };
+
+    const measureItems = () => {
+      layout = window.innerWidth <= 600
+        ? "horizontal"
+        : window.innerWidth >= 1_200 ? "vertical" : "grid";
+      itemCenters = items.map((item) => {
+        const bounds = item.getBoundingClientRect();
+        return {
+          item,
+          x: bounds.left + bounds.width / 2,
+          y: bounds.top + bounds.height / 2,
+        };
+      });
+    };
+
+    const paintInfluence = () => {
+      animationFrame = null;
+      if (
+        pointerX === null
+        || pointerY === null
+        || !dockPointerQuery.matches
+        || reducedMotionQuery.matches
+      ) {
+        clearInfluence();
+        return;
+      }
+
+      const activePointerX = pointerX;
+      const activePointerY = pointerY;
+      const influences = itemCenters.map(({ x, y }) => {
+        const distance = layout === "horizontal"
+          ? Math.abs(activePointerX - x)
+          : layout === "vertical"
+            ? Math.abs(activePointerY - y)
+            : Math.hypot(activePointerX - x, activePointerY - y);
+        const linearInfluence = clampValue(
+          1 - distance / DOCK_INFLUENCE_DISTANCE_PX,
+          0,
+          1,
+        );
+        return linearInfluence * linearInfluence * (3 - 2 * linearInfluence);
+      });
+
+      itemCenters.forEach(({ item }, index) => {
+        item.style.setProperty("--travel-dock-influence", influences[index].toFixed(3));
+      });
+      rail.dataset.dockProximity = "active";
+    };
+
+    const queuePaint = () => {
+      if (animationFrame === null) {
+        animationFrame = window.requestAnimationFrame(paintInfluence);
+      }
+    };
+
+    const handlePointerEnter = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" || !dockPointerQuery.matches) return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      measureItems();
+      queuePaint();
+    };
+    const handlePointerMove = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse" || !dockPointerQuery.matches) return;
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      queuePaint();
+    };
+    const handleLayoutChange = () => {
+      if (pointerX === null || pointerY === null) return;
+      measureItems();
+      queuePaint();
+    };
+
+    rail.addEventListener("pointerenter", handlePointerEnter);
+    rail.addEventListener("pointermove", handlePointerMove);
+    rail.addEventListener("pointerleave", clearInfluence);
+    rail.addEventListener("scroll", handleLayoutChange, { passive: true });
+    window.addEventListener("resize", handleLayoutChange, { passive: true });
+    dockPointerQuery.addEventListener("change", clearInfluence);
+    reducedMotionQuery.addEventListener("change", clearInfluence);
+
+    clearInfluence();
+    return () => {
+      clearInfluence();
+      rail.removeEventListener("pointerenter", handlePointerEnter);
+      rail.removeEventListener("pointermove", handlePointerMove);
+      rail.removeEventListener("pointerleave", clearInfluence);
+      rail.removeEventListener("scroll", handleLayoutChange);
+      window.removeEventListener("resize", handleLayoutChange);
+      dockPointerQuery.removeEventListener("change", clearInfluence);
+      reducedMotionQuery.removeEventListener("change", clearInfluence);
+      rail.dataset.dockProximity = "idle";
+    };
+  }, [isHydrated]);
 
   const toggleCountry = (countryCode: string) => {
     setSelectedCountryCode((current) => current === countryCode ? null : countryCode);
@@ -224,9 +553,9 @@ export function TravelMap() {
             </span>
             <svg
               className="travel-map-canvas"
-              data-map-view={isMobileMap === true && focusedViewBox !== WORLD_VIEW_BOX ? "focus" : "world"}
+              data-map-view={isMapReady && activeViewBox !== WORLD_VIEW_BOX ? "focus" : "world"}
               id="travel-map-canvas"
-              viewBox={isMobileMap === true ? focusedViewBox : WORLD_VIEW_BOX}
+              viewBox={activeViewBox}
               preserveAspectRatio="xMidYMid meet"
               role="img"
               aria-labelledby="travel-map-svg-title travel-map-svg-description"
@@ -307,9 +636,31 @@ export function TravelMap() {
                 })}
               </g>
             </svg>
+
+            <ul className="travel-map-legend" aria-label="Map legend">
+              <li>
+                <span
+                  className="travel-map-legend-mark travel-map-legend-mark--hub"
+                  aria-hidden="true"
+                />
+                <span>Hub node</span>
+              </li>
+              <li>
+                <span
+                  className="travel-map-legend-mark travel-map-legend-mark--route"
+                  aria-hidden="true"
+                />
+                <span>Route signal</span>
+              </li>
+            </ul>
           </div>
 
-          <div className="travel-map-dock" onKeyDown={handleDockKeyDown}>
+          <div
+            className="travel-map-dock"
+            role="group"
+            aria-label="Flight footprint controls"
+            onKeyDown={handleDockKeyDown}
+          >
             <div className="travel-map-dock-status">
               <dl
                 className="travel-map-stats"
@@ -331,7 +682,12 @@ export function TravelMap() {
               </p>
             </div>
 
-            <div className="travel-map-flags-scroll">
+            <div
+              className="travel-map-flags-scroll"
+              data-dock-proximity="idle"
+              data-rail-motion="static"
+              ref={filterRailRef}
+            >
               <ul
                 className="travel-map-flags"
                 aria-label="Filter flight footprint by country or region"
@@ -342,6 +698,7 @@ export function TravelMap() {
                   return (
                     <li
                       data-country-code={country.code}
+                      data-filter-value={country.code}
                       data-selected={isSelected ? "true" : "false"}
                       key={country.code}
                     >
@@ -357,7 +714,10 @@ export function TravelMap() {
                         <span className="travel-map-flag-icon" aria-hidden="true">
                           {countryFlag(country.code)}
                         </span>
-                        <span className="travel-map-flag-tooltip" aria-hidden="true">
+                        <span className="travel-map-region-code" aria-hidden="true">
+                          {country.code}
+                        </span>
+                        <span className="travel-map-country-name" aria-hidden="true">
                           {country.name}
                         </span>
                         <span className="sr-only">{country.name}</span>
@@ -367,11 +727,11 @@ export function TravelMap() {
                 })}
               </ul>
             </div>
-          </div>
 
-          <p className="sr-only">
-            Flighty export aggregated at build time; exact itinerary details are not published.
-          </p>
+            <p className="travel-map-privacy">
+              Build-time aggregate. Exact itinerary details are omitted.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="travel-map-empty" role="status">

@@ -893,7 +893,9 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
             ).map((button) => ({
               ariaControls: button.getAttribute("aria-controls"),
               ariaPressed: button.getAttribute("aria-pressed"),
+              filterValue: button.closest("li")?.getAttribute("data-filter-value") ?? "",
               name: button.querySelector(".sr-only")?.textContent?.trim() ?? "",
+              selected: button.closest("li")?.getAttribute("data-selected"),
               type: button.getAttribute("type"),
             })),
             flagCount: travelMapElement.querySelectorAll(".travel-map-flags > li").length,
@@ -951,17 +953,27 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
         label: "Map filter",
         value: "All signals",
       });
-      assert.equal(ledger.travelMap.flagButtons.length, generatedTravelData.counts.countries);
+      assert.equal(generatedTravelData.counts.countries, 9);
+      assert.equal(ledger.travelMap.flagButtons.length, 9);
+      assert.deepEqual(
+        ledger.travelMap.flagButtons.map(({ filterValue }) => filterValue).sort(),
+        generatedCountryCodes,
+      );
+      assert.deepEqual(
+        ledger.travelMap.flagButtons
+          .filter(({ ariaPressed, selected }) => ariaPressed === "true" || selected === "true")
+          .map(({ filterValue }) => filterValue),
+        [],
+      );
       assert.equal(
         ledger.travelMap.flagButtons.every((button) => (
           button.ariaControls === "travel-map-canvas"
-          && button.ariaPressed === "false"
           && button.name.length > 0
           && button.type === "button"
         )),
         true,
       );
-      assert.equal(ledger.travelMap.flagCount, generatedTravelData.counts.countries);
+      assert.equal(ledger.travelMap.flagCount, 9);
       assert.equal(ledger.travelMap.lineRoutesOnly, true);
       assert.equal(ledger.travelMap.routeCount, generatedTravelData.counts.routes);
       assert.equal(ledger.travelMap.routesUnique, true);
@@ -978,139 +990,436 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
         /Flight segments|Airports reached|Approximately [\d,]+ kilometers flown/i,
       );
       assert.doesNotMatch(ledger.travelMap.copy, /Trace window|DATA LAYER/i);
+      assert.doesNotMatch(ledger.travelMap.copy, /Reset view/i);
     } finally {
       await context.close();
     }
   }
 });
 
-test("desktop travel flag buttons magnify on hover and reveal labels on hover or focus", { timeout: 15_000 }, async () => {
+test("desktop travel region rail magnifies by proximity without shifting layout", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1440, height: 900 },
   });
 
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const rail = page.locator(".travel-map-flags-scroll");
     const flags = page.locator(".travel-map-flag-button");
-    assert.equal(await flags.count(), generatedCountryCodes.length);
+    assert.equal(await flags.count(), 9);
     assert.deepEqual(
       (await flags.evaluateAll((items) => (
         items.map((button) => (
-          button.closest("li")?.getAttribute("data-country-code") ?? ""
+          button.closest("li")?.getAttribute("data-filter-value") ?? ""
         )).sort()
       ))),
       generatedCountryCodes,
     );
+    assert.equal(
+      await flags.evaluateAll((items) => (
+        items.every((button) => button.getAttribute("aria-pressed") === "false")
+      )),
+      true,
+    );
+    assert.equal(await page.locator(".travel-map-flag-tooltip").count(), 0);
 
-    const flag = flags.first();
+    const flag = page.getByRole("button", { exact: true, name: "Singapore" });
+    assert.equal(await flag.getAttribute("aria-pressed"), "false");
     await flag.scrollIntoViewIfNeeded();
     await page.mouse.move(0, 0);
     await page.waitForTimeout(250);
 
-    const snapshot = (button) => {
-      const item = button.closest("li");
-      const rect = item?.getBoundingClientRect();
-      const tooltip = button.querySelector(".travel-map-flag-tooltip");
-      const tooltipRect = tooltip?.getBoundingClientRect();
-      const tooltipStyle = tooltip ? getComputedStyle(tooltip) : null;
+    const readDockState = () => rail.evaluate((element) => {
+      const rectSnapshot = (rect) => rect ? {
+        height: rect.height,
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+      } : null;
+      const entries = Object.fromEntries(
+        ["SG", "TH", "PH"].map((code) => {
+          const item = element.querySelector(`li[data-country-code="${code}"]`);
+          const button = item?.querySelector("button");
+          const icon = item?.querySelector(".travel-map-flag-icon");
+          const countryName = item?.querySelector(".travel-map-country-name");
+          const countryNameRect = countryName?.getBoundingClientRect();
+          const countryNameStyle = countryName ? getComputedStyle(countryName) : null;
+
+          return [code, {
+            buttonSize: button ? {
+              height: button.getBoundingClientRect().height,
+              width: button.getBoundingClientRect().width,
+            } : null,
+            countryName: countryName && countryNameRect && countryNameStyle ? {
+              display: countryNameStyle.display,
+              height: countryNameRect.height,
+              text: countryName.textContent?.trim() ?? "",
+              width: countryNameRect.width,
+            } : null,
+            iconRect: rectSnapshot(icon?.getBoundingClientRect()),
+            influence: Number.parseFloat(
+              item ? getComputedStyle(item).getPropertyValue("--travel-dock-influence") : "0",
+            ) || 0,
+            itemRect: rectSnapshot(item?.getBoundingClientRect()),
+          }];
+        }),
+      );
 
       return {
-        ariaControls: button.getAttribute("aria-controls"),
-        ariaPressed: button.getAttribute("aria-pressed"),
-        code: item?.getAttribute("data-country-code"),
-        focused: document.activeElement === button,
-        height: rect?.height ?? 0,
-        left: rect?.left ?? 0,
-        tooltip: tooltip && tooltipRect && tooltipStyle ? {
-          height: tooltipRect.height,
-          opacity: Number.parseFloat(tooltipStyle.opacity),
-          visibility: tooltipStyle.visibility,
-          width: tooltipRect.width,
-        } : null,
-        top: rect?.top ?? 0,
-        type: button.getAttribute("type"),
-        width: rect?.width ?? 0,
+        dockRect: rectSnapshot(element.closest(".travel-map-dock")?.getBoundingClientRect()),
+        entries,
+        focusedCode: document.activeElement?.closest("li")
+          ?.getAttribute("data-country-code") ?? null,
+        itemLayout: Array.from(element.querySelectorAll(".travel-map-flags > li"))
+          .map((item) => ({
+            buttonSize: (() => {
+              const rect = item.querySelector("button")?.getBoundingClientRect();
+              return rect ? { height: rect.height, width: rect.width } : null;
+            })(),
+            filterValue: item.getAttribute("data-filter-value"),
+            itemRect: rectSnapshot(item.getBoundingClientRect()),
+          })),
+        proximity: element.getAttribute("data-dock-proximity"),
       };
+    });
+    const assertLayoutStable = (before, after, label) => {
+      assert.ok(before.dockRect && after.dockRect, `${label} missed dock geometry`);
+      for (const key of ["height", "left", "top", "width"]) {
+        assert.ok(
+          Math.abs(after.dockRect[key] - before.dockRect[key]) <= .75,
+          `${label} moved dock.${key}: before=${JSON.stringify(before.dockRect)}, `
+            + `after=${JSON.stringify(after.dockRect)}`,
+        );
+      }
+      assert.equal(after.itemLayout.length, before.itemLayout.length);
+      before.itemLayout.forEach((beforeItem, index) => {
+        const afterItem = after.itemLayout[index];
+        assert.equal(afterItem.filterValue, beforeItem.filterValue);
+        assert.ok(beforeItem.itemRect && afterItem.itemRect, `${label} missed item geometry`);
+        for (const key of ["height", "left", "top", "width"]) {
+          assert.ok(
+            Math.abs(afterItem.itemRect[key] - beforeItem.itemRect[key]) <= .75,
+            `${label} moved ${beforeItem.filterValue}.${key}: `
+              + `before=${JSON.stringify(beforeItem)}, after=${JSON.stringify(afterItem)}`,
+          );
+        }
+        assert.ok(beforeItem.buttonSize && afterItem.buttonSize, `${label} missed button size`);
+        assert.ok(
+          Math.abs(afterItem.buttonSize.width - beforeItem.buttonSize.width) <= .75
+            && Math.abs(afterItem.buttonSize.height - beforeItem.buttonSize.height) <= .75,
+          `${label} resized ${beforeItem.filterValue}: `
+            + `before=${JSON.stringify(beforeItem)}, after=${JSON.stringify(afterItem)}`,
+        );
+      });
     };
 
-    const resting = await flag.evaluate(snapshot);
-    assert.ok(resting.code);
-    assert.equal(resting.ariaControls, "travel-map-canvas");
-    assert.equal(resting.ariaPressed, "false");
-    assert.equal(resting.focused, false);
-    assert.equal(resting.type, "button");
-    assert.ok(resting.tooltip);
+    const resting = await readDockState();
+    assert.equal(resting.proximity, "idle");
+    assert.equal(resting.focusedCode, null);
+    assert.equal(resting.itemLayout.length, 9);
+    assert.equal(
+      new Set(resting.itemLayout.map(({ itemRect }) => itemRect.left.toFixed(1))).size,
+      1,
+    );
+    assert.equal(
+      new Set(resting.itemLayout.map(({ itemRect }) => itemRect.top.toFixed(1))).size,
+      9,
+    );
     assert.ok(
-      resting.tooltip.visibility === "hidden" || resting.tooltip.opacity <= .05,
-      `resting flag exposed its tooltip: ${JSON.stringify(resting)}`,
+      resting.entries.SG.countryName
+        && resting.entries.SG.countryName.display !== "none"
+        && resting.entries.SG.countryName.text === "Singapore"
+        && resting.entries.SG.countryName.width > 0
+        && resting.entries.SG.countryName.height > 0,
+      `desktop rail did not expose its persistent country name: ${JSON.stringify(resting)}`,
+    );
+    assert.deepEqual(
+      [resting.entries.SG, resting.entries.TH, resting.entries.PH]
+        .map(({ influence }) => influence),
+      [0, 0, 0],
     );
 
     await flag.hover();
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-dock-proximity") === "active"
+    ));
     await page.waitForTimeout(250);
-    const hovered = await flag.evaluate(snapshot);
+    const hovered = await readDockState();
+    assertLayoutStable(resting, hovered, "hover");
+    assert.equal(hovered.proximity, "active");
     assert.ok(
-      hovered.width >= resting.width + 3 && hovered.height >= resting.height + 3,
-      `hovered flag did not noticeably magnify: resting=${JSON.stringify(resting)}, `
-        + `hovered=${JSON.stringify(hovered)}`,
+      hovered.entries.SG.influence > hovered.entries.TH.influence
+        && hovered.entries.TH.influence > hovered.entries.PH.influence,
+      `dock influence did not decay target > adjacent > far: ${JSON.stringify(hovered.entries)}`,
     );
     assert.ok(
-      hovered.top <= resting.top - 2,
-      `hovered flag did not rise: resting top=${resting.top}, hovered top=${hovered.top}`,
-    );
-    assert.ok(
-      hovered.tooltip
-        && hovered.tooltip.visibility !== "hidden"
-        && hovered.tooltip.opacity >= .9
-        && hovered.tooltip.width > 0
-        && hovered.tooltip.height > 0,
-      `hovered flag label was not visible: ${JSON.stringify(hovered)}`,
+      hovered.entries.SG.iconRect.height > hovered.entries.TH.iconRect.height + 1
+        && hovered.entries.TH.iconRect.height > hovered.entries.PH.iconRect.height + 1,
+      `flag magnification did not decay target > adjacent > far: ${JSON.stringify(hovered.entries)}`,
     );
 
     await page.mouse.move(0, 0);
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-dock-proximity") === "idle"
+    ));
     await page.waitForTimeout(300);
-    const restored = await flag.evaluate(snapshot);
-    assert.ok(
-      Math.abs(restored.width - resting.width) <= .75
-        && Math.abs(restored.height - resting.height) <= .75
-        && Math.abs(restored.top - resting.top) <= .75
-        && Math.abs(restored.left - resting.left) <= .75,
-      `flag did not return to rest: resting=${JSON.stringify(resting)}, `
-        + `restored=${JSON.stringify(restored)}`,
+    const restored = await readDockState();
+    assertLayoutStable(resting, restored, "pointer exit");
+    assert.deepEqual(
+      [restored.entries.SG, restored.entries.TH, restored.entries.PH]
+        .map(({ influence }) => influence),
+      [0, 0, 0],
     );
-    assert.ok(
-      restored.tooltip
-        && (restored.tooltip.visibility === "hidden" || restored.tooltip.opacity <= .05),
-      `flag label remained visible after pointer exit: ${JSON.stringify(restored)}`,
-    );
+    for (const code of ["SG", "TH", "PH"]) {
+      assert.ok(
+        Math.abs(restored.entries[code].iconRect.height - resting.entries[code].iconRect.height)
+          <= .75,
+        `pointer exit did not restore ${code}: resting=${JSON.stringify(resting.entries[code])}, `
+          + `restored=${JSON.stringify(restored.entries[code])}`,
+      );
+    }
 
     await flag.focus();
     await page.waitForTimeout(250);
-    const focused = await flag.evaluate(snapshot);
-    assert.equal(focused.focused, true);
-    assert.ok(
-      focused.tooltip
-        && focused.tooltip.visibility !== "hidden"
-        && focused.tooltip.opacity >= .9
-        && focused.tooltip.width > 0
-        && focused.tooltip.height > 0,
-      `focused flag label was not visible: ${JSON.stringify(focused)}`,
-    );
+    const focused = await readDockState();
+    assert.equal(focused.focusedCode, "SG");
+    assertLayoutStable(resting, focused, "focus");
+    assert.equal(focused.entries.SG.countryName?.text, "Singapore");
 
     await flag.evaluate((button) => button.blur());
     await page.waitForTimeout(250);
-    const blurred = await flag.evaluate(snapshot);
-    assert.equal(blurred.focused, false);
+    const blurred = await readDockState();
+    assert.equal(blurred.focusedCode, null);
+    assertLayoutStable(resting, blurred, "blur");
+  } finally {
+    await context.close();
+  }
+});
+
+test("820px travel region rail renders one nine-column row", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 820, height: 1180 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const rail = page.locator(".travel-map-flags-scroll");
+    await rail.scrollIntoViewIfNeeded();
+
+    const geometry = await rail.evaluate((element) => {
+      const items = Array.from(element.querySelectorAll(".travel-map-flags > li"));
+      const itemRects = items.map((item) => item.getBoundingClientRect());
+      const coordinateCount = (values) => new Set(
+        values.map((value) => value.toFixed(1)),
+      ).size;
+
+      return {
+        buttonTargetsValid: items.every((item) => {
+          const rect = item.querySelector("button")?.getBoundingClientRect();
+          return rect && rect.width >= 44 && rect.height >= 44;
+        }),
+        columnCount: coordinateCount(itemRects.map(({ left }) => left)),
+        filterValues: items.map((item) => item.getAttribute("data-filter-value")).sort(),
+        itemCount: items.length,
+        pageClientWidth: document.documentElement.clientWidth,
+        pageScrollWidth: document.documentElement.scrollWidth,
+        pressedCount: items.filter((item) => (
+          item.querySelector("button")?.getAttribute("aria-pressed") === "true"
+        )).length,
+        rowCount: coordinateCount(itemRects.map(({ top }) => top)),
+        scrollClientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+        selectedCount: items.filter((item) => item.getAttribute("data-selected") === "true").length,
+      };
+    });
+    assert.equal(geometry.itemCount, 9);
+    assert.equal(geometry.columnCount, 9);
+    assert.equal(geometry.rowCount, 1);
+    assert.deepEqual(geometry.filterValues, generatedCountryCodes);
+    assert.equal(geometry.pressedCount, 0);
+    assert.equal(geometry.selectedCount, 0);
+    assert.equal(geometry.buttonTargetsValid, true);
     assert.ok(
-      blurred.tooltip
-        && (blurred.tooltip.visibility === "hidden" || blurred.tooltip.opacity <= .05),
-      `flag label remained visible after focus left: ${JSON.stringify(blurred)}`,
+      geometry.scrollWidth <= geometry.scrollClientWidth + 1,
+      `tablet rail unexpectedly scrolled horizontally: ${JSON.stringify(geometry)}`,
+    );
+    assert.ok(
+      geometry.pageScrollWidth <= geometry.pageClientWidth + 1,
+      `tablet rail leaked into page overflow: ${JSON.stringify(geometry)}`,
     );
   } finally {
     await context.close();
   }
 });
 
-test("430px travel map filters by flag without moving the focus view or overflowing the page", { timeout: 20_000 }, async () => {
+test("430px fine-pointer rail keeps fixed items and swaps ISO codes for names", { timeout: 20_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 430, height: 932 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+      && document.querySelector(".travel-map-canvas")?.getAttribute("data-map-view") === "focus"
+    ));
+
+    const pointerMedia = await page.evaluate(() => ({
+      fine: matchMedia("(pointer: fine)").matches,
+      hover: matchMedia("(hover: hover)").matches,
+    }));
+    assert.deepEqual(pointerMedia, { fine: true, hover: true });
+
+    const dock = page.locator(".travel-map-dock");
+    const rail = page.locator(".travel-map-flags-scroll");
+    const china = page.getByRole("button", { exact: true, name: "China" });
+    await dock.scrollIntoViewIfNeeded();
+    await china.scrollIntoViewIfNeeded();
+
+    const fixedGeometry = await rail.evaluate((element) => (
+      Array.from(element.querySelectorAll(".travel-map-flags > li")).map((item) => {
+        const itemRect = item.getBoundingClientRect();
+        const buttonRect = item.querySelector("button")?.getBoundingClientRect();
+        return {
+          button: buttonRect ? { height: buttonRect.height, width: buttonRect.width } : null,
+          filterValue: item.getAttribute("data-filter-value"),
+          item: {
+            height: itemRect.height,
+            left: itemRect.left,
+            top: itemRect.top,
+            width: itemRect.width,
+          },
+        };
+      })
+    ));
+    assert.equal(fixedGeometry.length, 9);
+    assert.equal(new Set(fixedGeometry.map(({ item }) => item.left.toFixed(1))).size, 9);
+    assert.equal(new Set(fixedGeometry.map(({ item }) => item.top.toFixed(1))).size, 1);
+    assert.equal(
+      fixedGeometry.every(({ button, item }) => (
+        button
+        && Math.abs(button.width - 64) <= .75
+        && Math.abs(button.height - 52) <= .75
+        && Math.abs(item.width - 64) <= .75
+        && Math.abs(item.height - 52) <= .75
+      )),
+      true,
+      `fine-pointer rail changed its 64x52 footprint: ${JSON.stringify(fixedGeometry)}`,
+    );
+
+    const readChinaState = () => china.evaluate((button) => {
+      const item = button.closest("li");
+      const itemRect = item?.getBoundingClientRect();
+      const buttonRect = button.getBoundingClientRect();
+      const countryName = button.querySelector(".travel-map-country-name");
+      const regionCode = button.querySelector(".travel-map-region-code");
+      const countryNameStyle = countryName ? getComputedStyle(countryName) : null;
+      const regionCodeStyle = regionCode ? getComputedStyle(regionCode) : null;
+
+      return {
+        buttonSize: { height: buttonRect.height, width: buttonRect.width },
+        countryName: countryName && countryNameStyle ? {
+          display: countryNameStyle.display,
+          opacity: Number.parseFloat(countryNameStyle.opacity),
+          text: countryName.textContent?.trim() ?? "",
+        } : null,
+        focusVisible: button.matches(":focus-visible"),
+        focused: document.activeElement === button,
+        influence: Number.parseFloat(
+          item ? getComputedStyle(item).getPropertyValue("--travel-dock-influence") : "0",
+        ) || 0,
+        itemSize: itemRect ? { height: itemRect.height, width: itemRect.width } : null,
+        proximity: button.closest(".travel-map-flags-scroll")
+          ?.getAttribute("data-dock-proximity"),
+        regionCode: regionCode && regionCodeStyle ? {
+          opacity: Number.parseFloat(regionCodeStyle.opacity),
+          text: regionCode.textContent?.trim() ?? "",
+        } : null,
+      };
+    });
+    const assertFixedChina = (state, label) => {
+      assert.ok(state.itemSize, `${label} missed item geometry`);
+      assert.ok(
+        Math.abs(state.itemSize.width - 64) <= .75
+          && Math.abs(state.itemSize.height - 52) <= .75
+          && Math.abs(state.buttonSize.width - 64) <= .75
+          && Math.abs(state.buttonSize.height - 52) <= .75,
+        `${label} changed the 64x52 footprint: ${JSON.stringify(state)}`,
+      );
+    };
+    const assertNameHidden = (state, label) => {
+      assert.equal(state.countryName?.display, "block");
+      assert.equal(state.countryName?.text, "China");
+      assert.ok(
+        state.countryName.opacity <= .05 && state.regionCode?.opacity >= .95,
+        `${label} did not restore the ISO label: ${JSON.stringify(state)}`,
+      );
+      assert.equal(state.regionCode?.text, "CN");
+    };
+    const assertNameVisible = (state, label) => {
+      assert.ok(
+        state.countryName?.opacity >= .95 && state.regionCode?.opacity <= .05,
+        `${label} did not replace ISO with the country name: ${JSON.stringify(state)}`,
+      );
+      assert.equal(state.countryName?.text, "China");
+      assert.equal(state.regionCode?.text, "CN");
+    };
+
+    const resting = await readChinaState();
+    assert.equal(resting.proximity, "idle");
+    assertNameHidden(resting, "rest");
+    assertFixedChina(resting, "rest");
+
+    await china.hover();
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-dock-proximity") === "active"
+    ));
+    await page.waitForTimeout(250);
+    const hovered = await readChinaState();
+    assert.equal(hovered.proximity, "active");
+    assert.ok(hovered.influence >= .95, `hover missed China: ${JSON.stringify(hovered)}`);
+    assertNameVisible(hovered, "hover");
+    assertFixedChina(hovered, "hover");
+
+    await page.mouse.move(0, 0);
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-dock-proximity") === "idle"
+    ));
+    await page.waitForTimeout(250);
+    const restored = await readChinaState();
+    assertNameHidden(restored, "pointer exit");
+    assertFixedChina(restored, "pointer exit");
+
+    await china.focus();
+    if (!await china.evaluate((button) => button.matches(":focus-visible"))) {
+      await page.keyboard.press("Tab");
+      await page.keyboard.press("Shift+Tab");
+    }
+    await page.waitForTimeout(250);
+    const focused = await readChinaState();
+    assert.equal(focused.focused, true);
+    assert.equal(focused.focusVisible, true);
+    assert.equal(focused.proximity, "idle");
+    assert.ok(focused.influence >= .95, `focus missed China: ${JSON.stringify(focused)}`);
+    assertNameVisible(focused, "focus");
+    assertFixedChina(focused, "focus");
+
+    await china.evaluate((button) => button.blur());
+    await page.waitForTimeout(250);
+    const blurred = await readChinaState();
+    assert.equal(blurred.focused, false);
+    assertNameHidden(blurred, "blur");
+    assertFixedChina(blurred, "blur");
+  } finally {
+    await context.close();
+  }
+});
+
+test("430px travel map auto-cruises its signal rail without moving the focus view", { timeout: 30_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     hasTouch: true,
     isMobile: true,
@@ -1160,7 +1469,7 @@ test("430px travel map filters by flag without moving the focus view or overflow
     const australia = page.getByRole("button", { exact: true, name: "Australia" });
     await dock.scrollIntoViewIfNeeded();
 
-    assert.equal(await flagButtons.count(), generatedTravelData.counts.countries);
+    assert.equal(await flagButtons.count(), 9);
     assert.equal(await china.count(), 1);
     assert.equal(await australia.count(), 1);
 
@@ -1169,19 +1478,31 @@ test("430px travel map filters by flag without moving the focus view or overflow
       const scrollElement = document.querySelector(".travel-map-flags-scroll");
       const dockRect = dockElement?.getBoundingClientRect();
       const buttons = Array.from(document.querySelectorAll(".travel-map-flag-button"));
+      const items = Array.from(document.querySelectorAll(".travel-map-flags > li"));
+      const itemRects = items.map((item) => {
+        const rect = item.getBoundingClientRect();
+        return { left: rect.left, top: rect.top };
+      });
+      const coordinateCount = (values) => new Set(
+        values.map((value) => value.toFixed(1)),
+      ).size;
 
       return {
         buttonSizes: buttons.map((button) => {
           const rect = button.getBoundingClientRect();
           return { height: rect.height, width: rect.width };
         }),
+        columnCount: coordinateCount(itemRects.map(({ left }) => left)),
         dockContained: Boolean(
           dockRect
           && dockRect.left >= -1
           && dockRect.right <= innerWidth + 1
         ),
+        dockProximity: scrollElement?.getAttribute("data-dock-proximity") ?? null,
+        itemCount: itemRects.length,
         pageClientWidth: document.documentElement.clientWidth,
         pageScrollWidth: document.documentElement.scrollWidth,
+        rowCount: coordinateCount(itemRects.map(({ top }) => top)),
         scrollClientWidth: scrollElement?.clientWidth ?? 0,
         scrollOverflowX: scrollElement ? getComputedStyle(scrollElement).overflowX : null,
         scrollWidth: scrollElement?.scrollWidth ?? 0,
@@ -1189,10 +1510,14 @@ test("430px travel map filters by flag without moving the focus view or overflow
       };
     });
     assert.equal(mobileGeometry.dockContained, true);
+    assert.equal(mobileGeometry.itemCount, 9);
+    assert.equal(mobileGeometry.columnCount, 9);
+    assert.equal(mobileGeometry.rowCount, 1);
+    assert.equal(mobileGeometry.dockProximity, "idle");
     assert.equal(mobileGeometry.scrollOverflowX, "auto");
     assert.ok(
       mobileGeometry.scrollWidth > mobileGeometry.scrollClientWidth,
-      `flag dock did not create internal overflow: ${JSON.stringify(mobileGeometry)}`,
+      `signal rail did not create internal horizontal overflow: ${JSON.stringify(mobileGeometry)}`,
     );
     assert.equal(
       mobileGeometry.buttonSizes.every(({ height, width }) => height >= 44 && width >= 44),
@@ -1205,36 +1530,93 @@ test("430px travel map filters by flag without moving the focus view or overflow
     );
     assert.equal(mobileGeometry.windowScrollX, 0);
 
-    await flagScroll.evaluate((element) => {
-      element.scrollLeft = element.scrollWidth - element.clientWidth;
-    });
-    await page.waitForFunction(() => (
-      (document.querySelector(".travel-map-flags-scroll")?.scrollLeft ?? 0) > 0
-    ));
-    const rightBoundary = await page.evaluate(() => {
-      const scrollElement = document.querySelector(".travel-map-flags-scroll");
-      const lastButton = document.querySelector(".travel-map-flags li:last-child button");
-      const scrollRect = scrollElement?.getBoundingClientRect();
-      const buttonRect = lastButton?.getBoundingClientRect();
+    const readRailMotion = () => flagScroll.evaluate((element) => ({
+      motion: element.getAttribute("data-rail-motion"),
+      proximity: element.getAttribute("data-dock-proximity"),
+      scrollLeft: element.scrollLeft,
+    }));
+    const assertRailStable = async (label) => {
+      const start = await readRailMotion();
+      assert.equal(start.motion, "paused", `${label} did not pause the rail`);
+      assert.equal(start.proximity, "idle", `${label} enabled pointer proximity on touch`);
+      await page.waitForTimeout(450);
+      const end = await readRailMotion();
+      assert.equal(end.motion, "paused", `${label} did not stay paused`);
+      assert.equal(end.proximity, "idle", `${label} enabled pointer proximity on touch`);
+      assert.ok(
+        Math.abs(end.scrollLeft - start.scrollLeft) <= .75,
+        `${label} moved the rail: start=${JSON.stringify(start)}, end=${JSON.stringify(end)}`,
+      );
+    };
+    const assertRailResumes = async (label) => {
+      await page.waitForFunction(() => (
+        document.querySelector(".travel-map-flags-scroll")
+          ?.getAttribute("data-rail-motion") === "waiting"
+      ));
+      const waiting = await readRailMotion();
+      assert.equal(waiting.proximity, "idle", `${label} enabled pointer proximity on touch`);
+      await page.waitForTimeout(350);
+      const stillWaiting = await readRailMotion();
+      assert.equal(stillWaiting.motion, "waiting", `${label} skipped its resume delay`);
+      assert.equal(
+        stillWaiting.proximity,
+        "idle",
+        `${label} enabled pointer proximity on touch`,
+      );
+      assert.ok(
+        Math.abs(stillWaiting.scrollLeft - waiting.scrollLeft) <= .75,
+        `${label} moved during its resume delay: waiting=${JSON.stringify(waiting)}, `
+          + `later=${JSON.stringify(stillWaiting)}`,
+      );
+      await page.waitForFunction(() => (
+        document.querySelector(".travel-map-flags-scroll")
+          ?.getAttribute("data-rail-motion") === "running"
+      ), null, { timeout: 3_500 });
+      const resumed = await readRailMotion();
+      await page.waitForTimeout(450);
+      const continued = await readRailMotion();
+      assert.equal(continued.motion, "running", `${label} did not keep cruising`);
+      assert.equal(continued.proximity, "idle", `${label} enabled pointer proximity on touch`);
+      assert.ok(
+        Math.abs(continued.scrollLeft - resumed.scrollLeft) >= 3,
+        `${label} did not resume real scrolling: resumed=${JSON.stringify(resumed)}, `
+          + `continued=${JSON.stringify(continued)}`,
+      );
+    };
 
-      return {
-        lastFlagContained: Boolean(
-          scrollRect
-          && buttonRect
-          && buttonRect.left >= scrollRect.left - 1
-          && buttonRect.right <= scrollRect.right + 1
-        ),
-        pageClientWidth: document.documentElement.clientWidth,
-        pageScrollWidth: document.documentElement.scrollWidth,
-        scrollLeft: scrollElement?.scrollLeft ?? 0,
-      };
-    });
-    assert.equal(rightBoundary.lastFlagContained, true);
-    assert.ok(rightBoundary.scrollLeft > 0);
-    assert.ok(rightBoundary.pageScrollWidth <= rightBoundary.pageClientWidth + 1);
-    await flagScroll.evaluate((element) => {
-      element.scrollLeft = 0;
-    });
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-rail-motion") === "running"
+      && (document.querySelector(".travel-map-flags-scroll")?.scrollLeft ?? 0) > 0
+    ), null, { timeout: 4_000 });
+    const automaticStart = await readRailMotion();
+    await page.waitForTimeout(450);
+    const automaticEnd = await readRailMotion();
+    assert.equal(automaticEnd.motion, "running");
+    assert.equal(automaticEnd.proximity, "idle");
+    assert.ok(
+      automaticEnd.scrollLeft >= automaticStart.scrollLeft + 3,
+      `visible signal rail did not auto-advance: start=${JSON.stringify(automaticStart)}, `
+        + `end=${JSON.stringify(automaticEnd)}`,
+    );
+
+    await flagScroll.hover();
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-rail-motion") === "paused"
+    ));
+    await assertRailStable("hover");
+    await page.mouse.move(0, 0);
+    await assertRailResumes("pointer leave");
+
+    await china.focus();
+    await page.waitForFunction(() => (
+      document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-rail-motion") === "paused"
+    ));
+    await assertRailStable("focus");
+    await china.evaluate((button) => button.blur());
+    await assertRailResumes("focus leave");
 
     const readMapState = () => page.locator(".about-travel").evaluate((figure) => {
       const countEmphasis = (selector) => ({
@@ -1250,14 +1632,15 @@ test("430px travel map filters by flag without moving the focus view or overflow
           .map((button) => ({
             ariaControls: button.getAttribute("aria-controls"),
             ariaPressed: button.getAttribute("aria-pressed"),
-            code: button.closest("li")?.getAttribute("data-country-code") ?? "",
+            filterValue: button.closest("li")?.getAttribute("data-filter-value") ?? "",
             name: button.querySelector(".sr-only")?.textContent?.trim() ?? "",
             type: button.getAttribute("type"),
           })),
         filterActive: figure.getAttribute("data-filter-active"),
         filterStatus: figure.querySelector(".travel-map-filter-status strong")
           ?.textContent?.trim() ?? "",
-        focusedCode: activeElement?.closest("li")?.getAttribute("data-country-code") ?? null,
+        focusedFilterValue: activeElement?.closest("li")
+          ?.getAttribute("data-filter-value") ?? null,
         loadingDisplay: getComputedStyle(
           figure.querySelector(".travel-map-loading"),
         ).display,
@@ -1267,8 +1650,8 @@ test("430px travel map filters by flag without moving the focus view or overflow
         mapReady: figure.getAttribute("data-map-ready"),
         mapView: figure.querySelector(".travel-map-canvas")?.getAttribute("data-map-view"),
         routes: countEmphasis(".travel-map-route"),
-        selectedCodes: Array.from(figure.querySelectorAll('.travel-map-flags li[data-selected="true"]'))
-          .map((item) => item.getAttribute("data-country-code") ?? ""),
+        selectedValues: Array.from(figure.querySelectorAll('.travel-map-flags li[data-selected="true"]'))
+          .map((item) => item.getAttribute("data-filter-value") ?? ""),
         viewBox: figure.querySelector(".travel-map-canvas")?.getAttribute("viewBox"),
       };
     });
@@ -1280,7 +1663,7 @@ test("430px travel map filters by flag without moving the focus view or overflow
     assert.equal(initial.mapReady, "true");
     assert.equal(initial.mapView, "focus");
     assert.notEqual(initial.viewBox, "0 0 800 400");
-    assert.deepEqual(initial.selectedCodes, []);
+    assert.deepEqual(initial.selectedValues, []);
     assert.deepEqual(initial.airports, {
       active: 0,
       idle: generatedTravelData.counts.airports,
@@ -1292,17 +1675,22 @@ test("430px travel map filters by flag without moving the focus view or overflow
       muted: 0,
     });
     assert.deepEqual(
-      initial.buttonStates.map(({ code }) => code).sort(),
+      initial.buttonStates.map(({ filterValue }) => filterValue).sort(),
       generatedCountryCodes,
     );
     assert.equal(
       initial.buttonStates.every((button) => (
         button.ariaControls === "travel-map-canvas"
-        && button.ariaPressed === "false"
         && button.name.length > 0
         && button.type === "button"
       )),
       true,
+    );
+    assert.deepEqual(
+      initial.buttonStates
+        .filter(({ ariaPressed }) => ariaPressed === "true")
+        .map(({ filterValue }) => filterValue),
+      [],
     );
 
     const assertSelectedCountry = (state, countryCode, countryName) => {
@@ -1311,10 +1699,10 @@ test("430px travel map filters by flag without moving the focus view or overflow
       assert.equal(state.filterStatus, countryName);
       assert.equal(state.mapView, "focus");
       assert.equal(state.viewBox, initial.viewBox);
-      assert.deepEqual(state.selectedCodes, [countryCode]);
+      assert.deepEqual(state.selectedValues, [countryCode]);
       assert.deepEqual(
         state.buttonStates.filter(({ ariaPressed }) => ariaPressed === "true")
-          .map(({ code }) => code),
+          .map(({ filterValue }) => filterValue),
         [countryCode],
       );
       assert.deepEqual(state.airports, expected.airports);
@@ -1325,10 +1713,11 @@ test("430px travel map filters by flag without moving the focus view or overflow
       assert.equal(state.filterStatus, "All signals");
       assert.equal(state.mapView, "focus");
       assert.equal(state.viewBox, initial.viewBox);
-      assert.deepEqual(state.selectedCodes, []);
-      assert.equal(
-        state.buttonStates.every(({ ariaPressed }) => ariaPressed === "false"),
-        true,
+      assert.deepEqual(state.selectedValues, []);
+      assert.deepEqual(
+        state.buttonStates.filter(({ ariaPressed }) => ariaPressed === "true")
+          .map(({ filterValue }) => filterValue),
+        [],
       );
       assert.deepEqual(state.airports, initial.airports);
       assert.deepEqual(state.routes, initial.routes);
@@ -1340,6 +1729,13 @@ test("430px travel map filters by flag without moving the focus view or overflow
         ?.getAttribute("aria-pressed") === "true"
     ));
     assertSelectedCountry(await readMapState(), "CN", "China");
+
+    await china.tap();
+    await page.waitForFunction(() => (
+      document.querySelector('.travel-map-flags li[data-country-code="CN"] button')
+        ?.getAttribute("aria-pressed") === "false"
+    ));
+    assertCleared(await readMapState());
 
     await australia.scrollIntoViewIfNeeded();
     await australia.tap();
@@ -1369,7 +1765,7 @@ test("430px travel map filters by flag without moving the focus view or overflow
     ));
     const escaped = await readMapState();
     assertCleared(escaped);
-    assert.equal(escaped.focusedCode, "CN");
+    assert.equal(escaped.focusedFilterValue, "CN");
   } finally {
     await context.close();
   }

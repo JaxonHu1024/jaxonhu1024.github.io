@@ -106,29 +106,89 @@ test("keeps the Context path static-first and progressively enhances travel filt
   assert.match(travelMap, /role="img"/);
   assert.match(travelMap, /href="\/assets\/travel-world-solid\.svg"/);
   assert.match(travelMap, /preserveAspectRatio="xMidYMid meet"/);
+  assert.match(travelMap, /WIDE_MAP_ASPECT_RATIO = 3 \/ 2/);
   assert.match(travelMap, /MOBILE_MAP_ASPECT_RATIO = 6 \/ 5/);
-  assert.match(travelMap, /createFocusedViewBox\(travelData\.airports\)/);
+  assert.match(
+    travelMap,
+    /createFocusedViewBox\(travelData\.airports, MOBILE_MAP_ASPECT_RATIO\)/,
+  );
+  assert.match(
+    travelMap,
+    /createFocusedViewBox\(travelData\.airports, WIDE_MAP_ASPECT_RATIO\)/,
+  );
   assert.match(travelMap, /data-map-view=/);
   assert.match(travelMap, /Math\.abs\(horizontalDistance\) <= MAP_WIDTH \/ 2/);
   assert.match(travelMap, /travelData\.routes\.map\(\(route\) =>/);
   assert.match(travelMap, /data-route-key=\{routeKey\}/);
   assert.match(travelMap, /data-route-direction=\{route\.bidirectional \? "both" : "one-way"\}/);
   assert.match(travelMap, /className="travel-map-dock"/);
+  assert.match(travelMap, /aria-label="Flight footprint controls"/);
+  assert.match(travelMap, /className="travel-map-legend" aria-label="Map legend"/);
   assert.match(travelMap, /className="travel-map-flags"/);
   assert.match(travelMap, /aria-label="Filter flight footprint by country or region"/);
+  assert.doesNotMatch(travelMap, /data-filter-value="all"|Reset view/);
   assert.match(travelMap, /data-country-code=\{country\.code\}/);
   assert.match(travelMap, /className="travel-map-flag-button"/);
   assert.match(travelMap, /aria-pressed=\{isSelected\}/);
   assert.match(travelMap, /aria-controls="travel-map-canvas"/);
+  assert.match(travelMap, /onClick=\{\(\) => toggleCountry\(country\.code\)\}/);
+  assert.match(
+    travelMap,
+    /const toggleCountry = \(countryCode: string\) => \{[\s\S]*?setSelectedCountryCode\(\(current\) => current === countryCode \? null : countryCode\);[\s\S]*?\};/,
+  );
+  assert.match(
+    travelMap,
+    /const handleDockKeyDown = \(event: KeyboardEvent<HTMLDivElement>\) => \{[\s\S]*?if \(event\.key !== "Escape" \|\| selectedCountryCode === null\) return;[\s\S]*?event\.preventDefault\(\);[\s\S]*?setSelectedCountryCode\(null\);[\s\S]*?\};/,
+  );
   assert.match(travelMap, /data-emphasis=/);
   assert.match(travelMap, /className="travel-map-flag-icon"/);
-  assert.match(travelMap, /className="travel-map-flag-tooltip"/);
+  assert.match(travelMap, /className="travel-map-region-code"/);
+  assert.match(travelMap, /className="travel-map-country-name"/);
+  assert.match(travelMap, /Build-time aggregate\. Exact itinerary details are omitted\./);
+  assert.doesNotMatch(travelMap, /travel-map-flag-tooltip/);
   assert.doesNotMatch(travelMap, /Flight segments|Airports reached|travel-map-distance|formatDistance/);
   assert.doesNotMatch(css, /\.travel-map-distance/);
   assert.match(
     css,
-    /\.travel-map-flag-icon\s*\{[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/,
+    /\.travel-map-flags\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*repeat\(9,/,
   );
+  assert.match(
+    css,
+    /@media \(max-width: 600px\)[\s\S]*?\.travel-map-flags-scroll\s*\{[\s\S]*?overflow-x:\s*auto;/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 600px\)[\s\S]*?\.travel-map-flags\s*\{[\s\S]*?display:\s*flex;[\s\S]*?width:\s*max-content;/,
+  );
+  assert.match(
+    css,
+    /@media \(min-width: 1200px\)[\s\S]*?\.travel-map-flags\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/,
+  );
+  assert.match(css, /mask-image:\s*linear-gradient\(90deg,/);
+  assert.match(travelMap, /MOBILE_RAIL_SPEED_PX_PER_MS/);
+  assert.match(travelMap, /requestAnimationFrame\(tick\)/);
+  assert.match(travelMap, /new IntersectionObserver/);
+  assert.match(travelMap, /REDUCED_MOTION_QUERY/);
+  assert.match(travelMap, /DOCK_POINTER_QUERY = "\(hover: hover\) and \(pointer: fine\)"/);
+  assert.match(travelMap, /DOCK_INFLUENCE_DISTANCE_PX = 112/);
+  assert.match(travelMap, /data-rail-motion="static"/);
+  assert.match(travelMap, /data-dock-proximity="idle"/);
+  assert.match(travelMap, /rail\.addEventListener\("pointerenter"/);
+  assert.match(travelMap, /rail\.addEventListener\("pointermove"/);
+  assert.match(travelMap, /rail\.addEventListener\("focusin"/);
+  assert.match(travelMap, /linearInfluence \* linearInfluence \* \(3 - 2 \* linearInfluence\)/);
+  assert.match(travelMap, /--travel-dock-influence/);
+  assert.match(css, /--travel-dock-influence:\s*0/);
+  assert.match(css, /data-dock-proximity="active"/);
+  assert.match(
+    css,
+    /@media \(max-width: 600px\) and \(hover: hover\) and \(pointer: fine\)/,
+  );
+  assert.match(
+    css,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.travel-map-flag-icon,[\s\S]*?transform:\s*none !important/,
+  );
+  assert.match(css, /@media \(min-width: 1200px\)[\s\S]*?grid-template-columns:\s*minmax\(0, 3fr\)/);
   assert.doesNotMatch(travelMap, /routeIndex|--travel-route-delay/);
   assert.doesNotMatch(travelMap, /createCurvedPath|selectRepresentativeRoutes|markerStart|markerEnd/);
   assert.doesNotMatch(travelMap, /Trace window|DATA LAYER/i);
@@ -157,7 +217,7 @@ test("travel filter affordances stay inert until their buttons are enabled", asy
   assert.match(css, /\.travel-map-flags button:not\(:disabled\):active\s*\{/);
   assert.match(
     css,
-    /\.travel-map-flags li:has\(> button:not\(:disabled\)\):hover\s*\{/,
+    /\.travel-map-flags button:not\(:disabled\):hover\s*\{/,
   );
   assert.match(
     css,
