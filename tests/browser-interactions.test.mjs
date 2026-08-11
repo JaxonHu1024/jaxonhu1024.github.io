@@ -2207,16 +2207,16 @@ test("mobile navigation separates pointer focus from keyboard focus", { timeout:
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.waitForFunction(() => (
       document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
-    ));
+    ), null, { timeout: 2_500 });
 
     const menuButton = page.locator('button[aria-controls="primary-navigation"]');
     const aboutLink = page.locator('#primary-navigation a[href="#about"]');
 
-    await menuButton.tap();
+    await menuButton.tap({ timeout: 3_000 });
     await page.waitForFunction(() => (
       document.querySelector('[aria-controls="primary-navigation"]')
         ?.getAttribute("aria-expanded") === "true"
-    ));
+    ), null, { timeout: 2_500 });
     assert.equal(
       await page.locator("#primary-navigation a:focus").count(),
       0,
@@ -2228,11 +2228,11 @@ test("mobile navigation separates pointer focus from keyboard focus", { timeout:
       "pointer-open exposed a navigation focus ring",
     );
 
-    await menuButton.tap();
+    await menuButton.tap({ timeout: 3_000 });
     await page.waitForFunction(() => (
       document.querySelector('[aria-controls="primary-navigation"]')
         ?.getAttribute("aria-expanded") === "false"
-    ));
+    ), null, { timeout: 2_500 });
 
     await menuButton.focus();
     await page.keyboard.press("Enter");
@@ -2240,7 +2240,7 @@ test("mobile navigation separates pointer focus from keyboard focus", { timeout:
       document.querySelector('[aria-controls="primary-navigation"]')
         ?.getAttribute("aria-expanded") === "true"
       && document.activeElement?.getAttribute("href") === "#about"
-    ));
+    ), null, { timeout: 2_500 });
     const keyboardFocus = await aboutLink.evaluate((element) => {
       const style = getComputedStyle(element);
       return {
@@ -2257,7 +2257,7 @@ test("mobile navigation separates pointer focus from keyboard focus", { timeout:
       "mobile link did not receive the inset focus ring",
     );
 
-    await page.keyboard.press("PageDown");
+    await page.keyboard.press("Escape");
     await page.waitForFunction(() => (
       document.querySelector('[aria-controls="primary-navigation"]')
         ?.getAttribute("aria-expanded") === "false"
@@ -2270,13 +2270,13 @@ test("mobile navigation separates pointer focus from keyboard focus", { timeout:
       document.querySelector('[aria-controls="primary-navigation"]')
         ?.getAttribute("aria-expanded") === "true"
       && document.activeElement?.getAttribute("href") === "#about"
-    ));
-    await page.keyboard.press("Escape");
+    ), null, { timeout: 2_500 });
+    await page.keyboard.press("PageDown");
     await page.waitForFunction(() => (
       document.querySelector('[aria-controls="primary-navigation"]')
         ?.getAttribute("aria-expanded") === "false"
       && document.activeElement?.getAttribute("aria-controls") === "primary-navigation"
-    ));
+    ), null, { timeout: 2_500 });
   } finally {
     await context.close();
   }

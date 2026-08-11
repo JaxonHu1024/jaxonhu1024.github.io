@@ -2,6 +2,8 @@ import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { optimizeHeadModulePreloads } from "./lib/module-preload-hints.mjs";
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const clientDirectory = resolve(root, "dist/client");
 const outputDirectory = resolve(root, "github-pages-dist");
@@ -65,8 +67,10 @@ await cp(
   resolve(outputDirectory, "THIRD_PARTY_NOTICES.md"),
 );
 
-const html = await render("/");
-const notFoundHtml = await render("/404", { allowNotFound: true });
+const html = optimizeHeadModulePreloads(await render("/"));
+const notFoundHtml = optimizeHeadModulePreloads(
+  await render("/404", { allowNotFound: true }),
+);
 await writeFile(resolve(outputDirectory, "index.html"), html);
 await writeFile(resolve(outputDirectory, "404.html"), notFoundHtml);
 
