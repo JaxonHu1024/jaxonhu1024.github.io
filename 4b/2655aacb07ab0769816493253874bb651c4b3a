@@ -1,0 +1,27 @@
+THIRD_PARTY_NOTICES.md
+  s_32c47abb0c7d8f::t_816a281cd620b7 5
+app/globals.css
+  s_32c47abb0c7d8f::t_8f542cf5b3dd5a 1805,1880,2979,3013,3017
+tests/github-pages-export.test.mjs
+  s_32c47abb0c7d8f::t_957d1f56fe5cb5 414
+tests/scroll-performance-contract.test.mjs
+  s_32c47abb0c7d8f::t_8f7e4f8645a3ec 167-176,179-181,312-313,321-323
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "4b2655aacb07ab0769816493253874bb651c4b3a",
+  "prompts": {},
+  "sessions": {
+    "s_32c47abb0c7d8f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff1e9-6985-74c1-8349-11856b1bbd2b",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
