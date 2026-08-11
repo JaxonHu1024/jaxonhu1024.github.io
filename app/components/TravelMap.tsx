@@ -596,7 +596,7 @@ export function TravelMap() {
                 aria-hidden="true"
               />
 
-              <g className="travel-map-routes" aria-hidden="true">
+              <g aria-hidden="true">
                 {travelData.routes.map((route) => {
                   const startAirport = airportByIata.get(route.from);
                   const endAirport = airportByIata.get(route.to);
@@ -635,7 +635,7 @@ export function TravelMap() {
                 })}
               </g>
 
-              <g className="travel-map-airports" aria-hidden="true">
+              <g aria-hidden="true">
                 {travelData.airports.map((airport) => {
                   const point = projectPoint(airport);
                   const isHub = hubCodes.has(airport.iata);

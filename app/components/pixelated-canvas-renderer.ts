@@ -1,9 +1,6 @@
 type PixelSample = {
   x: number;
   y: number;
-  r: number;
-  g: number;
-  b: number;
   a: number;
   color: string;
   drop: boolean;
@@ -432,17 +429,15 @@ export function createPixelatedCanvasRenderer({
           0,
           Math.min(1, (1 - gradientStrength) * dropoutStrength),
         );
+        const seed = hash2D(centerX, centerY);
 
         nextSamples.push({
           x,
           y,
-          r: red,
-          g: green,
-          b: blue,
           a: alpha,
           color: `rgb(${red}, ${green}, ${blue})`,
-          drop: hash2D(centerX, centerY) < dropoutProbability,
-          seed: hash2D(centerX, centerY),
+          drop: seed < dropoutProbability,
+          seed,
         });
       }
     }

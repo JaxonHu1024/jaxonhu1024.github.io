@@ -310,15 +310,7 @@ export function usePixelatedCanvas({
       event.pointerType === "touch" && touchHandle !== null
     );
 
-    const handleCanvasPointerEnter = (event: PointerEvent) => {
-      if (!canvasUsesTouchHandle(event)) updatePointer(event);
-    };
-
-    const handleCanvasPointerDown = (event: PointerEvent) => {
-      if (!canvasUsesTouchHandle(event)) updatePointer(event);
-    };
-
-    const handleCanvasPointerMove = (event: PointerEvent) => {
+    const handleCanvasPointerInteraction = (event: PointerEvent) => {
       if (!canvasUsesTouchHandle(event)) updatePointer(event);
     };
 
@@ -430,9 +422,9 @@ export function usePixelatedCanvas({
     const resizeObserver = responsive ? new ResizeObserver(scheduleResize) : null;
 
     syncInteractionState();
-    canvas.addEventListener("pointerenter", handleCanvasPointerEnter);
-    canvas.addEventListener("pointerdown", handleCanvasPointerDown);
-    canvas.addEventListener("pointermove", handleCanvasPointerMove);
+    canvas.addEventListener("pointerenter", handleCanvasPointerInteraction);
+    canvas.addEventListener("pointerdown", handleCanvasPointerInteraction);
+    canvas.addEventListener("pointermove", handleCanvasPointerInteraction);
     canvas.addEventListener("pointerleave", handleCanvasPointerLeave);
     canvas.addEventListener("pointerup", handleCanvasPointerUp);
     canvas.addEventListener("pointercancel", handleCanvasPointerCancel);
@@ -470,9 +462,9 @@ export function usePixelatedCanvas({
       }
       if (interactionEndTimeout !== null) window.clearTimeout(interactionEndTimeout);
       if (resizeFrameRef.current !== null) cancelAnimationFrame(resizeFrameRef.current);
-      canvas.removeEventListener("pointerenter", handleCanvasPointerEnter);
-      canvas.removeEventListener("pointerdown", handleCanvasPointerDown);
-      canvas.removeEventListener("pointermove", handleCanvasPointerMove);
+      canvas.removeEventListener("pointerenter", handleCanvasPointerInteraction);
+      canvas.removeEventListener("pointerdown", handleCanvasPointerInteraction);
+      canvas.removeEventListener("pointermove", handleCanvasPointerInteraction);
       canvas.removeEventListener("pointerleave", handleCanvasPointerLeave);
       canvas.removeEventListener("pointerup", handleCanvasPointerUp);
       canvas.removeEventListener("pointercancel", handleCanvasPointerCancel);

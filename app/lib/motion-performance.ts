@@ -1,4 +1,4 @@
-export type SiteTracePoint = Readonly<{ x: number; y: number }>;
+type SiteTracePoint = Readonly<{ x: number; y: number }>;
 
 const RESEARCH_MOBILE_MAX_WIDTH = 700;
 const FRAME_TIME_TOLERANCE_MS = 0.5;

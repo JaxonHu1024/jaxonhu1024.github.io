@@ -4,17 +4,11 @@ import { ResearchVisual } from "./components/ResearchVisual";
 import { SignalHeading } from "./components/SignalHeading";
 import { TravelMap } from "./components/TravelMap";
 
-const currentExperience = {
-  company: "ByteDance",
-};
+const currentCompany = "ByteDance";
 
-const alibabaExperiences = [
-  {
-    organization: "International Digital Commerce Group",
-  },
-  {
-    organization: "DAMO Academy",
-  },
+const alibabaOrganizations = [
+  "International Digital Commerce Group",
+  "DAMO Academy",
 ];
 
 const papers = [
@@ -209,7 +203,7 @@ export default function Home() {
               <div className="experience-copy">
                 <div className="experience-entry-heading">
                   <div className="experience-entry-copy">
-                    <h3>{currentExperience.company}</h3>
+                    <h3>{currentCompany}</h3>
                     <p>Senior AI Engineer</p>
                   </div>
                   {/* Static export serves the user-provided SVG directly. */}
@@ -248,10 +242,10 @@ export default function Home() {
                 </div>
               </header>
               <div className="experience-subentries">
-                {alibabaExperiences.map((item) => (
-                  <article className="experience-subentry" key={item.organization}>
+                {alibabaOrganizations.map((organization) => (
+                  <article className="experience-subentry" key={organization}>
                     <div className="experience-subentry-copy">
-                      <h4>{item.organization}</h4>
+                      <h4>{organization}</h4>
                     </div>
                   </article>
                 ))}
@@ -275,7 +269,7 @@ export default function Home() {
                 EDUCATION
               </SignalHeading>
               <div className="education-timeline">
-                <article className="education-item has-crest">
+                <article className="education-item">
                   <span className="education-node" aria-hidden="true" />
                   {/* Static export serves the local SVG directly; Next image optimizer is not used. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -291,7 +285,7 @@ export default function Home() {
                   <h3>Nanyang Technological University</h3>
                   <p>MSc in Computer Control and Automation</p>
                 </article>
-                <article className="education-item has-crest">
+                <article className="education-item">
                   <span className="education-node" aria-hidden="true" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -341,7 +335,7 @@ export default function Home() {
           </SignalHeading>
           <div className="research-frame reveal">
             {papers.map((paper) => (
-              <article className={`research-packet is-${paper.visual}`} key={paper.id}>
+              <article className="research-packet" key={paper.id}>
                 <div className="paper-copy">
                   <p className="paper-index">PUBLICATION {paper.id}</p>
                   <h3 aria-label={paper.title.join(" ")}>
