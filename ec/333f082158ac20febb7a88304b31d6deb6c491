@@ -1,0 +1,23 @@
+app/globals.css
+  s_6b8394067d2c4e::t_31b79216f2476f 3012
+tests/browser-interactions.test.mjs
+  s_6b8394067d2c4e::t_680d648d679ecc 1516-1529
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "ec333f082158ac20febb7a88304b31d6deb6c491",
+  "prompts": {},
+  "sessions": {
+    "s_6b8394067d2c4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff13f-ebfb-7781-ba84-f68debb87fe5",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
