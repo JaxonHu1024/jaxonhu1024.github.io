@@ -329,6 +329,7 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                 element?.querySelectorAll(".travel-map-flags > li") ?? [],
               );
               const map = element?.querySelector(".travel-map-canvas");
+              const loading = element?.querySelector(".travel-map-loading");
               const routeKeys = Array.from(
                 element?.querySelectorAll(".travel-map-route") ?? [],
               ).map((route) => route.getAttribute("data-route-key"));
@@ -351,8 +352,10 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                   return {
                     accessibleName: button?.querySelector(".sr-only")?.textContent?.trim() ?? "",
                     ariaControls: button?.getAttribute("aria-controls") ?? null,
+                    ariaDisabled: button?.getAttribute("aria-disabled") ?? null,
                     ariaPressed: button?.getAttribute("aria-pressed") ?? null,
                     countryCode: flag.getAttribute("data-country-code") ?? "",
+                    disabled: button?.disabled ?? null,
                     selected: flag.getAttribute("data-selected") ?? null,
                     tagName: button?.tagName ?? null,
                     type: button?.getAttribute("type") ?? null,
@@ -371,7 +374,16 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
                   && Boolean(flag.querySelector(".travel-map-flag-tooltip"))
                 )),
                 legacySummaryCount: element.querySelectorAll(".travel-map-summary").length,
+                loading: loading ? {
+                  display: getComputedStyle(loading).display,
+                  role: loading.getAttribute("role"),
+                  text: loading.textContent?.trim() ?? "",
+                } : null,
+                mapCanvasOpacity: map
+                  ? Number.parseFloat(getComputedStyle(map).opacity)
+                  : null,
                 mapId: map?.id ?? null,
+                mapReady: element.getAttribute("data-map-ready"),
                 mapView: map?.getAttribute("data-map-view") ?? null,
                 preserveAspectRatio: map?.getAttribute("preserveAspectRatio") ?? null,
                 routeCount: routeKeys.length,
@@ -490,7 +502,14 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
       assert.equal(state.about.travelMap.visible, true);
       assert.equal(state.about.travelMap.svgRole, "img");
       assert.equal(state.about.travelMap.mapId, "travel-map-canvas");
+      assert.equal(state.about.travelMap.mapReady, "false");
       assert.equal(state.about.travelMap.mapView, "world");
+      assert.equal(state.about.travelMap.mapCanvasOpacity, 1);
+      assert.deepEqual(state.about.travelMap.loading, {
+        display: "none",
+        role: "status",
+        text: "ACQUIRING MAP SIGNAL",
+      });
       assert.equal(state.about.travelMap.viewBox, "0 0 800 400");
       assert.equal(state.about.travelMap.preserveAspectRatio, "xMidYMid meet");
       assert.equal(state.about.travelMap.filterActive, "false");
@@ -517,7 +536,9 @@ test("core content and mobile navigation remain usable without JavaScript", { ti
         button.tagName === "BUTTON"
         && button.type === "button"
         && button.ariaControls === "travel-map-canvas"
+        && button.ariaDisabled === "true"
         && button.ariaPressed === "false"
+        && button.disabled === true
         && button.selected === "false"
         && button.accessibleName.length > 0
       )), true);
@@ -660,6 +681,69 @@ test("mobile navigation stays usable when its enhancement never hydrates", { tim
     await page.locator('#primary-navigation a[href="#research"]').click();
     await page.waitForFunction(() => location.hash === "#research");
     assert.equal(await page.locator("#research-title").isVisible(), true);
+  } finally {
+    await context.close();
+  }
+});
+
+test("mobile travel map masks its fallback camera until enhancement is ready", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 390, height: 844 },
+  });
+  page.setDefaultTimeout(3_000);
+  let stalledTravelMapRequests = 0;
+
+  try {
+    await context.route("**/assets/TravelMap-*.js", (route) => {
+      stalledTravelMapRequests += 1;
+      return route.fulfill({
+        body: "await new Promise(() => {}); export function TravelMap() { return null; }",
+        contentType: "text/javascript; charset=utf-8",
+        status: 200,
+      });
+    });
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForTimeout(350);
+    await page.locator(".travel-map-viewport").scrollIntoViewIfNeeded();
+
+    const fallback = await page.locator(".about-travel").evaluate((figure) => {
+      const canvas = figure.querySelector(".travel-map-canvas");
+      const loading = figure.querySelector(".travel-map-loading");
+      const viewport = figure.querySelector(".travel-map-viewport")?.getBoundingClientRect();
+      const loadingRect = loading?.getBoundingClientRect();
+
+      return {
+        canvasOpacity: canvas
+          ? Number.parseFloat(getComputedStyle(canvas).opacity)
+          : null,
+        loading: loading ? {
+          display: getComputedStyle(loading).display,
+          role: loading.getAttribute("role"),
+          text: loading.textContent?.trim() ?? "",
+        } : null,
+        loadingFillsViewport: Boolean(
+          viewport
+          && loadingRect
+          && Math.abs(viewport.left - loadingRect.left) <= 1
+          && Math.abs(viewport.top - loadingRect.top) <= 1
+          && Math.abs(viewport.width - loadingRect.width) <= 1
+          && Math.abs(viewport.height - loadingRect.height) <= 1
+        ),
+        mapReady: figure.getAttribute("data-map-ready"),
+        mapView: canvas?.getAttribute("data-map-view") ?? null,
+      };
+    });
+
+    assert.ok(stalledTravelMapRequests > 0, "TravelMap enhancement chunk was not requested");
+    assert.equal(fallback.mapReady, "false");
+    assert.equal(fallback.mapView, "world");
+    assert.equal(fallback.canvasOpacity, 0);
+    assert.deepEqual(fallback.loading, {
+      display: "grid",
+      role: "status",
+      text: "ACQUIRING MAP SIGNAL",
+    });
+    assert.equal(fallback.loadingFillsViewport, true);
   } finally {
     await context.close();
   }

@@ -54,6 +54,10 @@ await cp(resolve(clientDirectory, "assets"), resolve(outputDirectory, "assets"),
   recursive: true,
 });
 await cp(resolve(root, "public/favicon.svg"), resolve(outputDirectory, "favicon.svg"));
+await cp(
+  resolve(root, "public/apple-touch-icon.png"),
+  resolve(outputDirectory, "apple-touch-icon.png"),
+);
 await cp(resolve(root, "public/robots.txt"), resolve(outputDirectory, "robots.txt"));
 await cp(resolve(root, "public/sitemap.xml"), resolve(outputDirectory, "sitemap.xml"));
 

@@ -46,6 +46,7 @@ next-env.d.ts
 # private travel imports
 /data/private/**
 !/data/private/README.md
+[Ff][Ll][Ii][Gg][Hh][Tt][Yy]*.[Cc][Ss][Vv]
 
 # agents
 .trae/

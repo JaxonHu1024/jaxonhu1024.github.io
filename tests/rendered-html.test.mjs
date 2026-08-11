@@ -39,9 +39,14 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /property="og:title" content="Jaxon \| AI Engineer"/);
   assert.match(html, /name="twitter:card" content="summary_large_image"/);
   assert.match(html, /name="twitter:title" content="Jaxon \| AI Engineer"/);
+  assert.match(html, /name="twitter:image:alt" content="JAXON signal field"/);
   assert.match(html, /property="og:image" content="https:\/\/jaxonhu1024\.github\.io\/assets\/jaxon-signal-og\.png"/);
   assert.match(html, /name="twitter:image" content="https:\/\/jaxonhu1024\.github\.io\/assets\/jaxon-signal-og\.png"/);
   assert.match(html, /<meta name="theme-color" content="#05070B"\/>/);
+  assert.match(
+    html,
+    /<link(?=[^>]*\brel="apple-touch-icon")(?=[^>]*\bhref="https:\/\/jaxonhu1024\.github\.io\/apple-touch-icon\.png")(?=[^>]*\bsizes="180x180")(?=[^>]*\btype="image\/png")[^>]*\/>/,
+  );
   assert.match(
     html,
     /<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"\/>/,
@@ -119,6 +124,39 @@ test("server-renders the JAXON portfolio and public contact paths", async () => 
   assert.match(html, /https:\/\/github\.com\/JaxonHu1024/);
   assert.match(html, /https:\/\/x\.com\/HuEnzo33232/);
   assert.match(html, /https:\/\/www\.linkedin\.com\/in\/jaxon-hu-10977a221/);
+  const structuredDataMatch = html.match(
+    /<script type="application\/ld\+json">([\s\S]*?)<\/script>/,
+  );
+  assert.ok(structuredDataMatch, "homepage should expose Person JSON-LD");
+  const structuredData = JSON.parse(structuredDataMatch[1]);
+  assert.deepEqual(structuredData, {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    jobTitle: "AI Engineer",
+    knowsAbout: [
+      "AI agents",
+      "AIGC",
+      "vision-language models",
+      "large language models",
+      "autonomous driving",
+    ],
+    name: "Jaxon",
+    sameAs: [
+      "https://github.com/JaxonHu1024",
+      "https://x.com/HuEnzo33232",
+      "https://www.linkedin.com/in/jaxon-hu-10977a221/",
+    ],
+    url: "https://jaxonhu1024.github.io",
+  });
+  const newWindowLinks = [
+    ...html.matchAll(/<a(?=[^>]*\btarget="_blank")[^>]*>[\s\S]*?<\/a>/g),
+  ].map((match) => match[0]);
+  assert.equal(newWindowLinks.length, 5);
+  assert.equal(
+    newWindowLinks.every((link) => /opens in new tab/i.test(link)),
+    true,
+    "every new-window link should announce its behavior in its accessible name",
+  );
   assert.equal(
     (html.match(/class="endpoint-arrow" aria-hidden="true">→<\/span>/g) ?? []).length,
     4,
@@ -155,6 +193,14 @@ test("renders a branded not-found route instead of the homepage", async () => {
   assert.match(html, /404 \/ SIGNAL LOST/);
   assert.match(html, /ROUTE NOT FOUND_/);
   assert.match(html, /The requested coordinate is outside this system\./);
+  assert.match(html, /class="skip-link" href="#content"/);
+  assert.match(html, /class="wordmark" href="\/"/);
+  assert.doesNotMatch(html, /application\/ld\+json/);
+  assert.equal(
+    (html.match(/href="\/#(?:about|experience|foundations|research|contact)"/g) ?? []).length,
+    5,
+  );
+  assert.match(html, /<nav class="nav-scroll" id="primary-navigation" aria-label="Primary navigation">/);
   assert.match(
     html,
     /<a(?=[^>]*\bhref="\/")(?=[^>]*\bclass="not-found-link")[^>]*><span>RETURN HOME<\/span>/,
@@ -294,7 +340,7 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.doesNotMatch(about, /about-context|<dt>Focus<\/dt>|Current context/);
   assert.match(
     about,
-    /<figure(?=[^>]*\bclass="about-travel")(?=[^>]*\baria-labelledby="travel-map-title")(?=[^>]*\bdata-filter-active="false")[^>]*>/,
+    /<figure(?=[^>]*\bclass="about-travel")(?=[^>]*\baria-labelledby="travel-map-title")(?=[^>]*\bdata-filter-active="false")(?=[^>]*\bdata-map-ready="false")[^>]*>/,
   );
   assert.match(
     about,
@@ -331,6 +377,10 @@ test("renders a distinct public-safe About system before Experience", async () =
   assert.match(
     about,
     /<svg(?=[^>]*\bclass="travel-map-canvas")(?=[^>]*\bdata-map-view="world")(?=[^>]*\bid="travel-map-canvas")(?=[^>]*\bviewBox="0 0 800 400")(?=[^>]*\bpreserveAspectRatio="xMidYMid meet")(?=[^>]*\brole="img")[^>]*>/,
+  );
+  assert.match(
+    about,
+    /<span class="travel-map-loading" role="status">ACQUIRING MAP SIGNAL<\/span>/,
   );
   assert.match(
     about,

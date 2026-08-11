@@ -7,6 +7,8 @@ import { createFrameRateGate, getResearchFrameRate } from "@/app/lib/motion-perf
 type Variant = "road" | "wave";
 type Point = readonly [number, number];
 
+const RESEARCH_VISIBILITY_THRESHOLD = 0.05;
+
 const canvasPalette = {
   text: "#E9FFF9",
   text26: "rgba(233,255,249,.26)",
@@ -72,11 +74,13 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
     if (!ctx) return;
 
     let frame = 0;
-    let visible = true;
+    let visible = false;
     let reducedMotion = motionQuery.matches;
     let frameRate = getResearchFrameRate(window.innerWidth);
     let frameRateGate = createFrameRateGate(frameRate);
     let canvasSize = { width: 1, height: 1, dpr: 1 };
+    let activeElapsedMs = 0;
+    let lastActiveFrameTime: number | null = null;
 
     const syncCanvasSize = (width: number, height: number) => {
       const nextFrameRate = getResearchFrameRate(window.innerWidth);
@@ -103,6 +107,14 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
 
     const render = (time = 0) => {
       const shouldAnimate = visible && !reducedMotion && !document.hidden;
+      if (shouldAnimate) {
+        if (lastActiveFrameTime !== null) {
+          activeElapsedMs += Math.max(0, time - lastActiveFrameTime);
+        }
+        lastActiveFrameTime = time;
+      } else {
+        lastActiveFrameTime = null;
+      }
       if (shouldAnimate && !frameRateGate.shouldRender(time)) {
         frame = window.requestAnimationFrame(render);
         return;
@@ -111,7 +123,7 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
       const { width: w, height: h, dpr } = canvasSize;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, w, h);
-      const phase = reducedMotion ? 0 : time * 0.001;
+      const phase = reducedMotion ? 0 : activeElapsedMs * 0.001;
 
       ctx.strokeStyle = canvasPalette.mint13;
       ctx.lineWidth = 1;
@@ -222,7 +234,10 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
     const scheduleRender = () => {
       window.cancelAnimationFrame(frame);
       frameRateGate.reset();
-      if (syncMotionState() === "paused") return;
+      if (syncMotionState() === "paused") {
+        lastActiveFrameTime = null;
+        return;
+      }
       frame = window.requestAnimationFrame(render);
     };
     const observer = new ResizeObserver(([entry]) => {
@@ -232,14 +247,16 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
     });
     observer.observe(canvas);
     const visibilityObserver = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
+      visible = entry.isIntersecting
+        && entry.intersectionRatio >= RESEARCH_VISIBILITY_THRESHOLD;
       if (visible) scheduleRender();
       else {
         window.cancelAnimationFrame(frame);
         frameRateGate.reset();
+        lastActiveFrameTime = null;
         syncMotionState();
       }
-    }, { threshold: 0.05 });
+    }, { threshold: [0, RESEARCH_VISIBILITY_THRESHOLD] });
     visibilityObserver.observe(canvas);
 
     const handleMotionPreference = (event: MediaQueryListEvent) => {
@@ -252,6 +269,7 @@ export function ResearchVisual({ variant }: { variant: Variant }) {
       else {
         window.cancelAnimationFrame(frame);
         frameRateGate.reset();
+        lastActiveFrameTime = null;
         syncMotionState();
       }
     };

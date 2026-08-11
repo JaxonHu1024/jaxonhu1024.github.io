@@ -6,7 +6,8 @@
 
 [jaxonhu1024.github.io](https://jaxonhu1024.github.io) 的完整源码——一个单页、
 以信号排版为核心的个人作品集。站点经服务端渲染后导出为纯静态产物，并由 CI 自动部署到
-GitHub Pages。生成的产物刻意不纳入版本管理，一切都从源码构建。
+GitHub Pages。构建产物不纳入版本管理；经过隐私收缩的旅行聚合会纳入版本管理，确保每个
+干净检出都发布同一份已审查数据。
 
 ## 技术栈
 
@@ -88,8 +89,9 @@ npm run verify
 ```
 
 导入器会把重复航段和反向航段合并成一条走廊；只有两个方向都真实出现时，才将其标记为
-双向。同步日期之后的未来航班不会进入公开足迹。结果写入 `app/data/travel.generated.json`，
-普通构建不会读取私有 CSV。机场元数据来自公有领域的 [OurAirports 数据集](https://ourairports.com/data/)，实心底图来自公有领域的
+双向。同步日期之后的未来航班不会进入公开足迹。写入 `app/data/travel.generated.json` 的
+公开投影只保留机场/国家或地区/走廊计数、机场展示坐标与访问次数，以及走廊次数/方向性；普通构建不会读取
+私有 CSV。机场元数据来自公有领域的 [OurAirports 数据集](https://ourairports.com/data/)，实心底图来自公有领域的
 [Natural Earth 数据](https://www.naturalearthdata.com/)。本地更新流程详见
 [`data/private/README.md`](./data/private/README.md)。
 

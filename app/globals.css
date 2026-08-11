@@ -1,3 +1,4 @@
+/* Tailwind v4 supplies Preflight and the `sr-only` utility; the site styles below are hand-authored by section. */
 @import "tailwindcss";
 
 :root {
@@ -881,6 +882,8 @@ html[data-page-active="false"] .hero-cta-border-signal {
   content: "";
 }
 
+.travel-map-loading { display: none; }
+
 .travel-map-canvas {
   position: absolute;
   inset: 0;
@@ -1133,7 +1136,6 @@ html[data-page-active="false"] .hero-cta-border-signal {
   border-radius: 8px;
   color: inherit;
   background: transparent;
-  cursor: pointer;
   transition:
     border-color 180ms var(--ease-out),
     background 180ms var(--ease-out),
@@ -1142,13 +1144,28 @@ html[data-page-active="false"] .hero-cta-border-signal {
   -webkit-tap-highlight-color: transparent;
 }
 
-.travel-map-flags button:active {
+.travel-map-flags button:not(:disabled) {
+  cursor: pointer;
+}
+
+.travel-map-flags button:not(:disabled):active {
   transform: scale(.96);
 }
 
-.travel-map-flags button:focus-visible {
+.travel-map-flags button:not(:disabled):focus-visible {
   outline: 2px solid var(--color-foreground);
   outline-offset: 2px;
+}
+
+.travel-map-flags button:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.travel-map-flags li:has(> button:disabled) {
+  filter: none;
+  transform: none;
+  transition: none;
 }
 
 .travel-map-flags li[data-selected="true"] button {
@@ -1212,21 +1229,21 @@ html[data-page-active="false"] .hero-cta-border-signal {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .travel-map-flags li:hover {
+  .travel-map-flags li:has(> button:not(:disabled)):hover {
     z-index: 2;
     filter: drop-shadow(0 9px 16px rgb(0 0 0 / .42));
     transform: translateY(-10px) scale(1.28);
   }
 
-  .travel-map-flags li:has(+ li:hover),
-  .travel-map-flags li:hover + li,
-  .travel-map-flags li:has(+ li:focus-within),
-  .travel-map-flags li:focus-within + li {
+  .travel-map-flags li:has(> button:not(:disabled)):has(+ li:hover > button:not(:disabled)),
+  .travel-map-flags li:has(> button:not(:disabled)):hover + li:has(> button:not(:disabled)),
+  .travel-map-flags li:has(> button:not(:disabled)):has(+ li:focus-within > button:not(:disabled)),
+  .travel-map-flags li:has(> button:not(:disabled)):focus-within + li:has(> button:not(:disabled)) {
     transform: translateY(-4px) scale(1.1);
   }
 
-  .travel-map-flags li:hover .travel-map-flag-tooltip,
-  .travel-map-flags li:focus-within .travel-map-flag-tooltip {
+  .travel-map-flags li:has(> button:not(:disabled)):hover .travel-map-flag-tooltip,
+  .travel-map-flags li:has(> button:not(:disabled)):focus-within .travel-map-flag-tooltip {
     opacity: 1;
     transform: translate(-50%, 0);
   }
@@ -2339,6 +2356,11 @@ html[data-page-active="false"] .contact-marquee-track {
     --surface-header: rgb(5 7 11 / .54);
   }
   html { scroll-padding-top: 0; }
+  .section {
+    scroll-margin-top: calc(
+      var(--nav-height) + max(8px, env(safe-area-inset-top))
+    );
+  }
   .hero {
     min-height: max(100dvh, 760px);
     padding-top: calc(116px + env(safe-area-inset-top));
@@ -2550,10 +2572,10 @@ html[data-page-active="false"] .contact-marquee-track {
       opacity var(--duration-fast) var(--ease-out) var(--menu-close-delay),
       transform var(--duration-normal) var(--ease-out) var(--menu-close-delay);
   }
-  .nav-scroll a:nth-child(2) { --menu-open-delay: 120ms; --menu-close-delay: 100ms; }
-  .nav-scroll a:nth-child(3) { --menu-open-delay: 240ms; --menu-close-delay: 50ms; }
-  .nav-scroll a:nth-child(4) { --menu-open-delay: 360ms; --menu-close-delay: 0ms; }
-  .nav-scroll a:nth-child(5) { --menu-open-delay: 480ms; --menu-close-delay: 0ms; }
+  .site-header[data-navigation-ready="true"] .nav-scroll a:nth-child(2) { --menu-open-delay: 120ms; --menu-close-delay: 100ms; }
+  .site-header[data-navigation-ready="true"] .nav-scroll a:nth-child(3) { --menu-open-delay: 240ms; --menu-close-delay: 50ms; }
+  .site-header[data-navigation-ready="true"] .nav-scroll a:nth-child(4) { --menu-open-delay: 360ms; --menu-close-delay: 0ms; }
+  .site-header[data-navigation-ready="true"] .nav-scroll a:nth-child(5) { --menu-open-delay: 480ms; --menu-close-delay: 0ms; }
   .site-header[data-navigation-ready="true"].is-menu-open .nav-scroll a {
     opacity: 1;
     transform: rotateX(0deg);
@@ -2599,6 +2621,20 @@ html[data-page-active="false"] .contact-marquee-track {
   .not-found-panel h1 { font-size: clamp(44px, 14vw, 62px); line-height: .92; }
   .not-found-copy { margin: 24px 0 34px; font-size: 14px; }
   .not-found-signature { margin-top: 22px; }
+  .site-header[data-navigation-ready="true"]:has(~ .not-found) .nav-scroll {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .site-header[data-navigation-ready="true"]:has(~ .not-found) .nav-scroll a {
+    min-height: 48px;
+    padding-inline: 14px;
+  }
+  .site-header[data-navigation-ready="true"]:has(~ .not-found) .nav-scroll a:nth-child(odd) {
+    border-right: 1px solid var(--color-line-subtle);
+  }
+  .site-header[data-navigation-ready="true"]:has(~ .not-found) .nav-scroll a:last-of-type {
+    grid-column: 1 / -1;
+    border-right: 0;
+  }
 
   .experience {
     padding-block: var(--section-block-space);
@@ -2888,6 +2924,28 @@ html[data-page-active="false"] .contact-marquee-track {
     margin-top: 0;
   }
   .about-loop-outcome strong { font-size: 12px; }
+}
+
+@media (max-width: 600px) and (scripting: enabled) {
+  .travel-map-canvas {
+    transition: opacity var(--duration-instant) var(--ease-out);
+  }
+  .about-travel[data-map-ready="false"] .travel-map-canvas { opacity: 0; }
+  .about-travel[data-map-ready="false"] .travel-map-loading {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    color: var(--color-foreground-muted);
+    background:
+      linear-gradient(90deg, transparent, rgb(79 247 213 / .04), transparent),
+      rgb(2 4 7 / .64);
+    font-size: 10px;
+    letter-spacing: .18em;
+    text-align: center;
+  }
 }
 
 .mobile-load-feedback {

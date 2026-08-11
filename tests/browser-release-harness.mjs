@@ -34,10 +34,75 @@ export const releaseLimits = {
   inp: 300,
   lcp: 2_500,
 };
+export const releaseViewports = Object.freeze([
+  Object.freeze({ width: 360, height: 800 }),
+  Object.freeze({ width: 390, height: 844 }),
+  Object.freeze({ width: 430, height: 932 }),
+  Object.freeze({ width: 768, height: 1024 }),
+  Object.freeze({ width: 820, height: 1180 }),
+  Object.freeze({ width: 1280, height: 800 }),
+  Object.freeze({ width: 1440, height: 900 }),
+  Object.freeze({ width: 1920, height: 1080 }),
+]);
 
 export let browser;
 export let origin;
 let server;
+
+export async function runReleaseViewportMatrix(checks, options = {}) {
+  const viewports = options.viewports ?? releaseViewports;
+  const reportFailure = options.reportFailure ?? ((label, error) => {
+    console.error(`[release-viewport] ${label}: FAIL`);
+    console.error(error.stack ?? error.message);
+  });
+  const failures = [];
+
+  for (const viewport of viewports) {
+    for (const check of checks) {
+      const label = `${check.name} ${viewport.width}x${viewport.height}`;
+
+      try {
+        await check.run(viewport);
+      } catch (cause) {
+        const error = cause instanceof Error ? cause : new Error(String(cause));
+        reportFailure(label, error);
+        failures.push(new Error(`${label}: ${error.message}`, { cause: error }));
+      }
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new AggregateError(
+      failures,
+      `${failures.length} release viewport checks failed`,
+    );
+  }
+}
+
+export function monitorBrowserErrors(page) {
+  const browserErrors = [];
+
+  page.on("console", (message) => {
+    if (message.type() === "error") {
+      browserErrors.push(`console: ${message.text()}`);
+    }
+  });
+  page.on("pageerror", (error) => {
+    browserErrors.push(`pageerror: ${error.message}`);
+  });
+  page.on("requestfailed", (request) => {
+    browserErrors.push(
+      `requestfailed: ${request.url()} (${request.failure()?.errorText ?? "unknown"})`,
+    );
+  });
+  page.on("response", (response) => {
+    if (response.status() >= 400) {
+      browserErrors.push(`response: ${response.status()} ${response.url()}`);
+    }
+  });
+
+  return browserErrors;
+}
 
 export function deferred() {
   let resolvePromise;

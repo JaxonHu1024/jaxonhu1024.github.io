@@ -19,5 +19,5 @@ await mkdir(dirname(outputPath), { recursive: true });
 await writeFile(outputPath, serializeTravelData(travelData));
 
 console.log(
-  `Wrote ${travelData.counts.flights} flights, ${travelData.counts.airports} airports, and ${travelData.counts.routes} routes to ${outputPath}`,
+  `Wrote ${travelData.routes.reduce((total, route) => total + route.count, 0)} flights, ${travelData.counts.airports} airports, and ${travelData.counts.routes} routes to ${outputPath}`,
 );

@@ -14,6 +14,7 @@ const links = [
 ] as const;
 
 const sectionIds = ["hero", ...links.map(([id]) => id)];
+const mobileNavigationMedia = "(max-width: 900px)";
 
 type VinextNavigate = (
   href: string,
@@ -22,7 +23,11 @@ type VinextNavigate = (
   ...args: unknown[]
 ) => Promise<unknown>;
 
-export function Navigation() {
+type NavigationProps = {
+  homePath?: "/";
+};
+
+export function Navigation({ homePath }: NavigationProps = {}) {
   const [active, setActive] = useState("hero");
   const [menuOpen, setMenuOpen] = useState(false);
   const cancelScrollRef = useRef<() => void>(() => undefined);
@@ -192,7 +197,7 @@ export function Navigation() {
       }
 
       setActive(id);
-      window.scrollTo(0, window.scrollY + target.getBoundingClientRect().top);
+      target.scrollIntoView({ block: "start" });
       window.requestAnimationFrame(() => target.focus({ preventScroll: true }));
     };
 
@@ -231,6 +236,18 @@ export function Navigation() {
   }, [menuOpen]);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia(mobileNavigationMedia);
+    const closeAtDesktopBreakpoint = (event: MediaQueryListEvent) => {
+      if (event.matches) return;
+      focusFirstLinkOnOpenRef.current = false;
+      setMenuOpen(false);
+    };
+
+    mediaQuery.addEventListener("change", closeAtDesktopBreakpoint);
+    return () => mediaQuery.removeEventListener("change", closeAtDesktopBreakpoint);
+  }, []);
+
+  useEffect(() => {
     if (!menuOpen) return;
     const openedAtScrollY = window.scrollY;
     const closeOnPointer = (event: PointerEvent) => {
@@ -238,7 +255,14 @@ export function Navigation() {
     };
     const closeOnScroll = () => {
       if (Math.abs(window.scrollY - openedAtScrollY) > 1) {
+        const navigation = document.getElementById("primary-navigation");
+        const shouldRestoreFocus = focusFirstLinkOnOpenRef.current
+          || Boolean(navigation?.contains(document.activeElement));
+        focusFirstLinkOnOpenRef.current = false;
         setMenuOpen(false);
+        if (shouldRestoreFocus) {
+          menuButtonRef.current?.focus({ preventScroll: true });
+        }
       }
     };
     document.addEventListener("pointerdown", closeOnPointer);
@@ -267,10 +291,10 @@ export function Navigation() {
     <header ref={headerRef} className={`site-header${menuOpen ? " is-menu-open" : ""}`}>
       <a
         className="wordmark"
-        href="#hero"
+        href={homePath ?? "#hero"}
         aria-label="Jaxon, back to top"
         translate="no"
-        onClick={(event) => navigateToSection(event, "hero")}
+        onClick={homePath ? undefined : (event) => navigateToSection(event, "hero")}
       >
         <span aria-hidden="true">›_</span> JAXON
       </a>
@@ -282,10 +306,10 @@ export function Navigation() {
         {links.map(([id, label], index) => (
           <a
             ref={index === 0 ? firstNavLinkRef : undefined}
-            href={`#${id}`}
+            href={homePath ? `${homePath}#${id}` : `#${id}`}
             className={active === id ? "is-active" : ""}
             aria-current={active === id ? "location" : undefined}
-            onClick={(event) => navigateToSection(event, id)}
+            onClick={homePath ? undefined : (event) => navigateToSection(event, id)}
             key={id}
           >
             <span className="nav-link-cursor" aria-hidden="true">[</span>

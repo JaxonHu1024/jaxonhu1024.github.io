@@ -9,8 +9,6 @@ export const FLIGHTY_FIELD_ALLOWLIST = Object.freeze([
   "Diverted To",
 ]);
 
-const EARTH_RADIUS_KM = 6371.0088;
-
 function compareText(left, right) {
   if (left < right) return -1;
   if (left > right) return 1;
@@ -103,19 +101,6 @@ function decodeAirportCatalog(catalog) {
   return airports;
 }
 
-function greatCircleDistanceKm(from, to) {
-  const toRadians = (degrees) => (degrees * Math.PI) / 180;
-  const latitudeDelta = toRadians(to.lat - from.lat);
-  const longitudeDelta = toRadians(to.lng - from.lng);
-  const fromLatitude = toRadians(from.lat);
-  const toLatitude = toRadians(to.lat);
-  const haversine =
-    Math.sin(latitudeDelta / 2) ** 2 +
-    Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(longitudeDelta / 2) ** 2;
-
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.min(1, Math.sqrt(haversine)));
-}
-
 function canonicalRoute(from, to) {
   return compareText(from, to) <= 0 ? [from, to] : [to, from];
 }
@@ -148,7 +133,7 @@ export function createTravelData(csvText, catalog, { asOf = new Date() } = {}) {
       throw new Error(`Unknown IATA code ${to} at CSV row ${rowNumber}`);
     }
 
-    flights.push({ from, to, year: flightDate.getUTCFullYear() });
+    flights.push({ from, to });
   }
 
   if (flights.length === 0) {
@@ -158,33 +143,20 @@ export function createTravelData(csvText, catalog, { asOf = new Date() } = {}) {
   const visits = new Map();
   const routes = new Map();
   const usedIata = new Set();
-  let firstYear = Number.POSITIVE_INFINITY;
-  let lastYear = Number.NEGATIVE_INFINITY;
-  let totalDistanceKm = 0;
-
   const addVisit = (iata) => visits.set(iata, (visits.get(iata) ?? 0) + 1);
 
   for (const flight of flights) {
-    const fromAirport = airportIndex.get(flight.from);
-    const toAirport = airportIndex.get(flight.to);
     const [routeFrom, routeTo] = canonicalRoute(flight.from, flight.to);
     const routeKey = `${routeFrom}\u0000${routeTo}`;
     const forwardDirection = flight.from === routeFrom && flight.to === routeTo;
-    const distanceKm = greatCircleDistanceKm(fromAirport, toAirport);
     const existingRoute = routes.get(routeKey);
 
     usedIata.add(flight.from);
     usedIata.add(flight.to);
     addVisit(flight.from);
     addVisit(flight.to);
-    firstYear = Math.min(firstYear, flight.year);
-    lastYear = Math.max(lastYear, flight.year);
-    totalDistanceKm += distanceKm;
-
     if (existingRoute) {
       existingRoute.count += 1;
-      existingRoute.firstYear = Math.min(existingRoute.firstYear, flight.year);
-      existingRoute.lastYear = Math.max(existingRoute.lastYear, flight.year);
       existingRoute.seenForward ||= forwardDirection;
       existingRoute.seenReverse ||= !forwardDirection;
     } else {
@@ -192,9 +164,6 @@ export function createTravelData(csvText, catalog, { asOf = new Date() } = {}) {
         from: routeFrom,
         to: routeTo,
         count: 1,
-        firstYear: flight.year,
-        lastYear: flight.year,
-        distanceKm: Math.round(distanceKm),
         seenForward: forwardDirection,
         seenReverse: !forwardDirection,
       });
@@ -203,37 +172,30 @@ export function createTravelData(csvText, catalog, { asOf = new Date() } = {}) {
 
   const airports = [...usedIata]
     .sort(compareText)
-    .map((iata) => ({ ...airportIndex.get(iata), visits: visits.get(iata) }));
+    .map((iata) => {
+      const { city, country, countryCode, lat, lng } = airportIndex.get(iata);
+      return { iata, city, country, countryCode, lat, lng, visits: visits.get(iata) };
+    });
   const routeList = [...routes.values()]
-    .map(({ seenForward, seenReverse, ...route }) => ({
-      ...route,
+    .map(({ from, to, count, seenForward, seenReverse }) => ({
+      from,
+      to,
+      count,
       bidirectional: seenForward && seenReverse,
     }))
     .sort((left, right) => {
       const fromOrder = compareText(left.from, right.from);
       return fromOrder || compareText(left.to, right.to);
     });
-  const cities = new Set(airports.map(({ city, countryCode }) => `${countryCode}\u0000${city}`));
   const countries = new Set(airports.map(({ countryCode }) => countryCode));
-  const continents = new Set(airports.map(({ continent }) => continent));
 
   return {
-    schemaVersion: 1,
-    source: {
-      flightData: "Flighty CSV",
-      airportData: "OurAirports",
-      rowCount: flights.length,
-    },
-    yearRange: [firstYear, lastYear],
+    schemaVersion: 2,
     counts: {
-      flights: flights.length,
       airports: airports.length,
-      cities: cities.size,
       countries: countries.size,
-      continents: continents.size,
       routes: routeList.length,
     },
-    totalDistanceKm: Math.round(totalDistanceKm),
     airports,
     routes: routeList,
   };

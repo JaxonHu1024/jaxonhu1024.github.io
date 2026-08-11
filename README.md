@@ -6,8 +6,9 @@
 
 Source for [jaxonhu1024.github.io](https://jaxonhu1024.github.io) — a single-page,
 signal-driven personal portfolio. The site is server-rendered, exported to a
-fully static bundle, and deployed to GitHub Pages by CI. Generated artifacts are
-intentionally never committed; everything ships from source.
+fully static bundle, and deployed to GitHub Pages by CI. Build artifacts are
+never committed; the privacy-safe travel aggregate is intentionally tracked so
+the same reviewed data ships from every clean checkout.
 
 ## Tech stack
 
@@ -93,7 +94,9 @@ npm run verify
 
 The importer merges repeated and reverse-direction flight segments into one
 corridor, marks a corridor as bidirectional only when both directions occur, and
-writes `app/data/travel.generated.json`. Flights dated after the sync date are
+writes the minimal public projection to `app/data/travel.generated.json`. That
+projection contains only airport/country/corridor counts, airport display
+coordinates and visit counts, plus corridor counts/directionality. Flights dated after the sync date are
 excluded, and ordinary builds never read the private CSV. Airport metadata comes
 from the public-domain [OurAirports data set](https://ourairports.com/data/), and
 the solid base map is derived from public-domain [Natural Earth data](https://www.naturalearthdata.com/).

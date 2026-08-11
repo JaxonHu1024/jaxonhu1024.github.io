@@ -23,7 +23,11 @@ export const metadata: Metadata = {
   title,
   description,
   alternates: { canonical: "/" },
-  icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },
+  icons: {
+    apple: [{ type: "image/png", sizes: "180x180", url: "/apple-touch-icon.png" }],
+    icon: "/favicon.svg",
+    shortcut: "/favicon.svg",
+  },
   robots: { index: true, follow: true },
   openGraph: {
     title,
@@ -43,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title,
     description,
-    images: ["/assets/jaxon-signal-og.png"],
+    images: [{ url: "/assets/jaxon-signal-og.png", alt: "JAXON signal field" }],
   },
 };
 

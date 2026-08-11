@@ -41,6 +41,25 @@ const papers = [
 
 const contactMessage = "For project collaborations, technical consulting, or career opportunities, feel free to reach out.";
 const currentYear = new Date().getUTCFullYear();
+const personStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  jobTitle: "AI Engineer",
+  knowsAbout: [
+    "AI agents",
+    "AIGC",
+    "vision-language models",
+    "large language models",
+    "autonomous driving",
+  ],
+  name: "Jaxon",
+  sameAs: [
+    "https://github.com/JaxonHu1024",
+    "https://x.com/HuEnzo33232",
+    "https://www.linkedin.com/in/jaxon-hu-10977a221/",
+  ],
+  url: "https://jaxonhu1024.github.io",
+};
 
 const aboutWorkingLoop = [
   {
@@ -72,6 +91,12 @@ const aboutWorkingLoop = [
 export default function Home() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(personStructuredData).replaceAll("<", "\\u003c"),
+        }}
+      />
       <a className="skip-link" href="#content">
         Skip to content
       </a>
@@ -326,8 +351,11 @@ export default function Home() {
                   </h3>
                   <p className="paper-venue">{paper.venue}</p>
                   <time className="paper-meta" dateTime={paper.year}>{paper.year}</time>
-                  <a className="paper-link" href={paper.href} target="_blank" rel="noreferrer">
-                    <span>VIEW PAPER</span>
+                  <a className="paper-link" href={paper.href} target="_blank" rel="noreferrer noopener">
+                    <span>
+                      VIEW PAPER
+                      <span className="sr-only"> (opens in new tab)</span>
+                    </span>
                     <span className="paper-link-arrow" aria-hidden="true">↗</span>
                   </a>
                 </div>
@@ -383,7 +411,7 @@ export default function Home() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://github.com/JaxonHu1024" target="_blank" rel="noreferrer noopener" aria-label="GitHub · JaxonHu1024">
+                  <a href="https://github.com/JaxonHu1024" target="_blank" rel="noreferrer noopener" aria-label="GitHub · JaxonHu1024 · opens in new tab">
                     <span className="endpoint-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" focusable="false">
                         <path d="M12 .5C5.7.5.5 5.7.5 12c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.7.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11 11 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.3.5 12 .5Z" />
@@ -394,7 +422,7 @@ export default function Home() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://x.com/HuEnzo33232" target="_blank" rel="noreferrer noopener" aria-label="X · HuEnzo33232">
+                  <a href="https://x.com/HuEnzo33232" target="_blank" rel="noreferrer noopener" aria-label="X · HuEnzo33232 · opens in new tab">
                     <span className="endpoint-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" focusable="false">
                         <path d="M18.24 2.25h3.31l-7.23 8.26L22.83 21.75h-6.66l-5.21-6.82-5.97 6.82H1.68l7.73-8.84L1.25 2.25h6.83l4.71 6.23 5.45-6.23Zm-1.16 17.52h1.83L7.08 4.13H5.12l11.96 15.64Z" />
@@ -405,7 +433,7 @@ export default function Home() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://www.linkedin.com/in/jaxon-hu-10977a221/" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn · Jaxon">
+                  <a href="https://www.linkedin.com/in/jaxon-hu-10977a221/" target="_blank" rel="noreferrer noopener" aria-label="LinkedIn · Jaxon · opens in new tab">
                     <span className="endpoint-icon" aria-hidden="true">
                       <svg viewBox="0 0 24 24" focusable="false">
                         <path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.44-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28ZM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13ZM7.12 20.45H3.55V9h3.57v11.45ZM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0Z" />

@@ -58,6 +58,46 @@ test("research canvas reports its viewport and page motion lifecycle", { timeout
       )
     ), null, { timeout: 2_500 });
 
+    const partialIntersection = await page.locator(".research-canvas").first().evaluate(
+      async (canvas) => {
+        const visibleHeight = canvas.getBoundingClientRect().height * 0.02;
+        for (let attempt = 0; attempt < 4; attempt += 1) {
+          const currentRect = canvas.getBoundingClientRect();
+          window.scrollBy(0, currentRect.top - (window.innerHeight - visibleHeight));
+          await new Promise((resolveFrame) => requestAnimationFrame(() => requestAnimationFrame(resolveFrame)));
+        }
+        await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
+        const rect = canvas.getBoundingClientRect();
+        const intersectionHeight = Math.max(
+          0,
+          Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0),
+        );
+        return {
+          bottom: rect.bottom,
+          motion: canvas.getAttribute("data-motion"),
+          ratio: intersectionHeight / rect.height,
+          scrollY: window.scrollY,
+          top: rect.top,
+        };
+      },
+    );
+    assert.ok(
+      partialIntersection.ratio > 0 && partialIntersection.ratio < 0.05,
+      `research threshold setup failed: ${JSON.stringify(partialIntersection)}`,
+    );
+    assert.equal(
+      partialIntersection.motion,
+      "paused",
+      `research canvas ran below its visibility threshold: ${JSON.stringify(partialIntersection)}`,
+    );
+
+    await page.locator("#research").scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      Array.from(document.querySelectorAll(".research-canvas")).every(
+        (canvas) => canvas.getAttribute("data-motion") === "running",
+      )
+    ), null, { timeout: 2_500 });
+
     await page.evaluate(() => window.__setDocumentHidden(true));
     await page.waitForFunction(() => (
       Array.from(document.querySelectorAll(".research-canvas")).every(
@@ -87,6 +127,99 @@ test("research canvas reports its viewport and page motion lifecycle", { timeout
     assert.ok(
       offscreenState.every((canvas) => canvas.motion === "paused"),
       `offscreen research canvases kept running: ${JSON.stringify(offscreenState)}`,
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("research animation clock excludes time spent paused", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1280, height: 800 },
+  });
+
+  try {
+    await page.addInitScript(() => {
+      let hidden = false;
+      let timestampOffset = 0;
+      const nativeRequestAnimationFrame = window.requestAnimationFrame.bind(window);
+      const nativeFillRect = CanvasRenderingContext2D.prototype.fillRect;
+
+      Object.defineProperty(document, "hidden", {
+        configurable: true,
+        get: () => hidden,
+      });
+      window.__setDocumentHidden = (value) => {
+        hidden = value;
+        document.dispatchEvent(new Event("visibilitychange"));
+      };
+      window.__advanceAnimationTimestamp = (milliseconds) => {
+        timestampOffset += milliseconds;
+      };
+      window.__wavePacketFrames = [];
+      window.requestAnimationFrame = (callback) => nativeRequestAnimationFrame((timestamp) => {
+        window.__currentAnimationTimestamp = timestamp + timestampOffset;
+        callback(timestamp + timestampOffset);
+      });
+      CanvasRenderingContext2D.prototype.fillRect = function recordWavePacket(
+        x,
+        y,
+        width,
+        height,
+      ) {
+        if (
+          this.canvas?.getAttribute("data-motion-layer") === "research-wave"
+          && width === 6
+          && height === 6
+        ) {
+          window.__wavePacketFrames.push({
+            canvasWidth: this.canvas.getBoundingClientRect().width,
+            timestamp: window.__currentAnimationTimestamp,
+            x,
+          });
+        }
+        return nativeFillRect.call(this, x, y, width, height);
+      };
+    });
+
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.locator("#research").scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector('[data-motion-layer="research-wave"]')
+        ?.getAttribute("data-motion") === "running"
+      && window.__wavePacketFrames.length >= 3
+    ), null, { timeout: 2_500 });
+
+    await page.evaluate(() => window.__setDocumentHidden(true));
+    await page.waitForFunction(() => (
+      document.querySelector('[data-motion-layer="research-wave"]')
+        ?.getAttribute("data-motion") === "paused"
+    ));
+    const paused = await page.evaluate(() => ({
+      count: window.__wavePacketFrames.length,
+      packet: window.__wavePacketFrames.at(-1),
+    }));
+
+    await page.evaluate(() => window.__advanceAnimationTimestamp(10_000));
+    await page.evaluate(() => window.__setDocumentHidden(false));
+    await page.waitForFunction((pausedCount) => (
+      window.__wavePacketFrames.length > pausedCount
+    ), paused.count, { timeout: 2_500 });
+    const resumed = await page.evaluate((pausedCount) => (
+      window.__wavePacketFrames[pausedCount]
+    ), paused.count);
+
+    const progressBefore = (paused.packet.x + 3) / paused.packet.canvasWidth;
+    const progressAfter = (resumed.x + 3) / resumed.canvasWidth;
+    const rawProgressDelta = Math.abs(progressAfter - progressBefore);
+    const circularProgressDelta = Math.min(rawProgressDelta, 1 - rawProgressDelta);
+    assert.ok(
+      circularProgressDelta < 0.05,
+      `paused time advanced the research phase: ${JSON.stringify({
+        circularProgressDelta,
+        paused: paused.packet,
+        resumed,
+      })}`,
     );
   } finally {
     await context.close();
@@ -1012,7 +1145,12 @@ test("430px travel map filters by flag without moving the focus view or overflow
   try {
     await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
     await page.waitForFunction(() => (
-      document.querySelector(".travel-map-canvas")?.getAttribute("data-map-view") === "focus"
+      document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+      && document.querySelector(".travel-map-canvas")?.getAttribute("data-map-view") === "focus"
+      && Number.parseFloat(getComputedStyle(
+        document.querySelector(".travel-map-canvas"),
+      ).opacity) >= 0.99
+      && getComputedStyle(document.querySelector(".travel-map-loading")).display === "none"
     ));
 
     const dock = page.locator(".travel-map-dock");
@@ -1120,6 +1258,13 @@ test("430px travel map filters by flag without moving the focus view or overflow
         filterStatus: figure.querySelector(".travel-map-filter-status strong")
           ?.textContent?.trim() ?? "",
         focusedCode: activeElement?.closest("li")?.getAttribute("data-country-code") ?? null,
+        loadingDisplay: getComputedStyle(
+          figure.querySelector(".travel-map-loading"),
+        ).display,
+        mapCanvasOpacity: Number.parseFloat(getComputedStyle(
+          figure.querySelector(".travel-map-canvas"),
+        ).opacity),
+        mapReady: figure.getAttribute("data-map-ready"),
         mapView: figure.querySelector(".travel-map-canvas")?.getAttribute("data-map-view"),
         routes: countEmphasis(".travel-map-route"),
         selectedCodes: Array.from(figure.querySelectorAll('.travel-map-flags li[data-selected="true"]'))
@@ -1130,6 +1275,9 @@ test("430px travel map filters by flag without moving the focus view or overflow
     const initial = await readMapState();
     assert.equal(initial.filterActive, "false");
     assert.equal(initial.filterStatus, "All signals");
+    assert.equal(initial.loadingDisplay, "none");
+    assert.equal(initial.mapCanvasOpacity, 1);
+    assert.equal(initial.mapReady, "true");
     assert.equal(initial.mapView, "focus");
     assert.notEqual(initial.viewBox, "0 0 800 400");
     assert.deepEqual(initial.selectedCodes, []);
@@ -1476,6 +1624,20 @@ test("mobile navigation separates pointer focus from keyboard focus", { timeout:
       "mobile link did not receive the inset focus ring",
     );
 
+    await page.keyboard.press("PageDown");
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "false"
+      && document.activeElement?.getAttribute("aria-controls") === "primary-navigation"
+    ), null, { timeout: 2_500 });
+
+    await menuButton.focus();
+    await page.keyboard.press("Enter");
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "true"
+      && document.activeElement?.getAttribute("href") === "#about"
+    ));
     await page.keyboard.press("Escape");
     await page.waitForFunction(() => (
       document.querySelector('[aria-controls="primary-navigation"]')
@@ -1484,6 +1646,147 @@ test("mobile navigation separates pointer focus from keyboard focus", { timeout:
     ));
   } finally {
     await context.close();
+  }
+});
+
+test("mobile menu state does not survive a desktop breakpoint round trip", { timeout: 10_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 900, height: 800 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
+    ));
+
+    const menuButton = page.locator('button[aria-controls="primary-navigation"]');
+    await menuButton.click();
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "true"
+    ));
+
+    await page.setViewportSize({ width: 901, height: 800 });
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "false"
+      && !document.querySelector(".site-header")?.classList.contains("is-menu-open")
+    ), null, { timeout: 2_500 });
+
+    await page.setViewportSize({ width: 900, height: 800 });
+    await page.waitForFunction(() => (
+      getComputedStyle(document.querySelector('[aria-controls="primary-navigation"]')).display !== "none"
+    ));
+    assert.equal(await menuButton.getAttribute("aria-expanded"), "false");
+  } finally {
+    await context.close();
+  }
+});
+
+test("mobile menu reveals links with progressive transition delays", { timeout: 10_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 390, height: 844 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
+    ));
+
+    await page.locator('button[aria-controls="primary-navigation"]').click();
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "true"
+    ));
+    const delays = await page.locator("#primary-navigation a").evaluateAll((links) => (
+      links.map((link) => Math.max(
+        ...getComputedStyle(link).transitionDelay
+          .split(",")
+          .map((delay) => Number.parseFloat(delay) || 0),
+      ))
+    ));
+
+    assert.deepEqual(delays, [0, 0.12, 0.24, 0.36, 0.48]);
+  } finally {
+    await context.close();
+  }
+});
+
+test("direct hash load keeps the native landing position through hydration", { timeout: 10_000 }, async () => {
+  for (const viewport of [
+    { width: 390, height: 844 },
+    { width: 1280, height: 800 },
+  ]) {
+    const { context, page } = await createReleasePageSession(browser, { viewport });
+
+    try {
+      await page.addInitScript(() => {
+        window.__hashLandingScrollSamples = [];
+        window.addEventListener("scroll", () => {
+          window.__hashLandingScrollSamples.push(window.scrollY);
+        }, { passive: true });
+      });
+
+      await page.goto(`${origin}/#about`, { timeout: 5_000, waitUntil: "load" });
+      await page.evaluate(() => document.fonts.ready);
+      await page.waitForFunction(() => (
+        document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
+        && document.activeElement?.id === "about"
+      ));
+      await page.waitForTimeout(100);
+
+      const landing = await page.evaluate(() => {
+        const target = document.querySelector("#about");
+        const positiveSamples = window.__hashLandingScrollSamples.filter((sample) => sample > 1);
+        return {
+          finalScrollY: window.scrollY,
+          finalTargetTop: target?.getBoundingClientRect().top ?? null,
+          headerBottom: document.querySelector(".site-header")
+            ?.getBoundingClientRect().bottom ?? null,
+          heroCtaBottom: document.querySelector(".hero-cta")
+            ?.getBoundingClientRect().bottom ?? null,
+          positiveSamples,
+          scrollMarginTop: target
+            ? Number.parseFloat(getComputedStyle(target).scrollMarginTop)
+            : null,
+        };
+      });
+
+      assert.ok(
+        landing.finalScrollY > 1,
+        `${viewport.width}px browser did not land on the requested hash target`,
+      );
+      assert.ok(
+        landing.scrollMarginTop > 0,
+        `${viewport.width}px native landing had no reserved header offset`,
+      );
+      if (landing.positiveSamples.length > 1) {
+        assert.ok(
+          Math.max(...landing.positiveSamples) - Math.min(...landing.positiveSamples) <= 1,
+          `${viewport.width}px hydration moved the native hash landing: ${JSON.stringify(landing)}`,
+        );
+      }
+      assert.ok(
+        Math.abs(landing.finalTargetTop - landing.scrollMarginTop) <= 1,
+        `${viewport.width}px hydrated hash target ignored its scroll margin: ${JSON.stringify(landing)}`,
+      );
+      if (viewport.width <= 900) {
+        assert.ok(
+          Math.abs(landing.finalTargetTop - landing.headerBottom) <= 1,
+          `${viewport.width}px hash target left previous-section content above the mobile header: `
+            + JSON.stringify(landing),
+        );
+        assert.ok(
+          landing.heroCtaBottom <= 0.5,
+          `${viewport.width}px hash landing left the previous Hero CTA visible at the viewport top: `
+            + JSON.stringify(landing),
+        );
+      }
+    } finally {
+      await context.close();
+    }
   }
 });
 
@@ -2076,6 +2379,7 @@ test("static 404 returns home without requesting an unavailable RSC route", { ti
     viewport: { width: 390, height: 844 },
   });
   const rscRequests = [];
+  const pageErrors = [];
 
   page.on("request", (request) => {
     const pathname = new URL(request.url()).pathname;
@@ -2083,8 +2387,40 @@ test("static 404 returns home without requesting an unavailable RSC route", { ti
       rscRequests.push(pathname);
     }
   });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
 
   try {
+    await page.goto(`${origin}/404.html`, { timeout: 5_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
+    ));
+    assert.deepEqual(
+      await page.locator(".site-header").evaluate((header) => ({
+        navigation: Array.from(header.querySelectorAll("#primary-navigation a"))
+          .map((link) => link.getAttribute("href")),
+        wordmark: header.querySelector(".wordmark")?.getAttribute("href"),
+      })),
+      {
+        navigation: [
+          "/#about",
+          "/#experience",
+          "/#foundations",
+          "/#research",
+          "/#contact",
+        ],
+        wordmark: "/",
+      },
+    );
+
+    await Promise.all([
+      page.waitForURL(`${origin}/#about`, { timeout: 5_000 }),
+      page.evaluate(() => {
+        document.querySelector('#primary-navigation a[href="/#about"]')?.click();
+      }),
+    ]);
+    await page.waitForLoadState("load");
+    await page.locator("#about").waitFor({ state: "visible", timeout: 5_000 });
+
     await page.goto(`${origin}/404.html`, { timeout: 5_000, waitUntil: "load" });
     await Promise.all([
       page.waitForURL(`${origin}/`, { timeout: 5_000 }),
@@ -2097,6 +2433,7 @@ test("static 404 returns home without requesting an unavailable RSC route", { ti
       [],
       `static 404 navigation requested unavailable RSC routes: ${rscRequests.join(", ")}`,
     );
+    assert.deepEqual(pageErrors, [], `static 404 navigation raised errors: ${pageErrors.join(", ")}`);
     await page.locator("#hero").waitFor({ state: "visible", timeout: 5_000 });
   } finally {
     await context.close();

@@ -450,6 +450,7 @@ export function usePixelatedCanvas({
 
     image.onload = computeSamples;
     image.onerror = () => {
+      if (cancelled) return;
       canvas.dataset.pixelatedError = "true";
       syncTouchHandleAvailability();
       console.error("Failed to load image for PixelatedCanvas:", src);
@@ -458,6 +459,8 @@ export function usePixelatedCanvas({
 
     return () => {
       cancelled = true;
+      image.onload = null;
+      image.onerror = null;
       stopAnimation();
       clearTouchHandleInteraction();
       if (touchHandle) {

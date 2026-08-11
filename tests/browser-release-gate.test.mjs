@@ -1,14 +1,17 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
+import { webkit } from "playwright";
 
 import {
   browser,
   createReleasePageSession,
   intersectionArea,
   measurePageGeometry,
+  monitorBrowserErrors,
   origin,
   releaseLimits,
   runPerformanceSample,
+  runReleaseViewportMatrix,
   setupReleaseHarness,
   teardownReleaseHarness,
 } from "./browser-release-harness.mjs";
@@ -21,41 +24,165 @@ import {
 before(setupReleaseHarness);
 after(teardownReleaseHarness);
 
-test("fresh export passes the complete eight-viewport release matrix", { timeout: 90_000 }, async () => {
-  const viewports = [
-    { width: 360, height: 800 },
-    { width: 390, height: 844 },
-    { width: 430, height: 932 },
-    { width: 768, height: 1024 },
-    { width: 820, height: 1180 },
-    { width: 1280, height: 800 },
-    { width: 1440, height: 900 },
-    { width: 1920, height: 1080 },
-  ];
+function assertBoxWithinDocument(box, name, viewport, documentGeometry) {
+  assert.ok(box, `${viewport.width}x${viewport.height} ${name} has no rendered box`);
+  assert.ok(
+    box.left >= -0.5,
+    `${viewport.width}x${viewport.height} ${name} starts at x=${box.left}px`,
+  );
+  assert.ok(
+    box.right <= documentGeometry.clientWidth + 0.5,
+    `${viewport.width}x${viewport.height} ${name} ends at x=${box.right}px`,
+  );
+  assert.ok(
+    box.top >= -0.5,
+    `${viewport.width}x${viewport.height} ${name} starts at y=${box.top}px`,
+  );
+  assert.ok(
+    box.bottom <= documentGeometry.scrollHeight + 0.5,
+    `${viewport.width}x${viewport.height} ${name} ends below the document`,
+  );
+}
 
-  for (const viewport of viewports) {
+async function validateNotFoundViewport(viewport) {
+  const { context, page } = await createReleasePageSession(browser, { viewport });
+
+  try {
+    const browserErrors = monitorBrowserErrors(page);
+    await page.goto(`${origin}/404.html`, { timeout: 5_000, waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+
+    const [effectiveViewport, geometry, documentGeometry] = await Promise.all([
+      page.locator('meta[name="viewport"]').evaluateAll(
+        (elements) => elements.at(-1)?.getAttribute("content") ?? "",
+      ),
+      measurePageGeometry(page, {
+        code: ".not-found-code",
+        copy: ".not-found-copy",
+        heading: ".not-found-panel h1",
+        link: ".not-found-link",
+        main: ".not-found",
+        panel: ".not-found-panel",
+        signature: ".not-found-signature",
+      }),
+      page.evaluate(() => ({
+        clientWidth: document.documentElement.clientWidth,
+        scrollHeight: document.documentElement.scrollHeight,
+      })),
+    ]);
+    assert.equal(
+      effectiveViewport,
+      "width=device-width, initial-scale=1, viewport-fit=cover",
+      `${viewport.width}x${viewport.height} 404 did not use the safe-area viewport override`,
+    );
+    assert.equal(
+      geometry.scrollWidth,
+      geometry.clientWidth,
+      `${viewport.width}x${viewport.height} 404 overflowed horizontally`,
+    );
+
+    for (const [name, box] of Object.entries(geometry.boxes)) {
+      assertBoxWithinDocument(box, `404 ${name}`, viewport, documentGeometry);
+    }
+
+    const { code, copy, heading, link, main, panel, signature } = geometry.boxes;
+    assert.ok(main.height >= viewport.height, "404 main did not fill the viewport height");
+    for (const [name, box] of Object.entries({ code, copy, heading, link })) {
+      assert.ok(
+        box.left >= panel.left - 0.5 && box.right <= panel.right + 0.5,
+        `${viewport.width}x${viewport.height} 404 ${name} escaped the panel`,
+      );
+    }
+    assert.ok(code.bottom <= heading.top, "404 code overlapped the heading");
+    assert.ok(heading.bottom <= copy.top, "404 heading overlapped the copy");
+    assert.ok(copy.bottom <= link.top, "404 copy overlapped the return link");
+    assert.ok(panel.bottom <= signature.top, "404 panel overlapped the signature");
+    assert.ok(link.width >= 44, "404 return link is narrower than 44px");
+    assert.ok(link.height >= 44, "404 return link is shorter than 44px");
+
+    assert.equal(await page.locator(".site-header .wordmark").getAttribute("href"), "/");
+    const expectedNavigationLinks = [
+      { href: "/#about", label: "ABOUT" },
+      { href: "/#experience", label: "EXPERIENCE" },
+      { href: "/#foundations", label: "FOUNDATIONS" },
+      { href: "/#research", label: "RESEARCH" },
+      { href: "/#contact", label: "CONTACT" },
+    ];
+    const readNavigationLinks = () => page.locator("#primary-navigation a").evaluateAll(
+      (links) => links.map((link) => ({
+        href: link.getAttribute("href"),
+        label: link.querySelector(".nav-link-label")?.textContent?.trim() ?? "",
+      })),
+    );
+    assert.deepEqual(await readNavigationLinks(), expectedNavigationLinks);
+
+    if (viewport.width <= 900) {
+      const menuButton = page.locator('button[aria-controls="primary-navigation"]');
+      assert.equal(await menuButton.getAttribute("aria-label"), "Open navigation menu");
+      await menuButton.click();
+      assert.equal(await menuButton.getAttribute("aria-expanded"), "true");
+      assert.equal(await menuButton.getAttribute("aria-label"), "Close navigation menu");
+      assert.deepEqual(await readNavigationLinks(), expectedNavigationLinks);
+      await page.waitForFunction(() => (
+        getComputedStyle(document.querySelector("#primary-navigation")).visibility === "visible"
+        && Array.from(document.querySelectorAll("#primary-navigation a"))
+          .every((link) => Number.parseFloat(getComputedStyle(link).opacity) >= 0.99)
+      ));
+
+      const openMenuGeometry = await measurePageGeometry(page, {
+        navigation: "#primary-navigation",
+        panel: ".not-found-panel",
+      });
+      assert.equal(
+        intersectionArea(
+          openMenuGeometry.boxes.navigation,
+          openMenuGeometry.boxes.panel,
+        ),
+        0,
+        `${viewport.width}x${viewport.height} open 404 navigation overlapped the recovery panel`,
+      );
+
+      await menuButton.click();
+      assert.equal(await menuButton.getAttribute("aria-expanded"), "false");
+      assert.equal(await menuButton.getAttribute("aria-label"), "Open navigation menu");
+      await page.waitForFunction(() => (
+        getComputedStyle(document.querySelector("#primary-navigation")).visibility === "hidden"
+      ));
+    }
+
+    const returnHome = page.getByRole("link", { name: "RETURN HOME" });
+    await returnHome.focus();
+    assert.equal(
+      await returnHome.evaluate((element) => document.activeElement === element),
+      true,
+      `${viewport.width}x${viewport.height} 404 return link could not receive keyboard focus`,
+    );
+    assert.equal(await returnHome.getAttribute("href"), "/");
+    await Promise.all([
+      page.waitForURL(`${origin}/`, { timeout: 5_000, waitUntil: "load" }),
+      returnHome.click(),
+    ]);
+    assert.equal(page.url(), `${origin}/`);
+    assert.deepEqual(
+      browserErrors,
+      [],
+      `${viewport.width}x${viewport.height} 404 browser errors: ${browserErrors.join(" | ")}`,
+    );
+    console.log(`[release-viewport] 404 ${viewport.width}x${viewport.height}: PASS`);
+  } finally {
+    await context.close();
+  }
+}
+
+test("fresh export passes the homepage and 404 eight-viewport release matrix", { timeout: 120_000 }, async () => {
+  await runReleaseViewportMatrix([
+    {
+      name: "homepage",
+      async run(viewport) {
     const { context, page } = await createReleasePageSession(browser, { viewport });
 
     try {
-      const browserErrors = [];
-      page.on("console", (message) => {
-        if (message.type() === "error") {
-          browserErrors.push(`console: ${message.text()}`);
-        }
-      });
-      page.on("pageerror", (error) => {
-        browserErrors.push(`pageerror: ${error.message}`);
-      });
-      page.on("requestfailed", (request) => {
-        browserErrors.push(
-          `requestfailed: ${request.url()} (${request.failure()?.errorText ?? "unknown"})`,
-        );
-      });
-      page.on("response", (response) => {
-        if (response.status() >= 400) {
-          browserErrors.push(`response: ${response.status()} ${response.url()}`);
-        }
-      });
+      const browserErrors = monitorBrowserErrors(page);
 
       await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
       await page.evaluate(() => document.fonts.ready);
@@ -79,7 +206,12 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         document.querySelector(".hero-pixel-canvas")?.getAttribute("data-pixelated-ready") === "true"
       ), null, { timeout: 3_000 });
       await page.waitForFunction((expectedView) => (
-        document.querySelector(".travel-map-canvas")?.getAttribute("data-map-view") === expectedView
+        document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+        && document.querySelector(".travel-map-canvas")?.getAttribute("data-map-view") === expectedView
+        && Number.parseFloat(getComputedStyle(
+          document.querySelector(".travel-map-canvas"),
+        ).opacity) === 1
+        && getComputedStyle(document.querySelector(".travel-map-loading")).display === "none"
       ), viewport.width <= 600 ? "focus" : "world", { timeout: 3_000 });
 
       const geometry = await measurePageGeometry(page, {
@@ -1695,10 +1827,143 @@ test("fresh export passes the complete eight-viewport release matrix", { timeout
         [],
         `${viewport.width}x${viewport.height} browser errors: ${browserErrors.join(" | ")}`,
       );
-      console.log(`[release-viewport] ${viewport.width}x${viewport.height}: PASS`);
+      console.log(`[release-viewport] homepage ${viewport.width}x${viewport.height}: PASS`);
     } finally {
       await context.close();
     }
+      },
+    },
+    {
+      name: "404",
+      run: validateNotFoundViewport,
+    },
+  ]);
+});
+
+test("WebKit smoke covers navigation, viewport CSS, canvases, and 404 recovery", { timeout: 30_000 }, async () => {
+  const webkitBrowser = await webkit.launch({ headless: true });
+  const { context, page } = await createReleasePageSession(webkitBrowser, {
+    reducedMotion: "reduce",
+    viewport: { width: 390, height: 844 },
+  });
+
+  try {
+    const browserErrors = monitorBrowserErrors(page);
+    await page.goto(origin, { timeout: 8_000, waitUntil: "load" });
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForFunction(() => (
+      document.documentElement.dataset.pageActive === "true"
+      && document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
+      && document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+      && Number.parseFloat(getComputedStyle(
+        document.querySelector(".travel-map-canvas"),
+      ).opacity) >= 0.99
+    ), null, { timeout: 5_000 });
+
+    const platformContracts = await page.evaluate(() => {
+      const heroCanvas = document.querySelector(".hero-pixel-canvas");
+      const researchCanvases = [...document.querySelectorAll(".research-canvas")];
+      const travelMap = document.querySelector(".travel-map-canvas");
+      const viewportMeta = [...document.querySelectorAll('meta[name="viewport"]')]
+        .at(-1)?.getAttribute("content") ?? "";
+
+      return {
+        dvh: CSS.supports("min-height", "100dvh"),
+        heroCanvas: heroCanvas instanceof HTMLCanvasElement
+          && heroCanvas.getBoundingClientRect().width > 0
+          && heroCanvas.getBoundingClientRect().height > 0,
+        researchCanvases: researchCanvases.length > 0
+          && researchCanvases.every((canvas) => (
+            canvas instanceof HTMLCanvasElement
+            && canvas.width > 0
+            && canvas.height > 0
+            && canvas.getAttribute("data-motion") === "reduced"
+          )),
+        safeArea: CSS.supports("padding-top", "env(safe-area-inset-top)"),
+        travelMap: {
+          canvasVisible: travelMap instanceof SVGSVGElement
+            && travelMap.getBoundingClientRect().width > 0
+            && travelMap.getBoundingClientRect().height > 0
+            && Number.parseFloat(getComputedStyle(travelMap).opacity) >= 0.99,
+          loadingDisplay: getComputedStyle(
+            document.querySelector(".travel-map-loading"),
+          ).display,
+          mapReady: document.querySelector(".about-travel")
+            ?.getAttribute("data-map-ready") ?? null,
+          mapView: travelMap?.getAttribute("data-map-view") ?? null,
+        },
+        viewportMeta,
+      };
+    });
+    assert.equal(platformContracts.dvh, true);
+    assert.equal(platformContracts.heroCanvas, true);
+    assert.equal(platformContracts.researchCanvases, true);
+    assert.equal(platformContracts.safeArea, true);
+    assert.deepEqual(platformContracts.travelMap, {
+      canvasVisible: true,
+      loadingDisplay: "none",
+      mapReady: "true",
+      mapView: "focus",
+    });
+    assert.equal(
+      platformContracts.viewportMeta,
+      "width=device-width, initial-scale=1, viewport-fit=cover",
+    );
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth),
+      true,
+      "WebKit homepage overflowed horizontally",
+    );
+
+    const menuButton = page.getByRole("button", { name: "Open navigation menu" });
+    await menuButton.click();
+    await page.waitForFunction(() => (
+      document.querySelector('[aria-controls="primary-navigation"]')
+        ?.getAttribute("aria-expanded") === "true"
+    ));
+    await page.getByRole("link", { name: "ABOUT" }).click();
+    await page.waitForFunction(() => location.hash === "#about", null, { timeout: 5_000 });
+
+    await page.goto(`${origin}/404.html`, { timeout: 8_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".site-header")?.getAttribute("data-navigation-ready") === "true"
+    ));
+    assert.equal(
+      await page.evaluate(() => document.documentElement.scrollWidth === document.documentElement.clientWidth),
+      true,
+      "WebKit 404 overflowed horizontally",
+    );
+    const notFoundMenuButton = page.locator('button[aria-controls="primary-navigation"]');
+    assert.equal(await notFoundMenuButton.getAttribute("aria-label"), "Open navigation menu");
+    await notFoundMenuButton.click();
+    assert.equal(await notFoundMenuButton.getAttribute("aria-label"), "Close navigation menu");
+    await page.waitForFunction(() => (
+      getComputedStyle(document.querySelector("#primary-navigation")).visibility === "visible"
+      && Array.from(document.querySelectorAll("#primary-navigation a"))
+        .every((link) => Number.parseFloat(getComputedStyle(link).opacity) >= 0.99)
+    ));
+    const notFoundOpenGeometry = await measurePageGeometry(page, {
+      navigation: "#primary-navigation",
+      panel: ".not-found-panel",
+    });
+    assert.equal(
+      intersectionArea(
+        notFoundOpenGeometry.boxes.navigation,
+        notFoundOpenGeometry.boxes.panel,
+      ),
+      0,
+      "WebKit open 404 navigation overlapped the recovery panel",
+    );
+    await notFoundMenuButton.click();
+    assert.equal(await notFoundMenuButton.getAttribute("aria-label"), "Open navigation menu");
+    await Promise.all([
+      page.waitForURL(`${origin}/`, { timeout: 5_000, waitUntil: "load" }),
+      page.getByRole("link", { name: "RETURN HOME" }).click(),
+    ]);
+    assert.deepEqual(browserErrors, [], `WebKit browser errors: ${browserErrors.join(" | ")}`);
+  } finally {
+    await context.close();
+    await webkitBrowser.close();
   }
 });
 

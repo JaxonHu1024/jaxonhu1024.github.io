@@ -38,6 +38,22 @@ test("wires the hero CTA to About through cancellable navigation without client-
   assert.doesNotMatch(packageJson, /["'](?:motion|framer-motion)["']/);
 });
 
+test("navigation can emit root-document links without intercepting them", async () => {
+  const navigation = await readFile(
+    new URL("../app/components/Navigation.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(navigation, /type NavigationProps = \{\s*homePath\?: "\/";\s*\}/);
+  assert.match(navigation, /export function Navigation\(\{ homePath \}: NavigationProps = \{\}\)/);
+  assert.match(navigation, /href=\{homePath \?\? "#hero"\}/);
+  assert.match(navigation, /href=\{homePath \? `\$\{homePath\}#\$\{id\}` : `#\$\{id\}`\}/);
+  assert.equal(
+    (navigation.match(/onClick=\{homePath \? undefined : \(event\) => navigateToSection/g) ?? []).length,
+    2,
+  );
+});
+
 test("keeps the Context path static-first and progressively enhances travel filtering", async () => {
   const page = await readFile(new URL("../app/page.tsx", import.meta.url), "utf8");
   const travelMap = await readFile(
@@ -131,6 +147,24 @@ test("keeps the Context path static-first and progressively enhances travel filt
   }
 });
 
+test("travel filter affordances stay inert until their buttons are enabled", async () => {
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+
+  assert.match(
+    css,
+    /\.travel-map-flags button:not\(:disabled\)\s*\{[^}]*cursor:\s*pointer/s,
+  );
+  assert.match(css, /\.travel-map-flags button:not\(:disabled\):active\s*\{/);
+  assert.match(
+    css,
+    /\.travel-map-flags li:has\(> button:not\(:disabled\)\):hover\s*\{/,
+  );
+  assert.match(
+    css,
+    /\.travel-map-flags button:disabled\s*\{[^}]*cursor:\s*default;[^}]*opacity:\s*1;/s,
+  );
+});
+
 test("keeps the site tracing beam responsive, pausable, and dependency-light", async () => {
   const component = await readFile(
     new URL("../app/components/SiteTracingBeam.tsx", import.meta.url),
@@ -196,6 +230,20 @@ test("keeps the site tracing beam responsive, pausable, and dependency-light", a
     readFile(new URL("../app/components/TextType.tsx", import.meta.url), "utf8"),
     { code: "ENOENT" },
   );
+});
+
+test("research motion honors its intersection-ratio visibility threshold", async () => {
+  const component = await readFile(
+    new URL("../app/components/ResearchVisual.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(component, /const RESEARCH_VISIBILITY_THRESHOLD = 0\.05/);
+  assert.match(
+    component,
+    /visible = entry\.isIntersecting\s*&&\s*entry\.intersectionRatio >= RESEARCH_VISIBILITY_THRESHOLD/,
+  );
+  assert.match(component, /threshold:\s*\[0, RESEARCH_VISIBILITY_THRESHOLD\]/);
 });
 
 test("keeps portrait motion cheap and the Experience guide fully static", async () => {
@@ -264,6 +312,19 @@ test("keeps portrait motion cheap and the Experience guide fully static", async 
     /@media \(max-width: 1100px\)[\s\S]*?\.reveal\s*\{[^}]*animation:\s*none/s,
   );
   assert.doesNotMatch(css, /trace-out|outbound-packet|--packet-travel/);
+});
+
+test("pixel portrait image callbacks cannot mutate an unmounted canvas", async () => {
+  const pixelCanvas = await readFile(
+    new URL("../app/components/usePixelatedCanvas.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(pixelCanvas, /image\.onerror = \(\) => \{\s*if \(cancelled\) return;/);
+  assert.match(
+    pixelCanvas,
+    /return \(\) => \{\s*cancelled = true;\s*image\.onload = null;\s*image\.onerror = null;/,
+  );
 });
 
 test("renders the Aceternity pixel portrait and removes the signal and CLI implementations", async () => {

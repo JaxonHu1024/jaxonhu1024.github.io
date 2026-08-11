@@ -1,28 +1,23 @@
 "use client";
 
-import { useEffect, useState, type KeyboardEvent } from "react";
+import { useEffect, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import travelDataJson from "../data/travel.generated.json";
 import { SignalHeading } from "./SignalHeading";
 
 type TravelAirport = {
   city: string;
-  continent: string;
   country: string;
   countryCode: string;
   iata: string;
   lat: number;
   lng: number;
-  name: string;
   visits: number;
 };
 
 type TravelRoute = {
   bidirectional: boolean;
   count: number;
-  distanceKm: number;
-  firstYear: number;
   from: string;
-  lastYear: number;
   to: string;
 };
 
@@ -30,16 +25,11 @@ type TravelData = {
   airports: TravelAirport[];
   counts: {
     airports: number;
-    cities: number;
-    continents: number;
     countries: number;
-    flights: number;
     routes: number;
   };
   routes: TravelRoute[];
   schemaVersion: number;
-  totalDistanceKm: number;
-  yearRange: [number, number];
 };
 
 type ProjectedPoint = {
@@ -53,7 +43,7 @@ type CountrySignal = {
   visits: number;
 };
 
-const travelData = travelDataJson as unknown as TravelData;
+const travelData: TravelData = travelDataJson;
 const MAP_WIDTH = 800;
 const MAP_HEIGHT = 400;
 const MOBILE_MAP_ASPECT_RATIO = 6 / 5;
@@ -62,6 +52,9 @@ const MIN_FOCUSED_VIEW_HEIGHT = 180;
 const MOBILE_MAP_QUERY = "(max-width: 600px)";
 const WORLD_VIEW_BOX = `0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`;
 const COUNTRY_DISPLAY_ORDER = ["CN", "HK", "SG", "TH", "AU", "MY", "KR", "JP", "PH"];
+const subscribeToHydration = () => () => undefined;
+const getClientHydrationSnapshot = () => true;
+const getServerHydrationSnapshot = () => false;
 
 function projectPoint({ lat, lng }: TravelAirport): ProjectedPoint {
   return {
@@ -176,9 +169,15 @@ const countrySignals = [...travelData.airports.reduce((countries, airport) => {
   });
 
 export function TravelMap() {
-  const [isMobileMap, setIsMobileMap] = useState(false);
+  const isHydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getClientHydrationSnapshot,
+    getServerHydrationSnapshot,
+  );
+  const [isMobileMap, setIsMobileMap] = useState<boolean | null>(null);
   const [selectedCountryCode, setSelectedCountryCode] = useState<string | null>(null);
   const selectedCountry = countrySignals.find(({ code }) => code === selectedCountryCode) ?? null;
+  const isMapReady = isHydrated && isMobileMap !== null;
 
   useEffect(() => {
     const mediaQuery = window.matchMedia(MOBILE_MAP_QUERY);
@@ -204,6 +203,7 @@ export function TravelMap() {
       className="about-travel"
       aria-labelledby="travel-map-title"
       data-filter-active={selectedCountryCode === null ? "false" : "true"}
+      data-map-ready={isMapReady ? "true" : "false"}
     >
       <figcaption className="travel-map-header">
         <SignalHeading className="travel-map-kicker">
@@ -219,11 +219,14 @@ export function TravelMap() {
       {travelData.airports.length > 0 && travelData.routes.length > 0 ? (
         <div className="travel-map-stage">
           <div className="travel-map-viewport">
+            <span className="travel-map-loading" role="status">
+              ACQUIRING MAP SIGNAL
+            </span>
             <svg
               className="travel-map-canvas"
-              data-map-view={isMobileMap && focusedViewBox !== WORLD_VIEW_BOX ? "focus" : "world"}
+              data-map-view={isMobileMap === true && focusedViewBox !== WORLD_VIEW_BOX ? "focus" : "world"}
               id="travel-map-canvas"
-              viewBox={isMobileMap ? focusedViewBox : WORLD_VIEW_BOX}
+              viewBox={isMobileMap === true ? focusedViewBox : WORLD_VIEW_BOX}
               preserveAspectRatio="xMidYMid meet"
               role="img"
               aria-labelledby="travel-map-svg-title travel-map-svg-description"
@@ -346,7 +349,9 @@ export function TravelMap() {
                         className="travel-map-flag-button"
                         type="button"
                         aria-controls="travel-map-canvas"
+                        aria-disabled={!isHydrated}
                         aria-pressed={isSelected}
+                        disabled={!isHydrated}
                         onClick={() => toggleCountry(country.code)}
                       >
                         <span className="travel-map-flag-icon" aria-hidden="true">
