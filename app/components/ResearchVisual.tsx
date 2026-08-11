@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react";
 
 import { createFrameRateGate, getResearchFrameRate } from "@/app/lib/motion-performance";
-import { useResearchSpotlight } from "@/app/components/useResearchSpotlight";
 
 type Variant = "road" | "wave";
 type Point = readonly [number, number];
@@ -65,7 +64,6 @@ function pointOnRoute(route: readonly Point[], progress: number): Point {
 
 export function ResearchVisual({ variant }: { variant: Variant }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  useResearchSpotlight(canvasRef);
 
   useEffect(() => {
     const canvas = canvasRef.current;

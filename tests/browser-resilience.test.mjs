@@ -745,7 +745,7 @@ test("reduced-motion mobile keeps the travel signal rail still and Dock glyphs u
       selectedCount: element.querySelectorAll('[data-selected="true"]').length,
     }));
     assert.equal(before.allControlCount, 0);
-    assert.equal(before.motion, "paused");
+    assert.equal(before.motion, "reduced");
     assert.equal(before.dockProximity, "reduced");
     assert.equal(before.filterStatus, "All signals");
     assert.equal(before.glyphs.length, generatedTravelData.counts.countries);
@@ -778,12 +778,67 @@ test("reduced-motion mobile keeps the travel signal rail still and Dock glyphs u
       motion: element.getAttribute("data-rail-motion"),
       scrollLeft: element.scrollLeft,
     }));
-    assert.equal(after.motion, "paused");
+    assert.equal(after.motion, "reduced");
     assert.equal(after.dockProximity, "reduced");
     assert.equal(after.glyphsUnscaled, true);
     assert.ok(
       Math.abs(after.scrollLeft - before.scrollLeft) <= .5,
       `reduced-motion signal rail drifted from ${before.scrollLeft}px to ${after.scrollLeft}px`,
+    );
+  } finally {
+    await context.close();
+  }
+});
+
+test("reduced-motion touch keeps a user-selected travel rail position", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    hasTouch: true,
+    isMobile: true,
+    reducedMotion: "reduce",
+    viewport: { width: 430, height: 932 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const rail = page.locator(".travel-map-flags-scroll");
+    await rail.scrollIntoViewIfNeeded();
+    await page.waitForFunction(() => (
+      document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+      && document.querySelector(".travel-map-flags-scroll")
+        ?.getAttribute("data-rail-motion") === "reduced"
+    ), null, { timeout: 3_000 });
+
+    const targetScrollLeft = await rail.evaluate((element) => (
+      Math.min(96, element.scrollWidth - element.clientWidth)
+    ));
+    assert.ok(targetScrollLeft > 0, "reduced-motion rail did not overflow horizontally");
+
+    await rail.dispatchEvent("pointerdown", {
+      bubbles: true,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+    await rail.evaluate((element, target) => {
+      element.scrollLeft = target;
+      element.dispatchEvent(new Event("scroll"));
+    }, targetScrollLeft);
+    await rail.dispatchEvent("pointerup", {
+      bubbles: true,
+      isPrimary: true,
+      pointerId: 1,
+      pointerType: "touch",
+    });
+    await page.waitForTimeout(100);
+
+    const settled = await rail.evaluate((element) => ({
+      motion: element.getAttribute("data-rail-motion"),
+      scrollLeft: element.scrollLeft,
+    }));
+    assert.equal(settled.motion, "reduced");
+    assert.ok(
+      Math.abs(settled.scrollLeft - targetScrollLeft) <= .5,
+      `reduced-motion touch rail snapped from ${targetScrollLeft}px to ${settled.scrollLeft}px`,
     );
   } finally {
     await context.close();
@@ -820,15 +875,47 @@ test("coarse-pointer touch keeps travel Dock proximity idle", { timeout: 15_000 
       controlCount: element.querySelectorAll(".travel-map-flags > li").length,
       filterStatus: document.querySelector(".travel-map-filter-status strong")
         ?.textContent?.trim() ?? "",
+      motion: element.getAttribute("data-rail-motion"),
       pressedCount: element.querySelectorAll('[aria-pressed="true"]').length,
       selectedCount: element.querySelectorAll('[data-selected="true"]').length,
     })), {
       allControlCount: 0,
       controlCount: generatedTravelData.counts.countries,
       filterStatus: "All signals",
+      motion: "manual",
       pressedCount: 0,
       selectedCount: 0,
     });
+
+    const railBox = await rail.boundingBox();
+    assert.ok(railBox, "touch rail had no rendered box");
+    const cdp = await context.newCDPSession(page);
+    const touchY = railBox.y + railBox.height / 2;
+    const touchStartX = railBox.x + railBox.width * .8;
+    const touchTravel = railBox.width * .55;
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchStart",
+      touchPoints: [{ x: touchStartX, y: touchY }],
+    });
+    for (let step = 1; step <= 8; step += 1) {
+      await cdp.send("Input.dispatchTouchEvent", {
+        type: "touchMove",
+        touchPoints: [{
+          x: touchStartX - touchTravel * (step / 8),
+          y: touchY,
+        }],
+      });
+      await page.waitForTimeout(16);
+    }
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await page.waitForTimeout(120);
+    const gestureScrollLeft = await rail.evaluate((element) => element.scrollLeft);
+    assert.ok(
+      gestureScrollLeft >= 24,
+      `native touch swipe did not move the travel rail: ${gestureScrollLeft}px`,
+    );
+    await cdp.detach();
+    await rail.evaluate((element) => { element.scrollLeft = 0; });
 
     const china = page.getByRole("button", { exact: true, name: "China" });
     await china.tap();

@@ -164,9 +164,21 @@ test("keeps the Context path static-first and progressively enhances travel filt
     css,
     /@media \(min-width: 1200px\)[\s\S]*?\.travel-map-flags\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/,
   );
-  assert.match(css, /mask-image:\s*linear-gradient\(90deg,/);
+  const travelRailRules = Array.from(
+    css.matchAll(/\.travel-map-flags-scroll\s*\{([^}]*)\}/g),
+    (match) => match[1],
+  );
+  assert.ok(travelRailRules.length >= 2);
+  assert.equal(
+    travelRailRules.every((rule) => !rule.includes("mask-image")),
+    true,
+    "the mobile overflow layer should not carry a compositing mask",
+  );
   assert.match(travelMap, /MOBILE_RAIL_SPEED_PX_PER_MS/);
   assert.match(travelMap, /requestAnimationFrame\(tick\)/);
+  assert.match(travelMap, /const automaticMotionQuery = window\.matchMedia\(DOCK_POINTER_QUERY\)/);
+  assert.match(travelMap, /automaticMotionQuery\.matches \? "paused" : "manual"/);
+  assert.match(travelMap, /setMotionState\("manual"\)/);
   assert.match(travelMap, /new IntersectionObserver/);
   assert.match(travelMap, /REDUCED_MOTION_QUERY/);
   assert.match(travelMap, /DOCK_POINTER_QUERY = "\(hover: hover\) and \(pointer: fine\)"/);
@@ -297,6 +309,8 @@ test("research motion honors its intersection-ratio visibility threshold", async
     new URL("../app/components/ResearchVisual.tsx", import.meta.url),
     "utf8",
   );
+  const css = await readFile(new URL("../app/globals.css", import.meta.url), "utf8");
+  const paperVisual = css.match(/\.paper-visual\s*\{[^}]*\}/s)?.[0] ?? "";
 
   assert.match(component, /const RESEARCH_VISIBILITY_THRESHOLD = 0\.05/);
   assert.match(
@@ -304,6 +318,9 @@ test("research motion honors its intersection-ratio visibility threshold", async
     /visible = entry\.isIntersecting\s*&&\s*entry\.intersectionRatio >= RESEARCH_VISIBILITY_THRESHOLD/,
   );
   assert.match(component, /threshold:\s*\[0, RESEARCH_VISIBILITY_THRESHOLD\]/);
+  assert.doesNotMatch(component, /useResearchSpotlight|research-spotlight/);
+  assert.doesNotMatch(css, /--research-spotlight|data-research-spotlight/);
+  assert.doesNotMatch(paperVisual, /radial-gradient/);
 });
 
 test("keeps portrait motion cheap and the Experience guide fully static", async () => {

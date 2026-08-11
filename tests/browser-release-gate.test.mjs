@@ -641,6 +641,52 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
                         const pauseButton = matchMedia("(max-width: 600px)").matches
                           ? items[0].querySelector(".travel-map-flag-button")
                           : null;
+                        const verticalLayout = (() => {
+                          if (!matchMedia("(max-width: 600px)").matches) return null;
+                          const railRect = scroll.getBoundingClientRect();
+                          return items.map((item) => {
+                            const button = item.querySelector(".travel-map-flag-button");
+                            const code = item.querySelector(".travel-map-region-code");
+                            const icon = item.querySelector(".travel-map-flag-icon");
+                            const itemRect = item.getBoundingClientRect();
+                            const buttonRect = button?.getBoundingClientRect();
+                            const codeRect = code?.getBoundingClientRect();
+                            const iconRect = icon?.getBoundingClientRect();
+                            const iconStyle = icon ? getComputedStyle(icon) : null;
+                            const iconTransform = iconStyle?.transform ?? "none";
+                            const iconMatrix = iconTransform === "none"
+                              ? new DOMMatrixReadOnly()
+                              : new DOMMatrixReadOnly(iconTransform);
+                            const range = document.createRange();
+                            if (icon) range.selectNodeContents(icon);
+                            const visualRect = icon ? range.getBoundingClientRect() : null;
+                            return {
+                              bottomClearance: railRect.bottom - itemRect.bottom,
+                              contentContained: Boolean(
+                                buttonRect
+                                && codeRect
+                                && iconRect
+                                && iconRect.top >= buttonRect.top - .75
+                                && codeRect.bottom <= buttonRect.bottom + .75
+                              ),
+                              glyphContained: Boolean(
+                                iconRect
+                                && visualRect
+                                && visualRect.top >= iconRect.top - .75
+                                && visualRect.bottom <= iconRect.bottom + .75
+                              ),
+                              glyphGap: visualRect && codeRect
+                                ? codeRect.top - visualRect.bottom
+                                : Number.NEGATIVE_INFINITY,
+                              glyphHeight: visualRect?.height ?? 0,
+                              iconClipPath: iconStyle?.clipPath ?? null,
+                              iconHeight: iconRect?.height ?? 0,
+                              iconScaleX: Math.hypot(iconMatrix.a, iconMatrix.b),
+                              iconScaleY: Math.hypot(iconMatrix.c, iconMatrix.d),
+                              topClearance: itemRect.top - railRect.top,
+                            };
+                          });
+                        })();
                         pauseButton?.focus({ preventScroll: true });
                         const dockProximityDuringMeasurement = scroll.getAttribute(
                           "data-dock-proximity",
@@ -662,6 +708,7 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
                           && lastRect.right <= endScrollRect.right + 1;
                         scroll.scrollLeft = originalScrollLeft;
                         const scrollRect = scroll.getBoundingClientRect();
+                        const scrollStyle = getComputedStyle(scroll);
                         const itemRects = items.map((item) => item.getBoundingClientRect());
                         const clusterPositions = (positions) => positions
                           .sort((a, b) => a - b)
@@ -691,10 +738,15 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
                           lastReachable,
                           listWidth: listRect.width,
                           overflowX: getComputedStyle(scroll).overflowX,
+                          pointerEvents: scrollStyle.pointerEvents,
                           railMotionDuringMeasurement,
                           rowCount: rowClusters.length,
                           rowSizes: rowClusters.map((cluster) => cluster.length),
                           scrollWidth: scroll.scrollWidth,
+                          scrollMaskImage: scrollStyle.maskImage,
+                          scrollWebkitMaskImage: scrollStyle.webkitMaskImage,
+                          touchAction: scrollStyle.touchAction,
+                          verticalLayout,
                         };
                         pauseButton?.blur();
                         return layout;
@@ -1054,6 +1106,10 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
             + JSON.stringify(travelMap.filterLayout),
         );
         assert.equal(travelMap.filterLayout.overflowX, "auto");
+        assert.notEqual(travelMap.filterLayout.pointerEvents, "none");
+        assert.match(travelMap.filterLayout.touchAction, /^(auto|manipulation|.*\bpan-x\b.*)$/);
+        assert.equal(travelMap.filterLayout.scrollMaskImage, "none");
+        assert.equal(travelMap.filterLayout.scrollWebkitMaskImage, "none");
         assert.equal(travelMap.filterLayout.firstReachable, true);
         assert.equal(travelMap.filterLayout.lastReachable, true);
         assert.equal(travelMap.filterLayout.columnCount, 9);
@@ -1063,6 +1119,24 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
           Array.from({ length: 9 }, () => 1),
         );
         assert.deepEqual(travelMap.filterLayout.rowSizes, [9]);
+        assert.equal(
+          travelMap.filterLayout.verticalLayout.every((item) => (
+            item.topClearance >= 12
+            && item.bottomClearance >= 12
+            && item.contentContained
+            && item.glyphContained
+            && item.glyphGap >= 1
+            && item.glyphHeight >= 28
+            && item.iconClipPath === "none"
+            && item.iconHeight >= 29
+            && Math.abs(item.iconScaleX - item.iconScaleY) <= .02
+            && item.iconScaleX >= .98
+            && item.iconScaleY >= .98
+          )),
+          true,
+          `${viewport.width}x${viewport.height} squeezed a flag row: `
+            + JSON.stringify(travelMap.filterLayout.verticalLayout),
+        );
       } else if (viewport.width < 1_200) {
         assert.equal(travelMap.filterLayout.hasHorizontalOverflow, false);
         assert.equal(travelMap.filterLayout.overflowX, "visible");
@@ -2041,6 +2115,127 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
       run: validateNotFoundViewport,
     },
   ]);
+});
+
+test("WebKit 430px touch rail keeps every flag visible and rests on native scrolling", { timeout: 20_000 }, async () => {
+  const webkitBrowser = await webkit.launch({ headless: true });
+  const { context, page } = await createReleasePageSession(webkitBrowser, {
+    deviceScaleFactor: 3,
+    hasTouch: true,
+    isMobile: true,
+    viewport: { width: 430, height: 932 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 8_000, waitUntil: "load" });
+    await page.waitForFunction(() => (
+      document.querySelector(".about-travel")?.getAttribute("data-map-ready") === "true"
+    ), null, { timeout: 5_000 });
+    const rail = page.locator(".travel-map-flags-scroll");
+    await rail.scrollIntoViewIfNeeded();
+
+    const geometry = await rail.evaluate((element) => {
+      const railRect = element.getBoundingClientRect();
+      const railStyle = getComputedStyle(element);
+      const items = Array.from(element.querySelectorAll(".travel-map-flags > li"));
+      const rect = (value) => value ? {
+        bottom: value.bottom,
+        height: value.height,
+        top: value.top,
+        width: value.width,
+      } : null;
+
+      return {
+        items: items.map((item) => {
+          const button = item.querySelector("button");
+          const code = item.querySelector(".travel-map-region-code");
+          const icon = item.querySelector(".travel-map-flag-icon");
+          const iconStyle = icon ? getComputedStyle(icon) : null;
+          const transform = iconStyle?.transform ?? "none";
+          const matrix = transform === "none"
+            ? new DOMMatrixReadOnly()
+            : new DOMMatrixReadOnly(transform);
+          const range = document.createRange();
+          if (icon) range.selectNodeContents(icon);
+          return {
+            button: rect(button?.getBoundingClientRect()),
+            clipPath: iconStyle?.clipPath ?? null,
+            code: rect(code?.getBoundingClientRect()),
+            icon: rect(icon?.getBoundingClientRect()),
+            item: rect(item.getBoundingClientRect()),
+            scaleX: Math.hypot(matrix.a, matrix.b),
+            scaleY: Math.hypot(matrix.c, matrix.d),
+            visual: rect(icon ? range.getBoundingClientRect() : null),
+          };
+        }),
+        motion: element.getAttribute("data-rail-motion"),
+        rail: rect(railRect),
+        railStyle: {
+          maskImage: railStyle.maskImage,
+          overflowX: railStyle.overflowX,
+          pointerEvents: railStyle.pointerEvents,
+          touchAction: railStyle.touchAction,
+          webkitMaskImage: railStyle.webkitMaskImage,
+        },
+        scrollLeft: element.scrollLeft,
+      };
+    });
+    assert.equal(geometry.items.length, generatedTravelData.counts.countries);
+    assert.equal(geometry.motion, "manual");
+    assert.ok(geometry.rail);
+    assert.equal(geometry.railStyle.overflowX, "auto");
+    assert.notEqual(geometry.railStyle.pointerEvents, "none");
+    assert.match(geometry.railStyle.touchAction, /^(auto|manipulation|.*\bpan-x\b.*)$/);
+    assert.equal(geometry.railStyle.maskImage, "none");
+    assert.equal(geometry.railStyle.webkitMaskImage, "none");
+    geometry.items.forEach((item, index) => {
+      assert.ok(item.button && item.code && item.icon && item.item && item.visual);
+      assert.ok(
+        item.item.top - geometry.rail.top >= 12
+          && geometry.rail.bottom - item.item.bottom >= 12,
+        `WebKit clipped flag item ${index}: ${JSON.stringify({ item, rail: geometry.rail })}`,
+      );
+      assert.ok(
+        item.visual.top >= item.icon.top - .75
+          && item.visual.bottom <= item.icon.bottom + .75,
+        `WebKit flag glyph escaped its line box ${index}: ${JSON.stringify(item)}`,
+      );
+      assert.ok(
+        item.icon.height >= 29
+          && item.visual.height >= 28
+          && item.clipPath === "none"
+          && Math.abs(item.scaleX - item.scaleY) <= .02
+          && item.scaleX >= .98
+          && item.scaleY >= .98,
+        `WebKit flag glyph was compressed or clipped ${index}: ${JSON.stringify(item)}`,
+      );
+      assert.ok(
+        item.visual.bottom <= item.code.top - 1,
+        `WebKit flag glyph overlapped its ISO code ${index}: ${JSON.stringify(item)}`,
+      );
+      assert.ok(
+        item.icon.top >= item.button.top - .75
+          && item.code.bottom <= item.button.bottom + .75,
+        `WebKit flag content escaped its button ${index}: ${JSON.stringify(item)}`,
+      );
+    });
+
+    await page.waitForTimeout(750);
+    const resting = await rail.evaluate((element) => ({
+      motion: element.getAttribute("data-rail-motion"),
+      scrollLeft: element.scrollLeft,
+    }));
+    assert.deepEqual(resting, { motion: "manual", scrollLeft: geometry.scrollLeft });
+
+    const manual = await rail.evaluate((element) => {
+      element.scrollLeft = Math.min(96, element.scrollWidth - element.clientWidth);
+      return element.scrollLeft;
+    });
+    assert.ok(manual > geometry.scrollLeft, "WebKit rail did not retain native horizontal scroll");
+  } finally {
+    await context.close();
+    await webkitBrowser.close();
+  }
 });
 
 test("WebKit smoke covers navigation, viewport CSS, canvases, and 404 recovery", { timeout: 30_000 }, async () => {

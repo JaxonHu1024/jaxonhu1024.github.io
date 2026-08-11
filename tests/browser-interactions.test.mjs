@@ -133,9 +133,10 @@ test("research canvas reports its viewport and page motion lifecycle", { timeout
   }
 });
 
-test("research spotlight follows a fine pointer and anchors to keyboard focus", { timeout: 15_000 }, async () => {
+test("research cards stay halo-free while links retain focus feedback", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
-    viewport: { width: 1440, height: 900 },
+    deviceScaleFactor: 3,
+    viewport: { width: 430, height: 932 },
   });
 
   try {
@@ -144,150 +145,68 @@ test("research spotlight follows a fine pointer and anchors to keyboard focus", 
     const paperLink = packet.locator(".paper-link");
     await packet.scrollIntoViewIfNeeded();
 
-    const restingLinkState = await paperLink.evaluate((element) => ({
-      arrowTransform: getComputedStyle(element.querySelector(".paper-link-arrow")).transform,
-      signalScale: new DOMMatrixReadOnly(getComputedStyle(element, "::before").transform).a,
+    const readHaloState = () => page.evaluate(() => ({
+      packetBackgrounds: Array.from(document.querySelectorAll(".research-packet"))
+        .map((element) => getComputedStyle(element, "::before").backgroundImage),
+      packetModes: Array.from(document.querySelectorAll(".research-packet"))
+        .map((element) => element.getAttribute("data-research-spotlight")),
+      packetVariables: Array.from(document.querySelectorAll(".research-packet"))
+        .map((element) => ({
+          x: element.style.getPropertyValue("--research-spotlight-x"),
+          y: element.style.getPropertyValue("--research-spotlight-y"),
+        })),
+      visualBackgrounds: Array.from(document.querySelectorAll(".paper-visual"))
+        .map((element) => getComputedStyle(element).backgroundImage),
     }));
-    assert.ok(restingLinkState.signalScale > 0.35 && restingLinkState.signalScale < 0.5);
-    assert.equal(restingLinkState.arrowTransform, "none");
+    const assertHaloFree = (state, label) => {
+      assert.equal(
+        [...state.packetBackgrounds, ...state.visualBackgrounds]
+          .every((background) => !background.includes("radial-gradient")),
+        true,
+        `${label} retained a radial research halo: ${JSON.stringify(state)}`,
+      );
+      assert.deepEqual(state.packetModes, [null, null], `${label} set spotlight state`);
+      assert.deepEqual(
+        state.packetVariables,
+        [{ x: "", y: "" }, { x: "", y: "" }],
+        `${label} wrote spotlight coordinates`,
+      );
+    };
+
+    assertHaloFree(await readHaloState(), "rest");
 
     const packetBox = await packet.boundingBox();
     assert.ok(packetBox, "the first research packet should have a rendered box");
-    const pointerTarget = {
-      x: packetBox.x + packetBox.width * 0.72,
-      y: packetBox.y + packetBox.height * 0.36,
-    };
-    await page.mouse.move(pointerTarget.x, pointerTarget.y);
-    await page.waitForFunction(() => (
-      document.querySelector(".research-packet")
-        ?.getAttribute("data-research-spotlight") === "pointer"
-      && Number.parseFloat(
-        getComputedStyle(document.querySelector(".research-packet"), "::before").opacity,
-      ) > 0.5
-    ), null, { timeout: 2_500 });
-
-    const pointerState = await packet.evaluate((element) => ({
-      mode: element.getAttribute("data-research-spotlight"),
-      x: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-x")),
-      y: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-y")),
-      otherMode: element.nextElementSibling?.getAttribute("data-research-spotlight") ?? null,
-      spotlightOpacity: Number.parseFloat(getComputedStyle(element, "::before").opacity),
-      spotlightPointerEvents: getComputedStyle(element, "::before").pointerEvents,
-    }));
-    assert.equal(pointerState.mode, "pointer");
-    assert.equal(pointerState.otherMode, null);
-    assert.ok(pointerState.spotlightOpacity > 0.5);
-    assert.equal(pointerState.spotlightPointerEvents, "none");
-    assert.ok(pointerState.x > 0 && pointerState.x < packetBox.width);
-    assert.ok(pointerState.y > 0 && pointerState.y < packetBox.height);
-
     await page.mouse.move(
-      packetBox.x + packetBox.width * 0.28,
-      packetBox.y + packetBox.height * 0.64,
+      packetBox.x + packetBox.width * .72,
+      packetBox.y + packetBox.height * .36,
     );
-    await page.waitForFunction(({ previousX, previousY }) => {
-      const element = document.querySelector(".research-packet");
-      if (!element) return false;
-      const x = Number.parseFloat(element.style.getPropertyValue("--research-spotlight-x"));
-      const y = Number.parseFloat(element.style.getPropertyValue("--research-spotlight-y"));
-      return x < previousX - 40 && y > previousY + 20;
-    }, { previousX: pointerState.x, previousY: pointerState.y }, { timeout: 2_500 });
-
-    await page.mouse.move(1, 1);
-    await page.waitForFunction(() => (
-      document.querySelector(".research-packet")
-        ?.getAttribute("data-research-spotlight") === null
-    ), null, { timeout: 2_500 });
+    await page.waitForTimeout(50);
+    assertHaloFree(await readHaloState(), "pointer move");
 
     await page.locator("#research").focus();
     await page.keyboard.press("Tab");
     await page.waitForFunction(() => (
-      document.querySelector(".research-packet")
-        ?.getAttribute("data-research-spotlight") === "focus"
-      && Number.parseFloat(
-        getComputedStyle(document.querySelector(".research-packet"), "::before").opacity,
-      ) > 0.5
+      document.querySelector(".paper-link")?.matches(":focus-visible")
       && new DOMMatrixReadOnly(
         getComputedStyle(document.querySelector(".paper-link"), "::before").transform,
       ).a > 0.95
     ), null, { timeout: 2_500 });
-    const focusState = await packet.evaluate((element) => ({
-      activeLink: document.activeElement === element.querySelector(".paper-link"),
-      mode: element.getAttribute("data-research-spotlight"),
-      spotlightOpacity: Number.parseFloat(getComputedStyle(element, "::before").opacity),
-      x: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-x")),
-      y: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-y")),
+    const focusState = await paperLink.evaluate((element) => ({
+      activeLink: document.activeElement === element,
+      borderColor: getComputedStyle(element).borderTopColor,
       linkArrowTransform: getComputedStyle(
         element.querySelector(".paper-link-arrow"),
       ).transform,
       linkSignalScale: new DOMMatrixReadOnly(
-        getComputedStyle(element.querySelector(".paper-link"), "::before").transform,
+        getComputedStyle(element, "::before").transform,
       ).a,
     }));
     assert.equal(focusState.activeLink, true);
-    assert.equal(focusState.mode, "focus");
-    assert.ok(focusState.spotlightOpacity > 0.5);
-    assert.ok(Number.isFinite(focusState.x) && focusState.x > 0 && focusState.x < packetBox.width);
-    assert.ok(Number.isFinite(focusState.y) && focusState.y > 0 && focusState.y < packetBox.height);
     assert.ok(focusState.linkSignalScale > 0.95);
     assert.notEqual(focusState.linkArrowTransform, "none");
-
-    const focusedPacketBox = await packet.boundingBox();
-    assert.ok(focusedPacketBox, "the focused research packet should retain its rendered box");
-    await page.mouse.move(
-      focusedPacketBox.x + focusedPacketBox.width * 0.64,
-      focusedPacketBox.y + focusedPacketBox.height * 0.42,
-    );
-    await page.waitForFunction(() => (
-      document.querySelector(".research-packet")
-        ?.getAttribute("data-research-spotlight") === "pointer"
-    ), null, { timeout: 2_500 });
-    await page.mouse.move(1, 1);
-    await page.waitForFunction(() => (
-      document.querySelector(".research-packet")
-        ?.getAttribute("data-research-spotlight") === "focus"
-    ), null, { timeout: 2_500 });
-    assert.equal(await paperLink.evaluate((element) => document.activeElement === element), true);
-
-    await page.mouse.move(
-      focusedPacketBox.x + focusedPacketBox.width * 0.58,
-      focusedPacketBox.y + focusedPacketBox.height * 0.48,
-    );
-    await page.waitForFunction(() => (
-      document.querySelector(".research-packet")
-        ?.getAttribute("data-research-spotlight") === "pointer"
-    ), null, { timeout: 2_500 });
-    const pointerBeforeFocusExit = await packet.evaluate((element) => ({
-      x: element.style.getPropertyValue("--research-spotlight-x"),
-      y: element.style.getPropertyValue("--research-spotlight-y"),
-    }));
-    await page.keyboard.press("Tab");
-    await page.waitForFunction(() => {
-      const packets = document.querySelectorAll(".research-packet");
-      return packets[0]?.getAttribute("data-research-spotlight") === "pointer"
-        && packets[1]?.getAttribute("data-research-spotlight") === "focus";
-    }, null, { timeout: 2_500 });
-    const pointerAfterFocusExit = await packet.evaluate((element) => ({
-      x: element.style.getPropertyValue("--research-spotlight-x"),
-      y: element.style.getPropertyValue("--research-spotlight-y"),
-    }));
-    assert.ok(
-      Math.abs(
-        Number.parseFloat(pointerAfterFocusExit.x)
-          - Number.parseFloat(pointerBeforeFocusExit.x),
-      ) <= 2,
-    );
-    assert.ok(
-      Math.abs(
-        Number.parseFloat(pointerAfterFocusExit.y)
-          - Number.parseFloat(pointerBeforeFocusExit.y),
-      ) <= 2,
-    );
-    assert.equal(
-      await page.locator(".research-packet").nth(1).locator(".paper-link")
-        .evaluate((element) => document.activeElement === element),
-      true,
-    );
+    assert.notEqual(focusState.borderColor, "rgba(0, 0, 0, 0)");
+    assertHaloFree(await readHaloState(), "keyboard focus");
   } finally {
     await context.close();
   }
@@ -971,10 +890,7 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
 
     await page.locator("#research").focus();
     await page.keyboard.press("Tab");
-    await page.waitForFunction(() => (
-      document.querySelector(".research-packet")
-        ?.getAttribute("data-research-spotlight") === "focus"
-    ));
+    await page.waitForFunction(() => document.querySelector(".paper-link")?.matches(":focus-visible"));
     const reducedPacket = page.locator(".research-packet").first();
     await page.waitForFunction(() => (
       document.querySelector(".research-packet")
@@ -983,11 +899,10 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     ));
     const beforePointer = await reducedPacket.evaluate((element) => ({
       focusVisible: element.querySelector(".paper-link")?.matches(":focus-visible") ?? false,
+      haloBackground: getComputedStyle(element, "::before").backgroundImage,
       mode: element.getAttribute("data-research-spotlight"),
       runningAnimations: element.getAnimations({ subtree: true })
         .filter((animation) => animation.playState === "running").length,
-      spotlightAnimation: getComputedStyle(element, "::before").animationName,
-      spotlightOpacity: Number.parseFloat(getComputedStyle(element, "::before").opacity),
       x: element.style.getPropertyValue("--research-spotlight-x"),
       y: element.style.getPropertyValue("--research-spotlight-y"),
     }));
@@ -999,17 +914,18 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
     );
     await page.waitForTimeout(50);
     const afterPointer = await reducedPacket.evaluate((element) => ({
+      haloBackground: getComputedStyle(element, "::before").backgroundImage,
       mode: element.getAttribute("data-research-spotlight"),
       x: element.style.getPropertyValue("--research-spotlight-x"),
       y: element.style.getPropertyValue("--research-spotlight-y"),
     }));
     assert.equal(beforePointer.focusVisible, true);
-    assert.equal(beforePointer.mode, "focus");
+    assert.equal(beforePointer.haloBackground.includes("radial-gradient"), false);
+    assert.equal(beforePointer.mode, null);
     assert.equal(beforePointer.runningAnimations, 0);
-    assert.equal(beforePointer.spotlightAnimation, "none");
-    assert.ok(beforePointer.spotlightOpacity > 0.5);
     assert.deepEqual(afterPointer, {
-      mode: "focus",
+      haloBackground: beforePointer.haloBackground,
+      mode: null,
       x: beforePointer.x,
       y: beforePointer.y,
     });
@@ -1638,8 +1554,9 @@ test("430px fine-pointer rail keeps fixed items and swaps ISO codes for names", 
   }
 });
 
-test("430px travel map auto-cruises its signal rail without moving the focus view", { timeout: 30_000 }, async () => {
+test("430px touch travel map rests on native rail scrolling without moving the focus view", { timeout: 30_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
+    deviceScaleFactor: 3,
     hasTouch: true,
     isMobile: true,
     viewport: { width: 430, height: 932 },
@@ -1695,6 +1612,7 @@ test("430px travel map auto-cruises its signal rail without moving the focus vie
     const mobileGeometry = await page.evaluate(() => {
       const dockElement = document.querySelector(".travel-map-dock");
       const scrollElement = document.querySelector(".travel-map-flags-scroll");
+      const scrollStyle = scrollElement ? getComputedStyle(scrollElement) : null;
       const dockRect = dockElement?.getBoundingClientRect();
       const buttons = Array.from(document.querySelectorAll(".travel-map-flag-button"));
       const items = Array.from(document.querySelectorAll(".travel-map-flags > li"));
@@ -1723,7 +1641,11 @@ test("430px travel map auto-cruises its signal rail without moving the focus vie
         pageScrollWidth: document.documentElement.scrollWidth,
         rowCount: coordinateCount(itemRects.map(({ top }) => top)),
         scrollClientWidth: scrollElement?.clientWidth ?? 0,
-        scrollOverflowX: scrollElement ? getComputedStyle(scrollElement).overflowX : null,
+        scrollMaskImage: scrollStyle?.maskImage ?? null,
+        scrollOverflowX: scrollStyle?.overflowX ?? null,
+        scrollPointerEvents: scrollStyle?.pointerEvents ?? null,
+        scrollTouchAction: scrollStyle?.touchAction ?? null,
+        scrollWebkitMaskImage: scrollStyle?.webkitMaskImage ?? null,
         scrollWidth: scrollElement?.scrollWidth ?? 0,
         windowScrollX: scrollX,
       };
@@ -1734,6 +1656,10 @@ test("430px travel map auto-cruises its signal rail without moving the focus vie
     assert.equal(mobileGeometry.rowCount, 1);
     assert.equal(mobileGeometry.dockProximity, "idle");
     assert.equal(mobileGeometry.scrollOverflowX, "auto");
+    assert.notEqual(mobileGeometry.scrollPointerEvents, "none");
+    assert.match(mobileGeometry.scrollTouchAction, /^(auto|manipulation|.*\bpan-x\b.*)$/);
+    assert.equal(mobileGeometry.scrollMaskImage, "none");
+    assert.equal(mobileGeometry.scrollWebkitMaskImage, "none");
     assert.ok(
       mobileGeometry.scrollWidth > mobileGeometry.scrollClientWidth,
       `signal rail did not create internal horizontal overflow: ${JSON.stringify(mobileGeometry)}`,
@@ -1754,88 +1680,29 @@ test("430px travel map auto-cruises its signal rail without moving the focus vie
       proximity: element.getAttribute("data-dock-proximity"),
       scrollLeft: element.scrollLeft,
     }));
-    const assertRailStable = async (label) => {
-      const start = await readRailMotion();
-      assert.equal(start.motion, "paused", `${label} did not pause the rail`);
-      assert.equal(start.proximity, "idle", `${label} enabled pointer proximity on touch`);
-      await page.waitForTimeout(450);
-      const end = await readRailMotion();
-      assert.equal(end.motion, "paused", `${label} did not stay paused`);
-      assert.equal(end.proximity, "idle", `${label} enabled pointer proximity on touch`);
-      assert.ok(
-        Math.abs(end.scrollLeft - start.scrollLeft) <= .75,
-        `${label} moved the rail: start=${JSON.stringify(start)}, end=${JSON.stringify(end)}`,
-      );
-    };
-    const assertRailResumes = async (label) => {
-      await page.waitForFunction(() => (
-        document.querySelector(".travel-map-flags-scroll")
-          ?.getAttribute("data-rail-motion") === "waiting"
-      ));
-      const waiting = await readRailMotion();
-      assert.equal(waiting.proximity, "idle", `${label} enabled pointer proximity on touch`);
-      await page.waitForTimeout(350);
-      const stillWaiting = await readRailMotion();
-      assert.equal(stillWaiting.motion, "waiting", `${label} skipped its resume delay`);
-      assert.equal(
-        stillWaiting.proximity,
-        "idle",
-        `${label} enabled pointer proximity on touch`,
-      );
-      assert.ok(
-        Math.abs(stillWaiting.scrollLeft - waiting.scrollLeft) <= .75,
-        `${label} moved during its resume delay: waiting=${JSON.stringify(waiting)}, `
-          + `later=${JSON.stringify(stillWaiting)}`,
-      );
-      await page.waitForFunction(() => (
-        document.querySelector(".travel-map-flags-scroll")
-          ?.getAttribute("data-rail-motion") === "running"
-      ), null, { timeout: 3_500 });
-      const resumed = await readRailMotion();
-      await page.waitForTimeout(450);
-      const continued = await readRailMotion();
-      assert.equal(continued.motion, "running", `${label} did not keep cruising`);
-      assert.equal(continued.proximity, "idle", `${label} enabled pointer proximity on touch`);
-      assert.ok(
-        Math.abs(continued.scrollLeft - resumed.scrollLeft) >= 3,
-        `${label} did not resume real scrolling: resumed=${JSON.stringify(resumed)}, `
-          + `continued=${JSON.stringify(continued)}`,
-      );
-    };
-
     await page.waitForFunction(() => (
       document.querySelector(".travel-map-flags-scroll")
-        ?.getAttribute("data-rail-motion") === "running"
-      && (document.querySelector(".travel-map-flags-scroll")?.scrollLeft ?? 0) > 0
-    ), null, { timeout: 4_000 });
-    const automaticStart = await readRailMotion();
-    await page.waitForTimeout(450);
-    const automaticEnd = await readRailMotion();
-    assert.equal(automaticEnd.motion, "running");
-    assert.equal(automaticEnd.proximity, "idle");
+        ?.getAttribute("data-rail-motion") === "manual"
+    ), null, { timeout: 2_500 });
+    const restingStart = await readRailMotion();
+    await page.waitForTimeout(750);
+    const restingEnd = await readRailMotion();
+    assert.deepEqual(restingEnd, restingStart, "touch rail moved without user input");
+
+    const manualScrollLeft = await flagScroll.evaluate((element) => {
+      element.scrollLeft = Math.min(96, element.scrollWidth - element.clientWidth);
+      return element.scrollLeft;
+    });
     assert.ok(
-      automaticEnd.scrollLeft >= automaticStart.scrollLeft + 3,
-      `visible signal rail did not auto-advance: start=${JSON.stringify(automaticStart)}, `
-        + `end=${JSON.stringify(automaticEnd)}`,
+      manualScrollLeft > restingEnd.scrollLeft,
+      `native rail did not accept horizontal scrolling: ${manualScrollLeft}`,
     );
-
-    await flagScroll.hover();
-    await page.waitForFunction(() => (
-      document.querySelector(".travel-map-flags-scroll")
-        ?.getAttribute("data-rail-motion") === "paused"
-    ));
-    await assertRailStable("hover");
-    await page.mouse.move(0, 0);
-    await assertRailResumes("pointer leave");
-
-    await china.focus();
-    await page.waitForFunction(() => (
-      document.querySelector(".travel-map-flags-scroll")
-        ?.getAttribute("data-rail-motion") === "paused"
-    ));
-    await assertRailStable("focus");
-    await china.evaluate((button) => button.blur());
-    await assertRailResumes("focus leave");
+    await flagScroll.evaluate((element) => { element.scrollLeft = 0; });
+    assert.deepEqual(await readRailMotion(), {
+      motion: "manual",
+      proximity: "idle",
+      scrollLeft: 0,
+    });
 
     const readMapState = () => page.locator(".about-travel").evaluate((figure) => {
       const countEmphasis = (selector) => ({
@@ -2084,11 +1951,6 @@ test("touch-only users return to the resting control style after tapping", { tim
           backgroundPixel: Array.from(context.getImageData(0, 0, 1, 1).data),
           boxShadow: style.boxShadow,
           color: style.color,
-          packetSpotlightOpacity: element.closest(".research-packet")
-            ? Number.parseFloat(
-              getComputedStyle(element.closest(".research-packet"), "::before").opacity,
-            )
-            : null,
           transform: {
             a: transform.a,
             b: transform.b,
@@ -2141,11 +2003,6 @@ test("touch-only users return to the resting control style after tapping", { tim
           backgroundPixel: Array.from(context.getImageData(0, 0, 1, 1).data),
           boxShadow: style.boxShadow,
           color: style.color,
-          packetSpotlightOpacity: element.closest(".research-packet")
-            ? Number.parseFloat(
-              getComputedStyle(element.closest(".research-packet"), "::before").opacity,
-            )
-            : null,
           transform: {
             a: transform.a,
             b: transform.b,
@@ -2174,14 +2031,6 @@ test("touch-only users return to the resting control style after tapping", { tim
             + `${releasedStyle.backgroundColor} vs ${restingStyle.backgroundColor}`,
         );
       });
-      if (restingStyle.packetSpotlightOpacity !== null) {
-        assert.ok(
-          Math.abs(
-            releasedStyle.packetSpotlightOpacity - restingStyle.packetSpotlightOpacity,
-          ) <= 0.01,
-          `${selector} kept its research spotlight after touch release`,
-        );
-      }
       for (const component of ["a", "b", "c", "d", "e", "f"]) {
         assert.ok(
           Math.abs(

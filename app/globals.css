@@ -1793,36 +1793,16 @@ html[data-page-active="false"] .hero-cta-border-signal {
 .research-frame::after { right: -4px; bottom: -4px; border-right: 2px solid; border-bottom: 2px solid; }
 
 .research-packet {
-  --research-spotlight-x: 24%;
-  --research-spotlight-y: 72%;
-  position: relative;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   height: 50%;
   min-height: 0;
   padding: 26px 30px;
   border-bottom: 1px solid rgba(233,255,249,.15);
-  isolation: isolate;
-}
-
-.research-packet::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  background: radial-gradient(
-    circle 260px at var(--research-spotlight-x) var(--research-spotlight-y),
-    rgba(79,247,213,.115) 0,
-    rgba(138,114,255,.055) 34%,
-    transparent 72%
-  );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--duration-fast) var(--ease-out);
 }
 
 .research-packet:last-child { border-bottom: 0; }
-.paper-copy { position: relative; z-index: 1; align-self: center; min-width: 0; }
+.paper-copy { align-self: center; min-width: 0; }
 .paper-index { margin: 0 0 14px; color: var(--violet); font-size: var(--type-label); letter-spacing: .12em; }
 .paper-copy h3 { margin: 0; font-family: var(--display); font-size: var(--type-title); font-weight: 650; line-height: 1.22; letter-spacing: -.018em; }
 .paper-copy h3 span { display: block; }
@@ -1882,12 +1862,7 @@ html[data-page-active="false"] .hero-cta-border-signal {
 .paper-link:focus-visible::before { transform: scaleX(1); }
 .paper-link:focus-visible .paper-link-arrow { transform: translate(3px, -3px); }
 
-.research-packet[data-research-spotlight="focus"]::before,
-.research-packet:has(.paper-link:focus-visible)::before { opacity: .88; }
-
 @media (hover: hover) and (pointer: fine) {
-  .research-packet[data-research-spotlight="pointer"]::before { opacity: .88; }
-
   .paper-link:hover {
     border-color: var(--color-accent-signal);
     color: var(--color-foreground);
@@ -1898,15 +1873,11 @@ html[data-page-active="false"] .hero-cta-border-signal {
   .paper-link:hover .paper-link-arrow { transform: translate(3px, -3px); }
 }
 .paper-visual {
-  position: relative;
-  z-index: 1;
   min-height: 0;
   align-self: stretch;
   padding: 8px 18px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 72% 46%, rgba(138,114,255,.075), transparent 34%),
-    linear-gradient(135deg, rgba(79,247,213,.025), rgba(138,114,255,.025));
+  background: linear-gradient(135deg, rgba(79,247,213,.025), rgba(138,114,255,.025));
 }
 .research-canvas { display: block; width: 100%; height: 100%; min-height: 0; }
 
@@ -2996,8 +2967,6 @@ html[data-page-active="false"] .contact-marquee-track {
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-inline: contain;
-    -webkit-mask-image: linear-gradient(90deg, black 0, black calc(100% - 18px), transparent 100%);
-    mask-image: linear-gradient(90deg, black 0, black calc(100% - 18px), transparent 100%);
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
   }
@@ -3007,6 +2976,7 @@ html[data-page-active="false"] .contact-marquee-track {
     grid-template-columns: none;
     width: max-content;
     min-width: 100%;
+    min-block-size: 80px;
     align-items: end;
     gap: 2px;
     padding: 14px 12px;
@@ -3040,9 +3010,11 @@ html[data-page-active="false"] .contact-marquee-track {
     height: 1px;
   }
   .travel-map-flag-icon {
+    min-block-size: 30px;
     align-self: end;
     justify-self: center;
     font-size: 21px;
+    line-height: 30px;
     transform:
       translateY(calc(
         var(--travel-dock-selected) * -.75px
@@ -3299,7 +3271,6 @@ html[data-page-active="false"] .contact-marquee-track {
     transform: none !important;
   }
   .hero-pixel-canvas { transition: none !important; }
-  .research-packet::before { transition: none !important; }
   .paper-link::before,
   .paper-link-arrow {
     transform: none !important;

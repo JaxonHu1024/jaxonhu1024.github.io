@@ -204,6 +204,7 @@ export function TravelMap() {
     const rail = filterRailRef.current;
     if (!rail || !isHydrated || isMobileMap !== true) return;
 
+    const automaticMotionQuery = window.matchMedia(DOCK_POINTER_QUERY);
     const reducedMotionQuery = window.matchMedia(REDUCED_MOTION_QUERY);
     let animationFrame: number | null = null;
     let direction: 1 | -1 = 1;
@@ -215,13 +216,16 @@ export function TravelMap() {
     let resumeAt = lastTimestamp + MOBILE_RAIL_EDGE_PAUSE_MS;
     let scrollPosition = rail.scrollLeft;
 
-    const setMotionState = (state: "paused" | "reduced" | "running" | "waiting") => {
+    const setMotionState = (
+      state: "manual" | "paused" | "reduced" | "running" | "waiting",
+    ) => {
       if (rail.dataset.railMotion !== state) rail.dataset.railMotion = state;
     };
 
     const pageCanAnimate = () => (
       document.visibilityState === "visible"
       && document.documentElement.dataset.pageActive !== "false"
+      && automaticMotionQuery.matches
       && !reducedMotionQuery.matches
     );
 
@@ -285,10 +289,18 @@ export function TravelMap() {
     };
 
     const pauseForInteraction = () => {
-      setMotionState("paused");
+      setMotionState(
+        reducedMotionQuery.matches
+          ? "reduced"
+          : automaticMotionQuery.matches ? "paused" : "manual",
+      );
     };
 
     const resumeAfterInteraction = () => {
+      if (!automaticMotionQuery.matches || reducedMotionQuery.matches) {
+        syncAnimation();
+        return;
+      }
       resumeAt = performance.now() + MOBILE_RAIL_INTERACTION_PAUSE_MS;
       lastTimestamp = performance.now();
       setMotionState("waiting");
@@ -324,6 +336,10 @@ export function TravelMap() {
     };
     const handleManualScrollIntent = () => {
       scrollPosition = rail.scrollLeft;
+      if (!automaticMotionQuery.matches) {
+        setMotionState("manual");
+        return;
+      }
       resumeAt = performance.now() + MOBILE_RAIL_INTERACTION_PAUSE_MS;
       setMotionState("waiting");
     };
@@ -332,9 +348,15 @@ export function TravelMap() {
       if (reducedMotionQuery.matches) {
         stopFrames();
         direction = 1;
-        rail.scrollLeft = 0;
-        scrollPosition = 0;
+        scrollPosition = rail.scrollLeft;
         setMotionState("reduced");
+        return;
+      }
+
+      if (!automaticMotionQuery.matches) {
+        stopFrames();
+        scrollPosition = rail.scrollLeft;
+        setMotionState("manual");
         return;
       }
 
@@ -364,6 +386,7 @@ export function TravelMap() {
     rail.addEventListener("focusout", handleFocusOut);
     rail.addEventListener("wheel", handleManualScrollIntent, { passive: true });
     document.addEventListener("visibilitychange", syncAnimation);
+    automaticMotionQuery.addEventListener("change", syncAnimation);
     reducedMotionQuery.addEventListener("change", syncAnimation);
     pageStateObserver.observe(document.documentElement, {
       attributeFilter: ["data-page-active"],
@@ -390,6 +413,7 @@ export function TravelMap() {
       rail.removeEventListener("focusout", handleFocusOut);
       rail.removeEventListener("wheel", handleManualScrollIntent);
       document.removeEventListener("visibilitychange", syncAnimation);
+      automaticMotionQuery.removeEventListener("change", syncAnimation);
       reducedMotionQuery.removeEventListener("change", syncAnimation);
       rail.scrollLeft = 0;
       rail.dataset.railMotion = "static";

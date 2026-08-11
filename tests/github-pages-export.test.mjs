@@ -409,12 +409,9 @@ test("exports a complete static GitHub Pages artifact", async () => {
   assert.match(html, new RegExp(`JAXON \/ (?:<!-- -->)?${new Date().getUTCFullYear()}`));
   assert.match(robots, /Sitemap: https:\/\/jaxonhu1024\.github\.io\/sitemap\.xml/);
   assert.match(sitemap, /<loc>https:\/\/jaxonhu1024\.github\.io\/<\/loc>/);
-  assert.match(notices, /React Bits — SpotlightCard/);
   assert.match(notices, /Aceternity UI — Existing component adaptations/);
   assert.match(notices, /public-source redistribution permission .* remains unresolved/);
-  assert.match(notices, /Copyright \(c\) 2025 David Haz/);
-  assert.match(notices, /MIT \+ Commons Clause License Condition v1\.0/);
-  assert.match(notices, /do not sell, sublicense, or redistribute the components themselves/);
+  assert.doesNotMatch(notices, /React Bits|SpotlightCard|Commons Clause|David Haz/);
   assert.match(html, /Road-Network-Based/);
   assert.match(html, /ResFi:/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));
