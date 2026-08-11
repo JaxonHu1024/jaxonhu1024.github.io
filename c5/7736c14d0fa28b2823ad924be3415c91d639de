@@ -1,0 +1,89 @@
+.github/workflows/deploy-pages.yml
+  s_361fbd2983b24c::t_813de9db29d6d7 6,13,18-20,24,27,29,33-34,39-40,46-47,52,56,65
+.gitignore
+  s_361fbd2983b24c::t_40064073689689 49
+.node-version
+  s_361fbd2983b24c::t_5a0d080ab45b8c 1
+README.md
+  s_361fbd2983b24c::t_378f61907cd9f2 9-11,97-99
+README_zh.md
+  s_361fbd2983b24c::t_7ec73373201535 9-10,92-94
+app/components/Navigation.tsx
+  s_934377f404e498::t_f36653eb62c668 17,26-30,200,238-249,258-261,263-265,294,297,309,312
+app/components/ResearchVisual.tsx
+  s_934377f404e498::t_95d10b6a647552 10-11,77,82-83,110-117,126,237-240,250-251,256,259,272
+app/components/TravelMap.tsx
+  s_361fbd2983b24c::t_3268fffb6efa9e 3,46,55-57,172-177,180,206,222-224,227,229,352,354
+app/components/usePixelatedCanvas.ts
+  s_361fbd2983b24c::t_afedb9a2086739 453,462-463
+app/data/travel.generated.json
+  s_361fbd2983b24c::t_3ca2842446fe52 2
+app/globals.css
+  s_361fbd2983b24c::t_df3ec32a80ed8a 1,885-886,1147-1151,1155,1160-1170,1232,1238-1241,1245-1246,2359-2363,2575-2578,2624-2637,2929-2950
+app/layout.tsx
+  s_361fbd2983b24c::t_293dd787fd06e9 26-30,50
+app/not-found.tsx
+  s_361fbd2983b24c::t_eb1a80b653eab8 3-4,7-26
+app/page.tsx
+  s_361fbd2983b24c::t_8d7f0946d1cf20 44-62,94-99,354-358,414,425,436
+data/private/README.md
+  s_361fbd2983b24c::t_df6fc5baff54a2 6-8,19-20
+scripts/export-github-pages.mjs
+  s_361fbd2983b24c::t_38c83865ebe751 57-60
+scripts/lib/travel-data.mjs
+  s_361fbd2983b24c::t_b1405c718a8570 136,175-178,180-183,193
+scripts/sync-travel-data.mjs
+  s_361fbd2983b24c::t_2c1c1e3cd23243 22
+tests/browser-interactions.test.mjs
+  s_361fbd2983b24c::t_6df6c05b58dc52 61-100,135-227,1148-1153,1261-1267,1278-1280,1627-1640,1652-1792,2382,2390,2393-2423,2436
+tests/browser-release-gate.test.mjs
+  s_361fbd2983b24c::t_436ac8b9f4edb6 3,10,14,27-45,47-181,185,209-214,1830,1834-1966
+tests/browser-release-harness.mjs
+  s_da2e4f1ae42657::t_18d1b506e3aff4 37-46,52-106
+tests/browser-resilience.test.mjs
+  s_361fbd2983b24c::t_e6e6e49f30e0af 332,355,358,377-384,386,505,507-512,539,541,689-751
+tests/ci-contract.test.mjs
+  s_361fbd2983b24c::t_a0b0d55f2feccb 62,75-180
+tests/github-pages-export.test.mjs
+  s_361fbd2983b24c::t_90b0f80725c3a7 5,19-30,32-39,56-61,77-81,110,118-167
+tests/rendered-html.test.mjs
+  s_361fbd2983b24c::t_84a055cf4626bc 42,46-49,127-159,196-203,343,381-384
+tests/scroll-performance-contract.test.mjs
+  s_361fbd2983b24c::t_6eb264f7fb23ed 41-56,150-167,235-248,317-329
+tests/travel-data.test.mjs
+  s_361fbd2983b24c::t_fa803ad2ebfd6f 132,203,212-218,221,223-234,239-240,261-266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "c57736c14d0fa28b2823ad924be3415c91d639de",
+  "prompts": {},
+  "sessions": {
+    "s_361fbd2983b24c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fefa5-ae83-7432-ab4d-e6b2029e1f0f",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_934377f404e498": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fefa7-0214-7881-8e76-7cade9f40dff",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    },
+    "s_da2e4f1ae42657": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fefa7-357f-7443-a345-d123b74b5bb2",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
