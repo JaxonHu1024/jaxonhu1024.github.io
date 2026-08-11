@@ -3009,7 +3009,7 @@ html[data-page-active="false"] .contact-marquee-track {
     min-width: 100%;
     align-items: end;
     gap: 2px;
-    padding: 8px 12px;
+    padding: 14px 12px;
   }
   .travel-map-flags li {
     flex: 0 0 64px;

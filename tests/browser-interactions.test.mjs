@@ -1513,6 +1513,20 @@ test("430px fine-pointer rail keeps fixed items and swaps ISO codes for names", 
       true,
       `fine-pointer rail changed its 64x52 footprint: ${JSON.stringify(fixedGeometry)}`,
     );
+    const dividerClearance = await rail.evaluate((element) => {
+      const railRect = element.getBoundingClientRect();
+      const itemRects = Array.from(element.querySelectorAll(".travel-map-flags > li"))
+        .map((item) => item.getBoundingClientRect());
+
+      return {
+        bottom: railRect.bottom - Math.max(...itemRects.map((rect) => rect.bottom)),
+        top: Math.min(...itemRects.map((rect) => rect.top)) - railRect.top,
+      };
+    });
+    assert.ok(
+      dividerClearance.top >= 12 && dividerClearance.bottom >= 12,
+      `flag controls were squeezed by their divider lines: ${JSON.stringify(dividerClearance)}`,
+    );
 
     const readChinaState = () => china.evaluate((button) => {
       const item = button.closest("li");
