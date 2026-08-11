@@ -60,6 +60,10 @@ await cp(
 );
 await cp(resolve(root, "public/robots.txt"), resolve(outputDirectory, "robots.txt"));
 await cp(resolve(root, "public/sitemap.xml"), resolve(outputDirectory, "sitemap.xml"));
+await cp(
+  resolve(root, "THIRD_PARTY_NOTICES.md"),
+  resolve(outputDirectory, "THIRD_PARTY_NOTICES.md"),
+);
 
 const html = await render("/");
 const notFoundHtml = await render("/404", { allowNotFound: true });

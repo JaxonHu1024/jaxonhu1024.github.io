@@ -133,6 +133,166 @@ test("research canvas reports its viewport and page motion lifecycle", { timeout
   }
 });
 
+test("research spotlight follows a fine pointer and anchors to keyboard focus", { timeout: 15_000 }, async () => {
+  const { context, page } = await createReleasePageSession(browser, {
+    viewport: { width: 1440, height: 900 },
+  });
+
+  try {
+    await page.goto(origin, { timeout: 5_000, waitUntil: "load" });
+    const packet = page.locator(".research-packet").first();
+    const paperLink = packet.locator(".paper-link");
+    await packet.scrollIntoViewIfNeeded();
+
+    const restingLinkState = await paperLink.evaluate((element) => ({
+      arrowTransform: getComputedStyle(element.querySelector(".paper-link-arrow")).transform,
+      signalScale: new DOMMatrixReadOnly(getComputedStyle(element, "::before").transform).a,
+    }));
+    assert.ok(restingLinkState.signalScale > 0.35 && restingLinkState.signalScale < 0.5);
+    assert.equal(restingLinkState.arrowTransform, "none");
+
+    const packetBox = await packet.boundingBox();
+    assert.ok(packetBox, "the first research packet should have a rendered box");
+    const pointerTarget = {
+      x: packetBox.x + packetBox.width * 0.72,
+      y: packetBox.y + packetBox.height * 0.36,
+    };
+    await page.mouse.move(pointerTarget.x, pointerTarget.y);
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAttribute("data-research-spotlight") === "pointer"
+      && Number.parseFloat(
+        getComputedStyle(document.querySelector(".research-packet"), "::before").opacity,
+      ) > 0.5
+    ), null, { timeout: 2_500 });
+
+    const pointerState = await packet.evaluate((element) => ({
+      mode: element.getAttribute("data-research-spotlight"),
+      x: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-x")),
+      y: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-y")),
+      otherMode: element.nextElementSibling?.getAttribute("data-research-spotlight") ?? null,
+      spotlightOpacity: Number.parseFloat(getComputedStyle(element, "::before").opacity),
+      spotlightPointerEvents: getComputedStyle(element, "::before").pointerEvents,
+    }));
+    assert.equal(pointerState.mode, "pointer");
+    assert.equal(pointerState.otherMode, null);
+    assert.ok(pointerState.spotlightOpacity > 0.5);
+    assert.equal(pointerState.spotlightPointerEvents, "none");
+    assert.ok(pointerState.x > 0 && pointerState.x < packetBox.width);
+    assert.ok(pointerState.y > 0 && pointerState.y < packetBox.height);
+
+    await page.mouse.move(
+      packetBox.x + packetBox.width * 0.28,
+      packetBox.y + packetBox.height * 0.64,
+    );
+    await page.waitForFunction(({ previousX, previousY }) => {
+      const element = document.querySelector(".research-packet");
+      if (!element) return false;
+      const x = Number.parseFloat(element.style.getPropertyValue("--research-spotlight-x"));
+      const y = Number.parseFloat(element.style.getPropertyValue("--research-spotlight-y"));
+      return x < previousX - 40 && y > previousY + 20;
+    }, { previousX: pointerState.x, previousY: pointerState.y }, { timeout: 2_500 });
+
+    await page.mouse.move(1, 1);
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAttribute("data-research-spotlight") === null
+    ), null, { timeout: 2_500 });
+
+    await page.locator("#research").focus();
+    await page.keyboard.press("Tab");
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAttribute("data-research-spotlight") === "focus"
+      && Number.parseFloat(
+        getComputedStyle(document.querySelector(".research-packet"), "::before").opacity,
+      ) > 0.5
+      && new DOMMatrixReadOnly(
+        getComputedStyle(document.querySelector(".paper-link"), "::before").transform,
+      ).a > 0.95
+    ), null, { timeout: 2_500 });
+    const focusState = await packet.evaluate((element) => ({
+      activeLink: document.activeElement === element.querySelector(".paper-link"),
+      mode: element.getAttribute("data-research-spotlight"),
+      spotlightOpacity: Number.parseFloat(getComputedStyle(element, "::before").opacity),
+      x: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-x")),
+      y: Number.parseFloat(element.style.getPropertyValue("--research-spotlight-y")),
+      linkArrowTransform: getComputedStyle(
+        element.querySelector(".paper-link-arrow"),
+      ).transform,
+      linkSignalScale: new DOMMatrixReadOnly(
+        getComputedStyle(element.querySelector(".paper-link"), "::before").transform,
+      ).a,
+    }));
+    assert.equal(focusState.activeLink, true);
+    assert.equal(focusState.mode, "focus");
+    assert.ok(focusState.spotlightOpacity > 0.5);
+    assert.ok(Number.isFinite(focusState.x) && focusState.x > 0 && focusState.x < packetBox.width);
+    assert.ok(Number.isFinite(focusState.y) && focusState.y > 0 && focusState.y < packetBox.height);
+    assert.ok(focusState.linkSignalScale > 0.95);
+    assert.notEqual(focusState.linkArrowTransform, "none");
+
+    const focusedPacketBox = await packet.boundingBox();
+    assert.ok(focusedPacketBox, "the focused research packet should retain its rendered box");
+    await page.mouse.move(
+      focusedPacketBox.x + focusedPacketBox.width * 0.64,
+      focusedPacketBox.y + focusedPacketBox.height * 0.42,
+    );
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAttribute("data-research-spotlight") === "pointer"
+    ), null, { timeout: 2_500 });
+    await page.mouse.move(1, 1);
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAttribute("data-research-spotlight") === "focus"
+    ), null, { timeout: 2_500 });
+    assert.equal(await paperLink.evaluate((element) => document.activeElement === element), true);
+
+    await page.mouse.move(
+      focusedPacketBox.x + focusedPacketBox.width * 0.58,
+      focusedPacketBox.y + focusedPacketBox.height * 0.48,
+    );
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAttribute("data-research-spotlight") === "pointer"
+    ), null, { timeout: 2_500 });
+    const pointerBeforeFocusExit = await packet.evaluate((element) => ({
+      x: element.style.getPropertyValue("--research-spotlight-x"),
+      y: element.style.getPropertyValue("--research-spotlight-y"),
+    }));
+    await page.keyboard.press("Tab");
+    await page.waitForFunction(() => {
+      const packets = document.querySelectorAll(".research-packet");
+      return packets[0]?.getAttribute("data-research-spotlight") === "pointer"
+        && packets[1]?.getAttribute("data-research-spotlight") === "focus";
+    }, null, { timeout: 2_500 });
+    const pointerAfterFocusExit = await packet.evaluate((element) => ({
+      x: element.style.getPropertyValue("--research-spotlight-x"),
+      y: element.style.getPropertyValue("--research-spotlight-y"),
+    }));
+    assert.ok(
+      Math.abs(
+        Number.parseFloat(pointerAfterFocusExit.x)
+          - Number.parseFloat(pointerBeforeFocusExit.x),
+      ) <= 2,
+    );
+    assert.ok(
+      Math.abs(
+        Number.parseFloat(pointerAfterFocusExit.y)
+          - Number.parseFloat(pointerBeforeFocusExit.y),
+      ) <= 2,
+    );
+    assert.equal(
+      await page.locator(".research-packet").nth(1).locator(".paper-link")
+        .evaluate((element) => document.activeElement === element),
+      true,
+    );
+  } finally {
+    await context.close();
+  }
+});
+
 test("research animation clock excludes time spent paused", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1280, height: 800 },
@@ -808,6 +968,51 @@ test("reduced-motion desktop keeps all content visible and ambient loops stopped
       [],
       `reduced motion retained running animations: ${JSON.stringify(state.runningAnimations)}`,
     );
+
+    await page.locator("#research").focus();
+    await page.keyboard.press("Tab");
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAttribute("data-research-spotlight") === "focus"
+    ));
+    const reducedPacket = page.locator(".research-packet").first();
+    await page.waitForFunction(() => (
+      document.querySelector(".research-packet")
+        ?.getAnimations({ subtree: true })
+        .every((animation) => animation.playState !== "running")
+    ));
+    const beforePointer = await reducedPacket.evaluate((element) => ({
+      focusVisible: element.querySelector(".paper-link")?.matches(":focus-visible") ?? false,
+      mode: element.getAttribute("data-research-spotlight"),
+      runningAnimations: element.getAnimations({ subtree: true })
+        .filter((animation) => animation.playState === "running").length,
+      spotlightAnimation: getComputedStyle(element, "::before").animationName,
+      spotlightOpacity: Number.parseFloat(getComputedStyle(element, "::before").opacity),
+      x: element.style.getPropertyValue("--research-spotlight-x"),
+      y: element.style.getPropertyValue("--research-spotlight-y"),
+    }));
+    const reducedBox = await reducedPacket.boundingBox();
+    assert.ok(reducedBox, "the reduced-motion research packet should have a rendered box");
+    await page.mouse.move(
+      reducedBox.x + reducedBox.width * 0.8,
+      reducedBox.y + reducedBox.height * 0.2,
+    );
+    await page.waitForTimeout(50);
+    const afterPointer = await reducedPacket.evaluate((element) => ({
+      mode: element.getAttribute("data-research-spotlight"),
+      x: element.style.getPropertyValue("--research-spotlight-x"),
+      y: element.style.getPropertyValue("--research-spotlight-y"),
+    }));
+    assert.equal(beforePointer.focusVisible, true);
+    assert.equal(beforePointer.mode, "focus");
+    assert.equal(beforePointer.runningAnimations, 0);
+    assert.equal(beforePointer.spotlightAnimation, "none");
+    assert.ok(beforePointer.spotlightOpacity > 0.5);
+    assert.deepEqual(afterPointer, {
+      mode: "focus",
+      x: beforePointer.x,
+      y: beforePointer.y,
+    });
   } finally {
     await context.close();
   }
@@ -1865,6 +2070,11 @@ test("touch-only users return to the resting control style after tapping", { tim
           backgroundPixel: Array.from(context.getImageData(0, 0, 1, 1).data),
           boxShadow: style.boxShadow,
           color: style.color,
+          packetSpotlightOpacity: element.closest(".research-packet")
+            ? Number.parseFloat(
+              getComputedStyle(element.closest(".research-packet"), "::before").opacity,
+            )
+            : null,
           transform: {
             a: transform.a,
             b: transform.b,
@@ -1917,6 +2127,11 @@ test("touch-only users return to the resting control style after tapping", { tim
           backgroundPixel: Array.from(context.getImageData(0, 0, 1, 1).data),
           boxShadow: style.boxShadow,
           color: style.color,
+          packetSpotlightOpacity: element.closest(".research-packet")
+            ? Number.parseFloat(
+              getComputedStyle(element.closest(".research-packet"), "::before").opacity,
+            )
+            : null,
           transform: {
             a: transform.a,
             b: transform.b,
@@ -1945,6 +2160,14 @@ test("touch-only users return to the resting control style after tapping", { tim
             + `${releasedStyle.backgroundColor} vs ${restingStyle.backgroundColor}`,
         );
       });
+      if (restingStyle.packetSpotlightOpacity !== null) {
+        assert.ok(
+          Math.abs(
+            releasedStyle.packetSpotlightOpacity - restingStyle.packetSpotlightOpacity,
+          ) <= 0.01,
+          `${selector} kept its research spotlight after touch release`,
+        );
+      }
       for (const component of ["a", "b", "c", "d", "e", "f"]) {
         assert.ok(
           Math.abs(

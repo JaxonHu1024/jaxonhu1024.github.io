@@ -36,6 +36,7 @@ test("exports a complete static GitHub Pages artifact", async () => {
     "favicon.svg",
     "robots.txt",
     "sitemap.xml",
+    "THIRD_PARTY_NOTICES.md",
   ]) {
     assert.equal(await exists(resolve(output, file)), true, `${file} should exist`);
   }
@@ -49,6 +50,7 @@ test("exports a complete static GitHub Pages artifact", async () => {
   const notFoundHtml = await readFile(resolve(output, "404.html"), "utf8");
   const robots = await readFile(resolve(output, "robots.txt"), "utf8");
   const sitemap = await readFile(resolve(output, "sitemap.xml"), "utf8");
+  const notices = await readFile(resolve(output, "THIRD_PARTY_NOTICES.md"), "utf8");
   assert.match(html, /<title>Jaxon \| AI Engineer<\/title>/);
   assert.match(html, /name="twitter:card" content="summary_large_image"/);
   assert.match(html, /property="og:image" content="https:\/\/jaxonhu1024\.github\.io\/assets\/jaxon-signal-og\.png"/);
@@ -62,6 +64,12 @@ test("exports a complete static GitHub Pages artifact", async () => {
   assert.match(html, new RegExp(`JAXON \/ (?:<!-- -->)?${new Date().getUTCFullYear()}`));
   assert.match(robots, /Sitemap: https:\/\/jaxonhu1024\.github\.io\/sitemap\.xml/);
   assert.match(sitemap, /<loc>https:\/\/jaxonhu1024\.github\.io\/<\/loc>/);
+  assert.match(notices, /React Bits — SpotlightCard/);
+  assert.match(notices, /Aceternity UI — Existing component adaptations/);
+  assert.match(notices, /public-source redistribution permission .* remains unresolved/);
+  assert.match(notices, /Copyright \(c\) 2025 David Haz/);
+  assert.match(notices, /MIT \+ Commons Clause License Condition v1\.0/);
+  assert.match(notices, /do not sell, sublicense, or redistribute the components themselves/);
   assert.match(html, /Road-Network-Based/);
   assert.match(html, /ResFi:/);
   assert.ok(html.indexOf("9831898") < html.indexOf("9170807"));

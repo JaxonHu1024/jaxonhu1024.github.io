@@ -1732,6 +1732,7 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
             id: "research",
             selectors: [
               "#research-title",
+              ".research-packet",
               ".research-packet:first-child h3",
               ".research-packet:last-child h3",
               ".research-packet:first-child .paper-link",
