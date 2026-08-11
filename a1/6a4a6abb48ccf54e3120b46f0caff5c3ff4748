@@ -1,0 +1,23 @@
+app/globals.css
+  s_6b8394067d2c4e::t_6a70b458af41d5 1796-1798,1805-1821,1825,1863-1865,1877-1887,1889-1890,1897,1901-1902,3302-3307
+scripts/export-github-pages.mjs
+  s_6b8394067d2c4e::t_094adefb9d0bcd 63-66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "a16a4a6abb48ccf54e3120b46f0caff5c3ff4748",
+  "prompts": {},
+  "sessions": {
+    "s_6b8394067d2c4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff13f-ebfb-7781-ba84-f68debb87fe5",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
