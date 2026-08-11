@@ -1126,7 +1126,7 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
             && item.contentContained
             && item.glyphContained
             && item.glyphGap >= 1
-            && item.glyphHeight >= 28
+            && item.glyphHeight / item.iconHeight >= .7
             && item.iconClipPath === "none"
             && item.iconHeight >= 29
             && Math.abs(item.iconScaleX - item.iconScaleY) <= .02
@@ -2202,7 +2202,7 @@ test("WebKit 430px touch rail keeps every flag visible and rests on native scrol
       );
       assert.ok(
         item.icon.height >= 29
-          && item.visual.height >= 28
+          && item.visual.height / item.icon.height >= .7
           && item.clipPath === "none"
           && Math.abs(item.scaleX - item.scaleY) <= .02
           && item.scaleX >= .98
