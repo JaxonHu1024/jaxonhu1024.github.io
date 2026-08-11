@@ -1,0 +1,27 @@
+app/components/TravelMap.tsx
+  s_c542bb429ba8f9::t_ab369200228352 599,638
+app/components/pixelated-canvas-renderer.ts
+  s_c542bb429ba8f9::t_32517b5578c028 432,439-440
+app/components/usePixelatedCanvas.ts
+  s_c542bb429ba8f9::t_c62bbecd95e27f 313,425-427,465-467
+app/lib/motion-performance.ts
+  s_c542bb429ba8f9::t_47a9f13bf46139 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "b51813d2805a5cc179da747944ca12a65800466b",
+  "prompts": {},
+  "sessions": {
+    "s_c542bb429ba8f9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff21b-cd70-7072-80af-de0d15219662",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
