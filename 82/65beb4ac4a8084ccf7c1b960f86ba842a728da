@@ -1,0 +1,27 @@
+scripts/export-github-pages.mjs
+  s_6b8394067d2c4e::t_207f28679e099d 5-6,70-73
+scripts/lib/module-preload-hints.mjs
+  s_6b8394067d2c4e::t_be38ae7ebbc5ff 1-274
+tests/browser-interactions.test.mjs
+  s_6b8394067d2c4e::t_4af2e8647b7c38 2210,2215,2219,2231,2235,2243,2260,2273-2274,2279
+tests/github-pages-export.test.mjs
+  s_6b8394067d2c4e::t_b0ca9874b6f192 7-8,33-331,355-398
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "8265beb4ac4a8084ccf7c1b960f86ba842a728da",
+  "prompts": {},
+  "sessions": {
+    "s_6b8394067d2c4e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff13f-ebfb-7781-ba84-f68debb87fe5",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
