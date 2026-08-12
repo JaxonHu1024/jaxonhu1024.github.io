@@ -1,0 +1,27 @@
+app/components/TravelMap.tsx
+  s_63653693d39cbf::t_8b9a74fb6869a6 435,459-484,508
+tests/browser-interactions.test.mjs
+  s_63653693d39cbf::t_f441932c230cd9 1121,1155,1158,1193,1246,1250-1260
+tests/browser-release-gate.test.mjs
+  s_63653693d39cbf::t_574cf906f63ddf 636,712,736-743,1106-1115,1160
+tests/scroll-performance-contract.test.mjs
+  s_63653693d39cbf::t_e9cc6520da2023 165-169,207
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.10",
+  "base_commit_sha": "1f0e68186f2b0657f9ff208a17df58fdafb52303",
+  "prompts": {},
+  "sessions": {
+    "s_63653693d39cbf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019ff411-e971-7f03-87cd-3e1792710f93",
+        "model": "unknown"
+      },
+      "human_author": "JaxonHu1024 <983350385@qq.com>"
+    }
+  },
+  "attestation_metadata": {},
+  "remote_transcripts": {}
+}
