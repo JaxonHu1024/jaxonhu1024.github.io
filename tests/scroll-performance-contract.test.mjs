@@ -162,7 +162,11 @@ test("keeps the Context path static-first and progressively enhances travel filt
   );
   assert.match(
     css,
-    /@media \(min-width: 1200px\)[\s\S]*?\.travel-map-flags\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/,
+    /\.travel-map-stage\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)/s,
+  );
+  assert.doesNotMatch(
+    css,
+    /grid-template-columns:\s*minmax\(0, 3fr\)\s+minmax\(17rem, 1fr\)/,
   );
   const travelRailRules = Array.from(
     css.matchAll(/\.travel-map-flags-scroll\s*\{([^}]*)\}/g),
@@ -200,7 +204,7 @@ test("keeps the Context path static-first and progressively enhances travel filt
     css,
     /@media \(prefers-reduced-motion: reduce\)[\s\S]*?\.travel-map-flag-icon,[\s\S]*?transform:\s*none !important/,
   );
-  assert.match(css, /@media \(min-width: 1200px\)[\s\S]*?grid-template-columns:\s*minmax\(0, 3fr\)/);
+  assert.match(travelMap, /verticalSpread <= 1[\s\S]*?"horizontal"/);
   assert.doesNotMatch(travelMap, /routeIndex|--travel-route-delay/);
   assert.doesNotMatch(travelMap, /createCurvedPath|selectRepresentativeRoutes|markerStart|markerEnd/);
   assert.doesNotMatch(travelMap, /Trace window|DATA LAYER/i);

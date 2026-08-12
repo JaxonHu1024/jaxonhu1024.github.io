@@ -1118,7 +1118,7 @@ test("Context path exposes one complete static reading order", { timeout: 15_000
   }
 });
 
-test("desktop travel region rail magnifies by proximity without shifting layout", { timeout: 15_000 }, async () => {
+test("desktop travel region rail stays below the map and magnifies without shifting layout", { timeout: 15_000 }, async () => {
   const { context, page } = await createReleasePageSession(browser, {
     viewport: { width: 1440, height: 900 },
   });
@@ -1152,8 +1152,10 @@ test("desktop travel region rail magnifies by proximity without shifting layout"
 
     const readDockState = () => rail.evaluate((element) => {
       const rectSnapshot = (rect) => rect ? {
+        bottom: rect.bottom,
         height: rect.height,
         left: rect.left,
+        right: rect.right,
         top: rect.top,
         width: rect.width,
       } : null;
@@ -1188,6 +1190,7 @@ test("desktop travel region rail magnifies by proximity without shifting layout"
 
       return {
         dockRect: rectSnapshot(element.closest(".travel-map-dock")?.getBoundingClientRect()),
+        mapRect: rectSnapshot(document.querySelector(".travel-map-viewport")?.getBoundingClientRect()),
         entries,
         focusedCode: document.activeElement?.closest("li")
           ?.getAttribute("data-country-code") ?? null,
@@ -1240,11 +1243,21 @@ test("desktop travel region rail magnifies by proximity without shifting layout"
     assert.equal(resting.itemLayout.length, 9);
     assert.equal(
       new Set(resting.itemLayout.map(({ itemRect }) => itemRect.left.toFixed(1))).size,
-      1,
+      9,
     );
     assert.equal(
       new Set(resting.itemLayout.map(({ itemRect }) => itemRect.top.toFixed(1))).size,
-      9,
+      1,
+    );
+    assert.ok(resting.mapRect && resting.dockRect, "desktop map or dock geometry was missing");
+    assert.ok(
+      resting.dockRect.top >= resting.mapRect.bottom - .75,
+      `desktop flag dock did not render below the map: ${JSON.stringify(resting)}`,
+    );
+    assert.ok(
+      Math.abs(resting.dockRect.left - resting.mapRect.left) <= .75
+        && Math.abs(resting.dockRect.right - resting.mapRect.right) <= .75,
+      `desktop flag dock did not align with the map: ${JSON.stringify(resting)}`,
     );
     assert.ok(
       resting.entries.SG.countryName

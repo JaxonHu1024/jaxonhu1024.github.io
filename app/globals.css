@@ -1305,23 +1305,6 @@ html[data-page-active="false"] .hero-cta-border-signal {
 }
 
 @media (min-width: 1200px) {
-  .travel-map-stage {
-    grid-template-columns: minmax(0, 3fr) minmax(17rem, 1fr);
-    gap: clamp(22px, 2vw, 32px);
-    align-items: stretch;
-  }
-
-  .travel-map-dock {
-    height: 100%;
-    border-top: 1px solid color-mix(in srgb, var(--color-foreground) 16%, transparent);
-  }
-
-  .travel-map-flags {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0;
-    padding: 8px 14px;
-  }
-
   .travel-map-flags button {
     grid-template-columns: 22px 32px minmax(0, 1fr);
     justify-content: stretch;

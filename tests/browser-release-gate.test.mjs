@@ -633,6 +633,7 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
                       }),
                       filterLayout: (() => {
                         const scroll = travelMapElement.querySelector(".travel-map-flags-scroll");
+                        const dock = travelMapElement.querySelector(".travel-map-dock");
                         const list = travelMapElement.querySelector(".travel-map-flags");
                         const items = Array.from(
                           travelMapElement.querySelectorAll(".travel-map-flags > li"),
@@ -708,6 +709,7 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
                           && lastRect.right <= endScrollRect.right + 1;
                         scroll.scrollLeft = originalScrollLeft;
                         const scrollRect = scroll.getBoundingClientRect();
+                        const dockRect = dock?.getBoundingClientRect();
                         const scrollStyle = getComputedStyle(scroll);
                         const itemRects = items.map((item) => item.getBoundingClientRect());
                         const clusterPositions = (positions) => positions
@@ -731,6 +733,14 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
                             rect.left >= scrollRect.left - 1
                             && rect.right <= scrollRect.right + 1
                           )),
+                          dockAlignedToMap: Boolean(
+                            dockRect
+                            && Math.abs(dockRect.left - travelMapViewportRect.left) <= .75
+                            && Math.abs(dockRect.right - travelMapViewportRect.right) <= .75
+                          ),
+                          dockBelowMap: Boolean(
+                            dockRect && dockRect.top >= travelMapViewportRect.bottom - .75
+                          ),
                           firstReachable,
                           dockProximityDuringMeasurement,
                           hasHorizontalOverflow: scroll.scrollWidth > scroll.clientWidth + 1
@@ -1093,6 +1103,16 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
         "idle",
         `${viewport.width}x${viewport.height} layout sampling activated Dock proximity`,
       );
+      assert.equal(
+        travelMap.filterLayout.dockAlignedToMap,
+        true,
+        `${viewport.width}x${viewport.height} flag dock diverged from the map edges`,
+      );
+      assert.equal(
+        travelMap.filterLayout.dockBelowMap,
+        true,
+        `${viewport.width}x${viewport.height} flag dock did not render below the map`,
+      );
       if (viewport.width <= 600) {
         assert.equal(
           travelMap.filterLayout.railMotionDuringMeasurement,
@@ -1137,7 +1157,7 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
           `${viewport.width}x${viewport.height} squeezed a flag row: `
             + JSON.stringify(travelMap.filterLayout.verticalLayout),
         );
-      } else if (viewport.width < 1_200) {
+      } else {
         assert.equal(travelMap.filterLayout.hasHorizontalOverflow, false);
         assert.equal(travelMap.filterLayout.overflowX, "visible");
         assert.equal(travelMap.filterLayout.controlsContainedHorizontally, true);
@@ -1148,14 +1168,6 @@ test("fresh export passes the homepage and 404 eight-viewport release matrix", {
           Array.from({ length: 9 }, () => 1),
         );
         assert.deepEqual(travelMap.filterLayout.rowSizes, [9]);
-      } else {
-        assert.equal(travelMap.filterLayout.hasHorizontalOverflow, false);
-        assert.equal(travelMap.filterLayout.overflowX, "visible");
-        assert.equal(travelMap.filterLayout.controlsContainedHorizontally, true);
-        assert.equal(travelMap.filterLayout.columnCount, 1);
-        assert.equal(travelMap.filterLayout.rowCount, 9);
-        assert.deepEqual(travelMap.filterLayout.columnSizes, [9]);
-        assert.deepEqual(travelMap.filterLayout.rowSizes, Array.from({ length: 9 }, () => 1));
       }
       if (viewport.width === 390) {
         const rail = page.locator(".travel-map-flags-scroll");

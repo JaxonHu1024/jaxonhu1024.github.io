@@ -432,6 +432,7 @@ export function TravelMap() {
     let animationFrame: number | null = null;
     let pointerX: number | null = null;
     let pointerY: number | null = null;
+    let influenceDistance = DOCK_INFLUENCE_DISTANCE_PX;
     let layout: "grid" | "horizontal" | "vertical" = "grid";
     let itemCenters: Array<{ item: HTMLElement; x: number; y: number }> = [];
 
@@ -447,9 +448,6 @@ export function TravelMap() {
     };
 
     const measureItems = () => {
-      layout = window.innerWidth <= 600
-        ? "horizontal"
-        : window.innerWidth >= 1_200 ? "vertical" : "grid";
       itemCenters = items.map((item) => {
         const bounds = item.getBoundingClientRect();
         return {
@@ -458,6 +456,32 @@ export function TravelMap() {
           y: bounds.top + bounds.height / 2,
         };
       });
+      const xPositions = itemCenters.map(({ x }) => x);
+      const yPositions = itemCenters.map(({ y }) => y);
+      const horizontalSpread = Math.max(...xPositions) - Math.min(...xPositions);
+      const verticalSpread = Math.max(...yPositions) - Math.min(...yPositions);
+
+      layout = verticalSpread <= 1
+        ? "horizontal"
+        : horizontalSpread <= 1 ? "vertical" : "grid";
+
+      if (layout === "grid") {
+        influenceDistance = DOCK_INFLUENCE_DISTANCE_PX;
+        return;
+      }
+
+      const axisPositions = itemCenters
+        .map((center) => layout === "horizontal" ? center.x : center.y)
+        .sort((left, right) => left - right);
+      const neighborDistances = axisPositions
+        .slice(1)
+        .map((position, index) => position - axisPositions[index]);
+      const nearestNeighbor = neighborDistances.length > 0
+        ? Math.min(...neighborDistances)
+        : 0;
+      influenceDistance = nearestNeighbor > 0
+        ? Math.max(DOCK_INFLUENCE_DISTANCE_PX, nearestNeighbor * 1.6)
+        : DOCK_INFLUENCE_DISTANCE_PX;
     };
 
     const paintInfluence = () => {
@@ -481,7 +505,7 @@ export function TravelMap() {
             ? Math.abs(activePointerY - y)
             : Math.hypot(activePointerX - x, activePointerY - y);
         const linearInfluence = clampValue(
-          1 - distance / DOCK_INFLUENCE_DISTANCE_PX,
+          1 - distance / influenceDistance,
           0,
           1,
         );
